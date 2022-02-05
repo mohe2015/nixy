@@ -80,7 +80,7 @@ expr_simple
   : ID
   | INT
   | FLOAT
-  //| '"' string_parts '"' // TODO FIXME
+  | '"' string_parts '"'
   | IND_STRING_OPEN ind_string_parts IND_STRING_CLOSE
   | path_start // FIXME PATH_END
   | path_start string_parts_interpolated // FIXME PATH_END
@@ -144,8 +144,8 @@ attr
   ;
 
 string_attr:
-  // '"' string_parts '"'  // TODO FIXME
-   DOLLAR_CURLY expr '}'
+  '"' string_parts '"'
+  | DOLLAR_CURLY expr '}'
   ;
 
 expr_list

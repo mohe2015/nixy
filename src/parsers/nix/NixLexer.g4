@@ -73,7 +73,7 @@ CONCAT: '++';
 DOLLAR_CURLY: '${' -> pushMode(DEFAULT_MODE);
 CURLY_OPEN: '{' -> pushMode(DEFAULT_MODE);
 CURLY_CLOSE: '}' -> popMode;
-STRING_OPEN: '"' -> pushMode(STRING_MODE);
+STRING_OPEN: DOUBLE_QUOTES -> pushMode(STRING_MODE);
 
 // https://github.com/NixOS/nix/blob/0a7746603eda58c4b368e977e87d0aa4db397f5b/src/libexpr/lexer.l#L192
 IND_STRING_OPEN: '\'\'' (' '*'\n')? -> pushMode(IND_STRING_MODE);
@@ -122,7 +122,7 @@ mode STRING_MODE;
 STRING1: (~[$"\\]|'$'~[{"\\]| '\\' ANY|'$\\'ANY)*'$\\"' -> type(STR);
 STRING2: (~[$"\\]|'$'~[{"\\]| '\\' ANY|'$\\'ANY)+ -> type(STR);
 STRING3: '${' -> pushMode(DEFAULT_MODE), type(DOLLAR_CURLY);
-STRING4: '"' -> popMode;
+STRING4: DOUBLE_QUOTES -> popMode;
 
 
 
