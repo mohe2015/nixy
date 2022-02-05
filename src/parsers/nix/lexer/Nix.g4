@@ -1,11 +1,9 @@
 // antlr4 -Dlanguage=C++ 
-// antlr4 -o antlr Nix.g4
+// antlr4 Nix.g4
 // whereis antlr
-// javac -cp /nix/store/0h2al86yb3gh59h4lckwsprc5vavirmr-antlr-4.8/share/java/antlr-4.8-complete.jar antlr/*.java
-// grun Nix tokens -gui
+// javac -cp /nix/store/0h2al86yb3gh59h4lckwsprc5vavirmr-antlr-4.8/share/java/antlr-4.8-complete.jar *.java
+// grun Nix tokens -tokens
 // write code then ctrl+D
-
-// TODO FIXME default mode is DEFAULT_MODE
 
 lexer grammar Nix;
 // https://github.com/NixOS/nix/blob/0a7746603eda58c4b368e977e87d0aa4db397f5b/src/libexpr/lexer.l
@@ -27,7 +25,7 @@ channels {
 
 // TODO FIXME lexer context
 // https://github.com/NixOS/nix/blob/0a7746603eda58c4b368e977e87d0aa4db397f5b/src/libexpr/lexer.l#L107
-ANY:         .|'\n';
+// https://github.com/NixOS/nix/blob/0a7746603eda58c4b368e977e87d0aa4db397f5b/src/libexpr/lexer.l#L145
 ID:          [a-zA-Z_][a-zA-Z0-9_'\-]*;
 INT:         [0-9]+;
 FLOAT:       (([1-9][0-9]*'.'[0-9]*) | ('0'?'.'[0-9]+)) ([Ee][+-]?[0-9]+)?;
@@ -130,3 +128,7 @@ mode INPATH_SLASH_MODE;
 INPATH_SLASH1: '${' -> mode(INPATH_MODE), pushMode(DEFAULT_MODE), type(DOLLAR_CURLY);
 INPATH_SLASH2: (PATH | PATH_SEG | PATH_CHAR+) -> mode(INPATH_MODE), type(STR); // TODO FIXME
 INPATH_SLASH3: (ANY | EOF); // TODO FIXME error
+
+
+mode NEVER_REACH;
+ANY:         .|'\n';
