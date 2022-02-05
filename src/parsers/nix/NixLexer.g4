@@ -37,16 +37,8 @@ MULTILINE_COMMENT: '/*' (~[*]|'*'+~[*/])*'*'+'/' -> channel(COMMENTS_CHANNEL);
 // https://github.com/NixOS/nix/blob/0a7746603eda58c4b368e977e87d0aa4db397f5b/src/libexpr/lexer.l#L107
 // https://github.com/NixOS/nix/blob/0a7746603eda58c4b368e977e87d0aa4db397f5b/src/libexpr/lexer.l#L145
 fragment ANY:         .|'\n';
-ID:          [a-zA-Z_][a-zA-Z0-9_'\-]*;
-INT:         [0-9]+;
-FLOAT:       (([1-9][0-9]*'.'[0-9]*) | ('0'?'.'[0-9]+)) ([Ee][+-]?[0-9]+)?;
-PATH_CHAR:   [a-zA-Z0-9._\-+];
-PATH:        PATH_CHAR*('/'PATH_CHAR+)+'/'?;
-PATH_SEG:    PATH_CHAR*'/';
-HPATH:       '~'('/' PATH_CHAR+)+'/'?;
-HPATH_START: '~' '/';
-SPATH:       '<'PATH_CHAR+('/'PATH_CHAR+)*'>';
-URI:         [a-zA-Z][a-zA-Z0-9+\-.]*':'[a-zA-Z0-9%/?:@&=+$,\-_.!~*']+;
+
+
 
 // https://github.com/NixOS/nix/blob/0a7746603eda58c4b368e977e87d0aa4db397f5b/src/libexpr/lexer.l#L123
 IF: 'if';          
@@ -69,6 +61,18 @@ OR: '||';
 IMPL: '->';
 UPDATE: '//';
 CONCAT: '++';
+
+
+ID:          [a-zA-Z_][a-zA-Z0-9_'\-]*;
+INT:         [0-9]+;
+FLOAT:       (([1-9][0-9]*'.'[0-9]*) | ('0'?'.'[0-9]+)) ([Ee][+-]?[0-9]+)?;
+PATH_CHAR:   [a-zA-Z0-9._\-+];
+PATH:        PATH_CHAR*('/'PATH_CHAR+)+'/'?;
+PATH_SEG:    PATH_CHAR*'/';
+HPATH:       '~'('/' PATH_CHAR+)+'/'?;
+HPATH_START: '~' '/';
+SPATH:       '<'PATH_CHAR+('/'PATH_CHAR+)*'>';
+URI:         [a-zA-Z][a-zA-Z0-9+\-.]*':'[a-zA-Z0-9%/?:@&=+$,\-_.!~*']+;
 
 // https://github.com/NixOS/nix/blob/0a7746603eda58c4b368e977e87d0aa4db397f5b/src/libexpr/lexer.l#L145
 
