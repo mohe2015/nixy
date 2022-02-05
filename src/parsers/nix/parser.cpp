@@ -12,6 +12,16 @@
 
 // https://github.com/NixOS/nix/blob/master/src/libexpr/parser.y
 
+// https://en.wikipedia.org/wiki/Operator-precedence_parser
+
+// https://en.wikipedia.org/wiki/Comparison_of_parser_generators
+
+// https://github.com/antlr/grammars-v4/
+
+// bison or antlr or probably just hand-written
+
+// https://www.gnu.org/software/bison/manual/bison.html#GLR-Parsers
+
 export module parser;
 import <iostream>;
 //import <format>;
