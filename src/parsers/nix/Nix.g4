@@ -6,6 +6,7 @@
 grammar Nix;
 
 // https://github.com/antlr/antlr4/blob/master/doc/parser-rules.md
+// https://github.com/antlr/antlr4/blob/master/doc/lexer-rules.md
 // https://github.com/antlr/antlr4/blob/master/doc/wildcard.md
 // https://github.com/antlr/antlr4/blob/master/doc/interpreters.md
 // https://github.com/antlr/antlr4/blob/master/doc/cpp-target.md
@@ -13,7 +14,9 @@ grammar Nix;
 // https://github.com/NixOS/nix/blob/master/src/libexpr/lexer.l
 // https://github.com/NixOS/nix/blob/master/src/libexpr/parser.y
 
-start: expr;
+// TODO FIXME operator precedence
+
+start: expr EOF;
 expr: expr_function;
 expr_function
   : ID ':' expr_function
@@ -32,8 +35,8 @@ expr_if
   ;
 
 expr_op
-  : '!' expr_op %prec NOT
-  | '-' expr_op %prec NEGATE
+  : '!' expr_op
+  | '-' expr_op
   | expr_op EQ expr_op
   | expr_op NEQ expr_op
   | expr_op '<' expr_op
@@ -73,7 +76,7 @@ expr_simple
   | FLOAT
   | '"' string_parts '"'
   | IND_STRING_OPEN ind_string_parts IND_STRING_CLOSE
-  | path_start PATH_END { $$ = $1; }
+  | path_start PATH_END
   | path_start string_parts_interpolated PATH_END
   | SPATH
   | URI
@@ -151,16 +154,16 @@ formal
   | ID '?' expr
   ;
 
-ANY:         .|\n;
+ANY:         .|'\n';
 ID:          [a-zA-Z\_][a-zA-Z0-9\_\'\-]*;
 INT:         [0-9]+;
-FLOAT:       (([1-9][0-9]*\.[0-9]*)|(0?\.[0-9]+))([Ee][+-]?[0-9]+)?;
+FLOAT:       (([1-9][0-9]*'.'[0-9]*) | ('0'?'.'[0-9]+)) ([Ee][+-]?[0-9]+)?;
 PATH_CHAR:   [a-zA-Z0-9\.\_\-\+];
-PATH:        {PATH_CHAR}*(\/{PATH_CHAR}+)+\/?;
-PATH_SEG:    {PATH_CHAR}*\/;
-HPATH:       \~(\/{PATH_CHAR}+)+\/?;
-HPATH_START: \~\/;
-SPATH:       \<{PATH_CHAR}+(\/{PATH_CHAR}+)*\>;
-URI:         [a-zA-Z][a-zA-Z0-9\+\-\.]*\:[a-zA-Z0-9\%\/\?\:\@\&\=\+\$\,\-\_\.\!\~\*\']+;
+PATH:        PATH_CHAR*('/'PATH_CHAR+)+'/'?;
+PATH_SEG:    PATH_CHAR*'/';
+HPATH:       '~'('/' PATH_CHAR+)+'/'?;
+HPATH_START: '~' '/';
+SPATH:       '<'PATH_CHAR+('/'PATH_CHAR+)*'>';
+URI:         [a-zA-Z][a-zA-Z0-9\+\-\.]*':'[a-zA-Z0-9\%\/\?\:\@\&\=\+\$\,\-\_\.\!\~\*\']+;
 
-//WS: [ \t\r\n]+ -> skip ;
+WS: [ \t\r\n]+ -> skip ;
