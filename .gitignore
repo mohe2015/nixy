@@ -31,4 +31,6 @@
 *.out
 *.app
 
-gcm.cache
+gcm.cache/
+antlr/
+.antlr/
