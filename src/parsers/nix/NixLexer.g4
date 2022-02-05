@@ -6,8 +6,9 @@
 // write code then ctrl+D
 
 // antlr4 Nix.g4 && javac -cp /nix/store/0h2al86yb3gh59h4lckwsprc5vavirmr-antlr-4.8/share/java/antlr-4.8-complete.jar *.java && grun Nix tokens -tokens
+// https://github.com/antlr/antlr4/tree/master/runtime/Cpp/demo
 
-lexer grammar Nix;
+lexer grammar NixLexer;
 // https://github.com/NixOS/nix/blob/0a7746603eda58c4b368e977e87d0aa4db397f5b/src/libexpr/lexer.l
 
 /*

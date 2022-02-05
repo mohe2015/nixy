@@ -3,7 +3,11 @@
 // javac -cp /nix/store/0h2al86yb3gh59h4lckwsprc5vavirmr-antlr-4.8/share/java/antlr-4.8-complete.jar *.java
 // grun Nix r -gui
 // write code then ctrl+D
-grammar Nix;
+grammar NixParser;
+
+options {
+	tokenVocab = NixLexer;
+}
 
 // https://github.com/antlr/antlr4/blob/master/doc/parser-rules.md
 // https://github.com/antlr/antlr4/blob/master/doc/lexer-rules.md
