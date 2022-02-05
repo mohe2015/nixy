@@ -4,7 +4,7 @@
 // grun Nix r -gui
 // write code then ctrl+D
 
-// antlr4 NixLexer.g4 && antlr4 NixParser.g4 && javac -cp /nix/store/0h2al86yb3gh59h4lckwsprc5vavirmr-antlr-4.8/share/java/antlr-4.8-complete.jar *.java && grun NixParser tokens -tokens
+// antlr4 NixLexer.g4 && antlr4 NixParser.g4 && javac -cp /nix/store/0h2al86yb3gh59h4lckwsprc5vavirmr-antlr-4.8/share/java/antlr-4.8-complete.jar *.java && grun Nix start
 parser grammar NixParser;
 
 options {
