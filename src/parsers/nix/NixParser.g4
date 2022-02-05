@@ -3,7 +3,7 @@
 // javac -cp /nix/store/0h2al86yb3gh59h4lckwsprc5vavirmr-antlr-4.8/share/java/antlr-4.8-complete.jar *.java
 // grun Nix r -gui
 // write code then ctrl+D
-grammar NixParser;
+parser grammar NixParser;
 
 options {
 	tokenVocab = NixLexer;
@@ -113,17 +113,20 @@ path_start
 ind_string_parts
   : ind_string_parts IND_STR
   | ind_string_parts DOLLAR_CURLY expr '}'
+  | 
   ;
 
 binds
   : binds attrpath '=' expr ';'
   | binds INHERIT attrs ';'
   | binds INHERIT '(' expr ')' attrs ';'
+  |
   ;
 
 attrs
   : attrs attr
   | attrs string_attr
+  |
   ;
 
 attrpath
@@ -145,6 +148,7 @@ string_attr
 
 expr_list
   : expr_list expr_select
+  |
   ;
 
 formals
