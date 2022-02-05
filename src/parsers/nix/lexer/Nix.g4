@@ -1,4 +1,9 @@
 // antlr4 -Dlanguage=C++ 
+// antlr4 -o antlr Nix.g4
+// whereis antlr
+// javac -cp /nix/store/0h2al86yb3gh59h4lckwsprc5vavirmr-antlr-4.8/share/java/antlr-4.8-complete.jar *.java
+// grun Nix r -gui
+// write code then ctrl+D
 
 // TODO FIXME default mode is DEFAULT_MODE
 
@@ -23,16 +28,16 @@ channels {
 // TODO FIXME lexer context
 // https://github.com/NixOS/nix/blob/0a7746603eda58c4b368e977e87d0aa4db397f5b/src/libexpr/lexer.l#L107
 ANY:         .|'\n';
-ID:          [a-zA-Z\_][a-zA-Z0-9\_\'\-]*;
+ID:          [a-zA-Z_][a-zA-Z0-9_'\-]*;
 INT:         [0-9]+;
 FLOAT:       (([1-9][0-9]*'.'[0-9]*) | ('0'?'.'[0-9]+)) ([Ee][+-]?[0-9]+)?;
-PATH_CHAR:   [a-zA-Z0-9\.\_\-\+];
+PATH_CHAR:   [a-zA-Z0-9._\-+];
 PATH:        PATH_CHAR*('/'PATH_CHAR+)+'/'?;
 PATH_SEG:    PATH_CHAR*'/';
 HPATH:       '~'('/' PATH_CHAR+)+'/'?;
 HPATH_START: '~' '/';
 SPATH:       '<'PATH_CHAR+('/'PATH_CHAR+)*'>';
-URI:         [a-zA-Z][a-zA-Z0-9\+\-\.]*':'[a-zA-Z0-9\%\/\?\:\@\&\=\+\$\,\-\_\.\!\~\*\']+;
+URI:         [a-zA-Z][a-zA-Z0-9+\-.]*':'[a-zA-Z0-9%/?:@&=+$,\-_.!~*']+;
 
 // https://github.com/NixOS/nix/blob/0a7746603eda58c4b368e977e87d0aa4db397f5b/src/libexpr/lexer.l#L123
 IF: 'if';          
