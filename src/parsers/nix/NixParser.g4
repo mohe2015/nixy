@@ -4,7 +4,9 @@
 // grun Nix r -gui
 // write code then ctrl+D
 
-// antlr4 NixLexer.g4 && antlr4 NixParser.g4 && javac -cp /nix/store/0h2al86yb3gh59h4lckwsprc5vavirmr-antlr-4.8/share/java/antlr-4.8-complete.jar *.java && grun Nix start
+// antlr4 NixLexer.g4 && antlr4 NixParser.g4 && javac -cp /nix/store/0h2al86yb3gh59h4lckwsprc5vavirmr-antlr-4.8/share/java/antlr-4.8-complete.jar *.java && grun Nix tokens -tokens
+
+// antlr4 NixLexer.g4 && antlr4 NixParser.g4 && javac -cp /nix/store/0h2al86yb3gh59h4lckwsprc5vavirmr-antlr-4.8/share/java/antlr-4.8-complete.jar *.java && grun Nix start -gui
 parser grammar NixParser;
 
 options {
@@ -80,7 +82,7 @@ expr_simple
   : ID
   | INT
   | FLOAT
-  | '"' string_parts '"'
+  | STRING_OPEN string_parts STRING_CLOSE
   | IND_STRING_OPEN ind_string_parts IND_STRING_CLOSE
   | path_start // FIXME PATH_END
   | path_start string_parts_interpolated // FIXME PATH_END
@@ -144,7 +146,7 @@ attr
   ;
 
 string_attr:
-  '"' string_parts '"'
+  STRING_OPEN string_parts STRING_CLOSE
   | DOLLAR_CURLY expr '}'
   ;
 
