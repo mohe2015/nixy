@@ -1,8 +1,8 @@
 // antlr4 -Dlanguage=C++ 
 // antlr4 -o antlr Nix.g4
 // whereis antlr
-// javac -cp /nix/store/0h2al86yb3gh59h4lckwsprc5vavirmr-antlr-4.8/share/java/antlr-4.8-complete.jar *.java
-// grun Nix r -gui
+// javac -cp /nix/store/0h2al86yb3gh59h4lckwsprc5vavirmr-antlr-4.8/share/java/antlr-4.8-complete.jar antlr/*.java
+// grun Nix tokens -gui
 // write code then ctrl+D
 
 // TODO FIXME default mode is DEFAULT_MODE
@@ -75,7 +75,7 @@ IND_STRING_OPEN: '\'\'' (' '*'\n')? -> pushMode(IND_STRING_MODE);
 
 
 // https://github.com/NixOS/nix/blob/0a7746603eda58c4b368e977e87d0aa4db397f5b/src/libexpr/lexer.l#L217
-PATH1: ({PATH_SEG} '${' | {HPATH_START} '${') -> pushMode(PATH_START_MODE);
+PATH1: (PATH_SEG '${' | HPATH_START '${') -> pushMode(PATH_START_MODE);
 
 
 // https://github.com/NixOS/nix/blob/0a7746603eda58c4b368e977e87d0aa4db397f5b/src/libexpr/lexer.l#L238
@@ -93,8 +93,8 @@ MULTILINE_COMMENT: '/*' ([^*]|'*'+[^*/])*'*'+'/' -> channel(COMMENTS_CHANNEL);
 // https://github.com/NixOS/nix/blob/0a7746603eda58c4b368e977e87d0aa4db397f5b/src/libexpr/lexer.l#L174
 mode STRING_MODE;
 
-STRING1: ([^$"\\]|'$'[^{"\\]| '\\' {ANY}|'$\\'{ANY})*'$\\"' -> type(STR);
-STRING2: ([^$"\\]|'$'[^{"\\]| '\\' {ANY}|'$\\'{ANY})+ -> type(STR);
+STRING1: ([^$"\\]|'$'[^{"\\]| '\\' ANY|'$\\'ANY)*'$\\"' -> type(STR);
+STRING2: ([^$"\\]|'$'[^{"\\]| '\\' ANY|'$\\'ANY)+ -> type(STR);
 STRING3: '${' -> pushMode(DEFAULT_MODE), type(DOLLAR_CURLY);
 STRING4: '"' -> popMode;
 
