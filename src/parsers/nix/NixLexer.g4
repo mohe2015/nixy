@@ -91,6 +91,29 @@ PATH3: HPATH -> pushMode(INPATH_MODE); // TODO FIXME bruh
 
 
 
+// additional tokens
+COLON: ':';
+AT_SIGN: '@';
+SEMICOLON: ';';
+EXCLAMATION_MARK: '!';
+MINUS: '-';
+LESS_THAN: '<';
+GREATER_THAN: '>';
+PLUS: '+';
+STAR: '*';
+FORWARD_SLASH: '/';
+QUESTION_MARK: '?';
+DOT: '.';
+DOUBLE_QUOTES: '"';
+PAREN_OPEN: '(';
+PAREN_CLOSE: ')';
+BRACKET_OPEN: '[';
+BRACKET_CLOSE: ']';
+EQUALS: '=';
+COMMA: ',';
+
+
+
 
 // https://github.com/NixOS/nix/blob/0a7746603eda58c4b368e977e87d0aa4db397f5b/src/libexpr/lexer.l#L174
 mode STRING_MODE;
