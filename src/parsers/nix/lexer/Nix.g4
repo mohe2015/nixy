@@ -27,8 +27,8 @@ channels {
 
 // https://github.com/NixOS/nix/blob/0a7746603eda58c4b368e977e87d0aa4db397f5b/src/libexpr/lexer.l#L289
 WS: [ \t\r\n]+ -> skip;
-SINGLE_LINE_COMMENT: '#' [^\r\n]* -> channel(COMMENTS_CHANNEL);
-MULTILINE_COMMENT: '/*' ([^*]|'*'+[^*/])*'*'+'/' -> channel(COMMENTS_CHANNEL);
+SINGLE_LINE_COMMENT: '#' ~[\r\n]* -> channel(COMMENTS_CHANNEL);
+MULTILINE_COMMENT: '/*' (~[*]|'*'+~[*/])*'*'+'/' -> channel(COMMENTS_CHANNEL);
 
 // TODO FIXME lexer context
 // https://github.com/NixOS/nix/blob/0a7746603eda58c4b368e977e87d0aa4db397f5b/src/libexpr/lexer.l#L107
@@ -95,8 +95,8 @@ PATH3: HPATH -> pushMode(INPATH_MODE); // TODO FIXME bruh
 mode STRING_MODE;
 
 // interpolated variables in string
-STRING1: ([^$"\\]|'$'[^{"\\]| '\\' ANY|'$\\'ANY)*'$\\"' -> type(STR);
-STRING2: ([^$"\\]|'$'[^{"\\]| '\\' ANY|'$\\'ANY)+ -> type(STR);
+STRING1: (~[$"\\]|'$'~[{"\\]| '\\' ANY|'$\\'ANY)*'$\\"' -> type(STR);
+STRING2: (~[$"\\]|'$'~[{"\\]| '\\' ANY|'$\\'ANY)+ -> type(STR);
 STRING3: '${' -> pushMode(DEFAULT_MODE), type(DOLLAR_CURLY);
 STRING4: '"' -> popMode;
 
@@ -104,7 +104,7 @@ STRING4: '"' -> popMode;
 
 // https://github.com/NixOS/nix/blob/0a7746603eda58c4b368e977e87d0aa4db397f5b/src/libexpr/lexer.l#L193
 mode IND_STRING_MODE;
-IND_STRING1: ([^$']| '$' [^{']| '\'' [^'$])+;
+IND_STRING1: (~[$']| '$' ~[{']| '\'' ~['$])+;
 IND_STRING2: '\'\'$' -> type(IND_STR);
 IND_STRING3: '$' -> type(IND_STR);
 IND_STRING4: '\'\'\'' -> type(IND_STR);
