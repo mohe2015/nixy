@@ -154,6 +154,7 @@ formal
   | ID '?' expr
   ;
 
+// TODO FIXME lexer context
 ANY:         .|'\n';
 ID:          [a-zA-Z\_][a-zA-Z0-9\_\'\-]*;
 INT:         [0-9]+;
@@ -165,5 +166,27 @@ HPATH:       '~'('/' PATH_CHAR+)+'/'?;
 HPATH_START: '~' '/';
 SPATH:       '<'PATH_CHAR+('/'PATH_CHAR+)*'>';
 URI:         [a-zA-Z][a-zA-Z0-9\+\-\.]*':'[a-zA-Z0-9\%\/\?\:\@\&\=\+\$\,\-\_\.\!\~\*\']+;
+
+
+IF: 'if';          
+THEN: 'then';
+ELSE: 'else';
+ASSERT: 'assert';
+WITH: 'with';
+LET: 'let';
+IN: 'in';
+REC: 'rec';
+INERHIT: 'inherit';
+OR_KW: 'or';
+ELLIPSIS: '...';
+EQ: '==';
+NEQ: '!=';
+LEQ: '<=';
+GEQ: '>=';
+AND: '&&';
+OR: '||';
+IMPL: '->';
+UPDATE: '//';
+CONCAT: '++';
 
 WS: [ \t\r\n]+ -> skip ;
