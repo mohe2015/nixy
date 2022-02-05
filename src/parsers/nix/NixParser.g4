@@ -84,8 +84,8 @@ expr_simple
   | FLOAT
   | STRING_OPEN string_parts STRING_CLOSE
   | IND_STRING_OPEN ind_string_parts IND_STRING_CLOSE
-  | path_start // FIXME PATH_END
-  | path_start string_parts_interpolated // FIXME PATH_END
+  | path_start PATH_END
+  | path_start string_parts_interpolated PATH_END
   | SPATH
   | URI
   | '(' expr ')'
