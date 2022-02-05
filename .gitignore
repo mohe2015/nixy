@@ -34,3 +34,8 @@
 gcm.cache/
 antlr/
 .antlr/
+
+*.class
+*.interp
+*.java
+*.tokens
