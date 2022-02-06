@@ -1,5 +1,9 @@
   // GNU Lesser General Public License v2.1 https://github.com/NixOS/nix/blob/0a7746603eda58c4b368e977e87d0aa4db397f5b/src/libexpr/lexer.l
   // https://westes.github.io/flex/manual/
+  // https://westes.github.io/flex/manual/Bison-Bridge.html#Bison-Bridge
+  // https://westes.github.io/flex/manual/How-do-I-expand-backslash_002descape-sequences-in-C_002dstyle-quoted-strings_003f.html
+  // https://westes.github.io/flex/manual/Actions.html#Actions
+  // https://stackoverflow.com/questions/656703/how-does-flex-support-bison-location-exactly
 
 %option reentrant bison-bridge bison-locations
 %option noyywrap
@@ -18,18 +22,7 @@
 
 
 %{
-#ifdef __clang__
-#pragma clang diagnostic ignored "-Wunneeded-internal-declaration"
-#endif
-
-#include <boost/lexical_cast.hpp>
-
-#include "nixexpr.hh"
 #include "parser-tab.hh"
-
-using namespace nix;
-
-namespace nix {
 
 // backup to recover from yyless(0)
 YYLTYPE prev_yylloc;
@@ -95,8 +88,6 @@ static StringToken unescapeStr(SymbolTable & symbols, char * s, size_t length)
     return {result, size_t(t - result)};
 }
 
-
-}
 
 #define YY_USER_INIT initLoc(yylloc)
 #define YY_USER_ACTION adjustLoc(yylloc, yytext, yyleng);

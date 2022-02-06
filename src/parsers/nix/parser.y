@@ -1,5 +1,6 @@
 // GNU Lesser General Public License v2.1 https://github.com/NixOS/nix/blob/17e3f353df3d829ce57f3eb16ab5c810056cdf9b/src/libexpr/parser.y
 
+// https://www.gnu.org/software/bison/manual/html_node/C_002b_002b-Variants.html
 // https://stackoverflow.com/questions/42857386/bison-c-glr-parser-using-variants
 %require "3.8"
 %skeleton "glr2.cc"
