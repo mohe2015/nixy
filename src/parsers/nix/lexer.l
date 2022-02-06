@@ -6,7 +6,7 @@
   // https://stackoverflow.com/questions/656703/how-does-flex-support-bison-location-exactly
   // https://westes.github.io/flex/manual/Cxx.html#Cxx
 
-%option noyywrap
+%option noyywrap c++
 %option never-interactive
 %option stack
 %option nodefault
@@ -22,6 +22,7 @@
 
 
 %{
+import <iostream>;
 
 // backup to recover from yyless(0)
 YYLTYPE prev_yylloc;
