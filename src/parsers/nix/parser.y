@@ -5,7 +5,6 @@
 %require "3.8"
 %skeleton "glr2.cc"
 %glr-parser
-%define api.pure
 %locations
 %define parse.error verbose
 %defines
