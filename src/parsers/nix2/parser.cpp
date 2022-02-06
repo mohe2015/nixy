@@ -3,9 +3,11 @@
 // g++ -std=c++20 -fmodules-ts src/parsers/nix/parser.cpp
 
 // clang_13
-// clang++ -std=c++20 -fmodules src/parsers/nix/parser.cpp
+// clang++ -std=c++20 -fmodules src/parsers/nix2/parser.cpp
 
 // https://cor3ntin.github.io/posts/iouring/
+// http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2020/p2052r0.pdf
+// https://unixism.net/2020/04/io-uring-by-example-part-1-introduction/
 // https://cor3ntin.github.io/posts/executors/
 // https://en.cppreference.com/w/cpp/language/coroutines
 // https://en.cppreference.com/w/cpp/language/modules
@@ -26,9 +28,25 @@
 
 export module parser;
 import <iostream>;
+import <fstream>;
+import <sstream>;
 //import <format>;
+
+
+export void parse(std::string data) {
+
+}
 
 export int main() {
     std::cout << "Hello world!" << std::endl;
+
+    std::ifstream f("/etc/nixos/nixpkgs/flake.nix");
+    if(f) {
+        std::ostringstream ss;
+        ss << f.rdbuf(); // reading data
+        std::string str = ss.str();
+        parse(str);
+    }
+
     return 0;
 }
