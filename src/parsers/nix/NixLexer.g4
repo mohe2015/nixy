@@ -82,7 +82,10 @@ STRING_OPEN: DOUBLE_QUOTES -> pushMode(STRING_MODE);
 IND_STRING_OPEN: '\'\'' (' '*'\n')? -> pushMode(IND_STRING_MODE);
 
 
-
+// this also means we need unbounded lookahead?
+// or rather we could probably convert the grammar so we don't need it?
+// let a = "hi"; in lib/t${a}
+// let a = "hi"; in lib/t${a}jo.nix
 
 // https://github.com/NixOS/nix/blob/0a7746603eda58c4b368e977e87d0aa4db397f5b/src/libexpr/lexer.l#L217
 PATH1: (PATH_SEG '${' | HPATH_START '${') -> pushMode(PATH_START_MODE);

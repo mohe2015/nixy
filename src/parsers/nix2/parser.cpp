@@ -32,6 +32,9 @@ import <fstream>;
 import <sstream>;
 //import <format>;
 
+// https://nixos.wiki/wiki/Nix_Expression_Language
+
+// TODO FIXME use the antlr grammar here for now
 
 export void parse(std::string data) {
 

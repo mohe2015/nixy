@@ -7,6 +7,13 @@
 // antlr4 NixLexer.g4 && antlr4 NixParser.g4 && javac -cp /nix/store/0h2al86yb3gh59h4lckwsprc5vavirmr-antlr-4.8/share/java/antlr-4.8-complete.jar *.java && grun Nix tokens -tokens
 
 // antlr4 NixLexer.g4 && antlr4 NixParser.g4 && javac -cp /nix/store/0h2al86yb3gh59h4lckwsprc5vavirmr-antlr-4.8/share/java/antlr-4.8-complete.jar *.java && grun Nix start -gui
+// antlr4 NixLexer.g4 && antlr4 NixParser.g4 && javac -cp /nix/store/0h2al86yb3gh59h4lckwsprc5vavirmr-antlr-4.8/share/java/antlr-4.8-complete.jar *.java && cat /etc/nixos/nixpkgs/flake.nix | grun Nix start -gui
+
+
+
+// https://tomassetti.me/improving-the-performance-of-an-antlr-parser/
+
+
 parser grammar NixParser;
 
 options {
