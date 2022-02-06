@@ -1,3 +1,19 @@
+// just use bison...
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 // antlr4 -o antlr Nix.g4
 // whereis antlr
 // javac -cp /nix/store/0h2al86yb3gh59h4lckwsprc5vavirmr-antlr-4.8/share/java/antlr-4.8-complete.jar *.java
@@ -9,6 +25,27 @@
 // antlr4 NixLexer.g4 && antlr4 NixParser.g4 && javac -cp /nix/store/0h2al86yb3gh59h4lckwsprc5vavirmr-antlr-4.8/share/java/antlr-4.8-complete.jar *.java && grun Nix start -gui
 // antlr4 NixLexer.g4 && antlr4 NixParser.g4 && javac -cp /nix/store/0h2al86yb3gh59h4lckwsprc5vavirmr-antlr-4.8/share/java/antlr-4.8-complete.jar *.java && cat /etc/nixos/nixpkgs/flake.nix | grun Nix start -gui
 
+// https://nixos.wiki/wiki/Nix_Expression_Language
+
+// https://www.gnu.org/software/bison/manual/html_node/Precedence.html
+
+/*
+TODO
+
+%right IMPL
+%left OR
+%left AND
+%nonassoc EQ NEQ
+%nonassoc '<' '>' LEQ GEQ
+%right UPDATE
+%left NOT
+%left '+' '-'
+%left '*' '/'
+%right CONCAT
+%nonassoc '?'
+%nonassoc NEGATE
+
+ */
 
 
 // https://tomassetti.me/improving-the-performance-of-an-antlr-parser/
