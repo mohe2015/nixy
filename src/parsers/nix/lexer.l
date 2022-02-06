@@ -4,8 +4,8 @@
   // https://westes.github.io/flex/manual/How-do-I-expand-backslash_002descape-sequences-in-C_002dstyle-quoted-strings_003f.html
   // https://westes.github.io/flex/manual/Actions.html#Actions
   // https://stackoverflow.com/questions/656703/how-does-flex-support-bison-location-exactly
+  // https://westes.github.io/flex/manual/Cxx.html#Cxx
 
-%option reentrant bison-bridge bison-locations
 %option noyywrap
 %option never-interactive
 %option stack
@@ -22,19 +22,18 @@
 
 
 %{
-#include "parser-tab.hh"
 
 // backup to recover from yyless(0)
-yy::location prev_yylloc;
+YYLTYPE prev_yylloc;
 
-static void initLoc(yy::location * loc)
+static void initLoc(YYLTYPE * loc)
 {
     loc->begin.line = loc->end.line = 1;
     loc->begin.column = loc->end.column = 1;
 }
 
 
-static void adjustLoc(yy::location * loc, const char * s, size_t len)
+static void adjustLoc(YYLTYPE * loc, const char * s, size_t len)
 {
     prev_yylloc = *loc;
 
