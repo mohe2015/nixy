@@ -3,12 +3,16 @@
 // https://www.gnu.org/software/bison/manual/html_node/C_002b_002b-Variants.html
 // https://stackoverflow.com/questions/42857386/bison-c-glr-parser-using-variants
 // https://www.gnu.org/software/bison/manual/html_node/C_002b_002b-Location-Values.html
+// https://www.gnu.org/software/bison/manual/html_node/_0025define-Summary.html
+// https://www.gnu.org/software/bison/manual/html_node/Complete-Symbols.html
 
 %require "3.8"
 %skeleton "glr2.cc"
 %glr-parser
 %locations
 %define parse.error verbose
+%define api.location.type {YYLTYPE}
+%define api.value.type variant
 %defines
 /* %no-lines */
 %parse-param { void * scanner }
@@ -25,6 +29,13 @@
 
 import <string>;
 
+typedef struct YYLTYPE
+{
+  int first_line;
+  int first_column;
+  int last_line;
+  int last_column;
+} YYLTYPE;
 
     struct ParseData
     {
@@ -305,9 +316,11 @@ void yyerror(yy::location * loc, yyscan_t scanner, ParseData * data, const char 
 
 %}
 
+/*
 %union {
+    int i;
   // !!! We're probably leaking stuff here.
-  /*nix::Expr * e;
+  nix::Expr * e;
   nix::ExprList * list;
   nix::ExprAttrs * attrs;
   nix::ParserFormals * formals;
@@ -320,8 +333,9 @@ void yyerror(yy::location * loc, yyscan_t scanner, ParseData * data, const char 
   StringToken str;
   std::vector<nix::AttrName> * attrNames;
   std::vector<std::pair<nix::Pos, nix::Expr *> > * string_parts;
-  std::vector<std::pair<nix::Pos, std::variant<nix::Expr *, StringToken> > > * ind_string_parts;*/
+  std::vector<std::pair<nix::Pos, std::variant<nix::Expr *, StringToken> > > * ind_string_parts;
 }
+*/
 
 %type <e> start expr expr_function expr_if expr_op
 %type <e> expr_select expr_simple expr_app
