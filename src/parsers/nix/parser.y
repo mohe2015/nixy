@@ -6,6 +6,9 @@
 // https://www.gnu.org/software/bison/manual/html_node/_0025define-Summary.html
 // https://www.gnu.org/software/bison/manual/html_node/Complete-Symbols.html
 
+// for non glr:
+// bison --output=src/parsers/nix/parser-tab.cc src/parsers/nix/parser.y -Wcounterexamples
+
 %require "3.8"
 %skeleton "glr2.cc"
 %glr-parser
