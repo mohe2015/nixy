@@ -1,4 +1,5 @@
-// GNU Lesser General Public License v2.1 https://github.com/NixOS/nix/blob/0a7746603eda58c4b368e977e87d0aa4db397f5b/src/libexpr/lexer.l
+  // GNU Lesser General Public License v2.1 https://github.com/NixOS/nix/blob/0a7746603eda58c4b368e977e87d0aa4db397f5b/src/libexpr/lexer.l
+  // https://westes.github.io/flex/manual/
 
 %option reentrant bison-bridge bison-locations
 %option noyywrap

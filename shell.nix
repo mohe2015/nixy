@@ -2,6 +2,6 @@
 with import <nixpkgs> {};
 llvmPackages_13.libcxxStdenv.mkDerivation {
   name = "clang-nix-shell";
-  nativeBuildInputs = [ antlr4 ];
+  nativeBuildInputs = [ flex bison ];
   buildInputs = [ /* add libraries here */ ];
 }

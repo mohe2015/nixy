@@ -39,3 +39,6 @@ antlr/
 *.interp
 *.java
 *.tokens
+
+src/parsers/nix/lexer-tab.cc
+src/parsers/nix/lexer-tab.hh
