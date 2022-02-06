@@ -42,3 +42,6 @@ antlr/
 
 src/parsers/nix/lexer-tab.cc
 src/parsers/nix/lexer-tab.hh
+src/parsers/nix/parser-tab.cc
+src/parsers/nix/parser-tab.hh
+src/parsers/nix/location.hh

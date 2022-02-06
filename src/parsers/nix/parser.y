@@ -10,9 +10,9 @@
 %defines
 /* %no-lines */
 %parse-param { void * scanner }
-%parse-param { nix::ParseData * data }
+%parse-param { ParseData * data }
 %lex-param { void * scanner }
-%lex-param { nix::ParseData * data }
+%lex-param { ParseData * data }
 %expect 1
 %expect-rr 1
 
@@ -21,12 +21,12 @@
 #ifndef BISON_HEADER
 #define BISON_HEADER
 
-#include <variant>
+import <string>;
 
 
     struct ParseData
     {
-        EvalState & state;
+       /* EvalState & state;
         SymbolTable & symbols;
         Expr * result;
         Path basePath;
@@ -36,12 +36,12 @@
         ParseData(EvalState & state)
             : state(state)
             , symbols(state.symbols)
-            { };
+            { };*/
     };
 
     struct ParserFormals {
-        std::vector<Formal> formals;
-        bool ellipsis = false;
+      /*  std::vector<Formal> formals;
+        bool ellipsis = false;*/
     };
 
 
@@ -305,7 +305,7 @@ void yyerror(YYLTYPE * loc, yyscan_t scanner, ParseData * data, const char * err
 
 %union {
   // !!! We're probably leaking stuff here.
-  nix::Expr * e;
+  /*nix::Expr * e;
   nix::ExprList * list;
   nix::ExprAttrs * attrs;
   nix::ParserFormals * formals;
@@ -318,7 +318,7 @@ void yyerror(YYLTYPE * loc, yyscan_t scanner, ParseData * data, const char * err
   StringToken str;
   std::vector<nix::AttrName> * attrNames;
   std::vector<std::pair<nix::Pos, nix::Expr *> > * string_parts;
-  std::vector<std::pair<nix::Pos, std::variant<nix::Expr *, StringToken> > > * ind_string_parts;
+  std::vector<std::pair<nix::Pos, std::variant<nix::Expr *, StringToken> > > * ind_string_parts;*/
 }
 
 %type <e> start expr expr_function expr_if expr_op
