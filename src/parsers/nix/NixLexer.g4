@@ -159,8 +159,11 @@ PATH_START2: HPATH_START -> mode(INPATH_SLASH_MODE);
 mode INPATH_MODE;
 INPATH1: '${' -> mode(INPATH_MODE), pushMode(DEFAULT_MODE), type(DOLLAR_CURLY);
 INPATH2: (PATH | PATH_SEG | PATH_CHAR+) -> mode(INPATH_MODE), type(STR); // TODO FIXME
-INPATH3: (ANY | EOF) -> popMode, type(PATH_END); // TODO FIXME reparse (I think we unfortunately need custom code for this)
+INPATH3: SEMICOLON -> popMode, type(SEMICOLON);
+INPATH4: WS -> popMode, skip;
+INPATH5: EOF -> popMode, type(EOF); // TODO FIXME reparse (I think we unfortunately need custom code for this)
 // the alternative may be to duplicate all transitions from the start part?
+
 
 // https://github.com/NixOS/nix/blob/0a7746603eda58c4b368e977e87d0aa4db397f5b/src/libexpr/lexer.l#L255
 mode INPATH_SLASH_MODE;
