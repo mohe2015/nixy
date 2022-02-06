@@ -2,6 +2,8 @@
 
 // https://www.gnu.org/software/bison/manual/html_node/C_002b_002b-Variants.html
 // https://stackoverflow.com/questions/42857386/bison-c-glr-parser-using-variants
+// https://www.gnu.org/software/bison/manual/html_node/C_002b_002b-Location-Values.html
+
 %require "3.8"
 %skeleton "glr2.cc"
 %glr-parser
@@ -55,7 +57,7 @@ struct StringToken {
 };
 
 #define YY_DECL int yylex \
-    (YYSTYPE * yylval_param, YYLTYPE * yylloc_param, yyscan_t yyscanner, nix::ParseData * data)
+    (YYSTYPE * yylval_param, yy::location * yylloc_param, yyscan_t yyscanner, nix::ParseData * data)
 
 #endif
 
@@ -281,7 +283,7 @@ static Expr * stripIndentation(const Pos & pos, SymbolTable & symbols,
 }
 
 
-static inline Pos makeCurPos(const YYLTYPE & loc, ParseData * data)
+static inline Pos makeCurPos(const yy::location & loc, ParseData * data)
 {
     return Pos(data->origin, data->file, loc.first_line, loc.first_column);
 }
@@ -292,7 +294,7 @@ static inline Pos makeCurPos(const YYLTYPE & loc, ParseData * data)
 }
 
 
-void yyerror(YYLTYPE * loc, yyscan_t scanner, ParseData * data, const char * error)
+void yyerror(yy::location * loc, yyscan_t scanner, ParseData * data, const char * error)
 {
     data->error = {
         .msg = hintfmt(error),

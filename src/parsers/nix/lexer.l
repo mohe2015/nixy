@@ -25,21 +25,21 @@
 #include "parser-tab.hh"
 
 // backup to recover from yyless(0)
-YYLTYPE prev_yylloc;
+yy::location prev_yylloc;
 
-static void initLoc(YYLTYPE * loc)
+static void initLoc(yy::location * loc)
 {
-    loc->first_line = loc->last_line = 1;
-    loc->first_column = loc->last_column = 1;
+    loc->begin.line = loc->end.line = 1;
+    loc->begin.column = loc->end.column = 1;
 }
 
 
-static void adjustLoc(YYLTYPE * loc, const char * s, size_t len)
+static void adjustLoc(yy::location * loc, const char * s, size_t len)
 {
     prev_yylloc = *loc;
 
-    loc->first_line = loc->last_line;
-    loc->first_column = loc->last_column;
+    loc->begin.line = loc->end.line;
+    loc->begin.column = loc->end.column;
 
     for (size_t i = 0; i < len; i++) {
        switch (*s++) {
@@ -50,11 +50,11 @@ static void adjustLoc(YYLTYPE * loc, const char * s, size_t len)
            }
            /* fall through */
        case '\n':
-           ++loc->last_line;
-           loc->last_column = 1;
+           ++loc->end.line;
+           loc->end.column = 1;
            break;
        default:
-           ++loc->last_column;
+           ++loc->end.column;
        }
     }
 }
@@ -62,7 +62,7 @@ static void adjustLoc(YYLTYPE * loc, const char * s, size_t len)
 
 // we make use of the fact that the parser receives a private copy of the input
 // string and can munge around in it.
-static StringToken unescapeStr(SymbolTable & symbols, char * s, size_t length)
+static StringToken unescapeStr(/*SymbolTable & symbols, */char * s, size_t length)
 {
     char * result = s;
     char * t = s;
@@ -170,7 +170,7 @@ or          { return OR_KW; }
                 /* It is impossible to match strings ending with '$' with one
                    regex because trailing contexts are only valid at the end
                    of a rule. (A sane but undocumented limitation.) */
-                yylval->str = unescapeStr(data->symbols, yytext, yyleng);
+                yylval->str = unescapeStr(yytext, yyleng);
                 return STR;
               }
 <STRING>\$\{  { PUSH_STATE(DEFAULT); return DOLLAR_CURLY; }
@@ -198,7 +198,7 @@ or          { return OR_KW; }
                    return IND_STR;
                  }
 <IND_STRING>\'\'\\{ANY} {
-                   yylval->str = unescapeStr(data->symbols, yytext + 2, yyleng - 2);
+                   yylval->str = unescapeStr(yytext + 2, yyleng - 2);
                    return IND_STR;
                  }
 <IND_STRING>\$\{ { PUSH_STATE(DEFAULT); return DOLLAR_CURLY; }

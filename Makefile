@@ -10,7 +10,7 @@ src/parsers/nix/parser-tab.cc src/parsers/nix/parser-tab.hh src/parsers/nix/loca
 	bison --output=src/parsers/nix/parser-tab.cc src/parsers/nix/parser.y || exit 0
 
 clean:
-	rm src/parsers/nix/lexer-tab.cc src/parsers/nix/lexer-tab.hh src/parsers/nix/parser-tab.cc src/parsers/nix/parser-tab.hh src/parsers/nix/location.hh
+	rm -f src/parsers/nix/lexer-tab.cc src/parsers/nix/lexer-tab.hh src/parsers/nix/parser-tab.cc src/parsers/nix/parser-tab.hh src/parsers/nix/location.hh
 
 diff:
 	clear
