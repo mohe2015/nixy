@@ -55,16 +55,16 @@ pub enum NixTokenType<'a> {
 }
 
 #[derive(Debug)]
-pub struct NixToken {
-    pub token_type: NixTokenType,
+pub struct NixToken<'a> {
+    pub token_type: NixTokenType<'a>,
     pub location: SourceLocation,
 }
 
 
-pub struct NixLexer(pub Vec<u8>);
+pub struct NixLexer<'a>(pub &'a [u8]);
 
-impl Iterator for NixLexer {
-    type Item = NixToken;
+impl<'a> Iterator for NixLexer<'a> {
+    type Item = NixToken<'a>;
 
     fn next(&mut self) -> Option<Self::Item> {
 
