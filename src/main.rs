@@ -9,7 +9,7 @@ fn main() -> Result<()> {
 
     let file = fs::read("/etc/nixos/nixpkgs/flake.nix")?;
 
-    let lexer = NixLexer::new(file.iter().peekable());
+    let lexer = NixLexer::new(&file);
 
     for token in lexer {
         println!("{:?}", token);

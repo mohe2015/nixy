@@ -1,5 +1,6 @@
-use std::{slice::Iter, iter::Peekable};
+use std::{slice::Iter, iter::{Peekable, Enumerate}};
 
+// https://wduquette.github.io/parsing-strings-into-slices/
 
 #[derive(Debug)]
 pub struct SourcePosition {
@@ -63,15 +64,17 @@ pub struct NixToken<'a> {
 }
 
 pub struct NixLexer<'a>{
-    pub iter: Peekable<Iter<'a, u8>>,
+    pub data: &'a [u8],
+    pub iter: Peekable<Enumerate<Iter<'a, u8>>>,
     line_start: bool,
 }
 
 impl<'a> NixLexer<'a> {
 
-    pub fn new(iter: Peekable<Iter<'a, u8>>) -> Self {
+    pub fn new(data: &'a [u8]) -> Self {
         Self { 
-            iter: iter,
+            data,
+            iter: data.into_iter().enumerate().peekable(),
             line_start: true,
         }
     }
@@ -82,29 +85,29 @@ impl<'a> Iterator for NixLexer<'a> {
 
     fn next(&mut self) -> Option<Self::Item> {
         match self.iter.next() {
-            //Some(b'i') => Some(NixToken { token_type: NixTokenType::If }),
-            Some(b'{') => Some(NixToken { token_type: NixTokenType::CurlyOpen }),
-            Some(b'#') if self.line_start => {
-                loop {
-                    match self.iter.next() {
-                        Some(b'\n') => {
-                            break;
-                        }
-                        _ => ()
-                    }
-                }
+            Some((offset, b'{')) => {
+                Some(NixToken { token_type: NixTokenType::CurlyOpen })
+            },
+            Some((offset, b'#')) if self.line_start => {
+                let end = self.iter.find(|(_, c)| **c == b'\n');
+                let comment = &self.data[offset..=end.map(|v| v.0).unwrap_or(usize::MAX)];
+                println!("{:?}", std::str::from_utf8(comment));
                 Some(NixToken { token_type: NixTokenType::SingleLineComment })
             },
-            Some(b' ') | Some(b'\t') | Some(b'\r') | Some(b'\n') => {
+            Some((_, b' ')) | Some((_, b'\t')) | Some((_, b'\r')) | Some((_, b'\n')) => {
                 loop {
                     match self.iter.peek() {
-                        Some(b' ') | Some(b'\t') | Some(b'\r') | Some(b'\n') => {
+                        Some((_, b' ')) | Some((_, b'\t')) | Some((_, b'\r')) | Some((_, b'\n')) => {
                             self.iter.next();
                         }
                         _ => break
                     }
                 }
                 Some(NixToken { token_type: NixTokenType::Whitespace })
+            },
+            Some((_, b'A'..=b'Z')) => {
+            
+                Some(NixToken { token_type: NixTokenType::Identifier(self.data) })
             },
             None => None,
             _ => todo!()
