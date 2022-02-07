@@ -51,7 +51,8 @@ export struct Iterator
     Token operator->() { return currentToken; }
     Iterator& operator++() { return *this; }  
     friend bool operator== (const Iterator& a, const Iterator& b) { return false; };
-    friend bool operator!= (const Iterator& a, const Iterator& b) { return true; };  
+    Iterator& begin() { return *this; }
+    Iterator& end() { return *this; }
 
 private:
     std::ifstream input;
@@ -64,7 +65,7 @@ export int main() {
     std::ifstream f("/etc/nixos/nixpkgs/flake.nix");
         
     for (auto& elem : Iterator(std::move(f))) {
-        std::cout << elem << std::endl;
+        //std::cout << elem << std::endl;
     }
 
     return 0;
