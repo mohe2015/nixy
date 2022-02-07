@@ -36,6 +36,8 @@ pub enum NixTokenType<'a> {
     InterpolateEnd,
     CurlyOpen,
     CurlyClose,
+    ParenOpen,
+    ParenClose,
     Whitespace,
     SingleLineComment,
     MultiLineComment,
@@ -63,6 +65,8 @@ pub enum NixTokenType<'a> {
     Semicolon,
     Colon,
     Select,
+    Comma,
+    AtSign,
 }
 
 #[derive(Debug)]
@@ -108,6 +112,12 @@ impl<'a> Iterator for NixLexer<'a> {
                 Some((offset, b'}')) => Some(NixToken {
                     token_type: NixTokenType::CurlyClose,
                 }),
+                Some((offset, b'(')) => Some(NixToken {
+                    token_type: NixTokenType::ParenOpen,
+                }),
+                Some((offset, b')')) => Some(NixToken {
+                    token_type: NixTokenType::ParenClose,
+                }),
                 Some((offset, b':')) => Some(NixToken {
                     token_type: NixTokenType::Colon,
                 }),
@@ -117,16 +127,36 @@ impl<'a> Iterator for NixLexer<'a> {
                 Some((offset, b';')) => Some(NixToken {
                     token_type: NixTokenType::Semicolon,
                 }),
+                Some((offset, b',')) => Some(NixToken {
+                    token_type: NixTokenType::Comma,
+                }),
+                Some((offset, b'@')) => Some(NixToken {
+                    token_type: NixTokenType::AtSign,
+                }),
                 Some((offset, b'.')) => {
                     // ./ for path
+                    // ... for ellipsis
                     // or select
-                    if let Some((_, b'/')) = self.iter.peek() {
-                        self.state.push(NixLexerState::Path);
-                        self.next()
-                    } else {
-                        Some(NixToken {
+
+                    match self.iter.peek() {
+                        Some((_, b'/')) => {
+                            self.state.push(NixLexerState::Path);
+                            self.next()
+                        }
+                        Some((_, b'.')) => {
+                            self.iter.next();
+                            match self.iter.next() {
+                                Some((_, b'.')) => {
+                                    Some(NixToken {
+                                        token_type: NixTokenType::Ellipsis,
+                                    })
+                                }
+                                _ => todo!()
+                            }
+                        }
+                        _ => Some(NixToken {
                             token_type: NixTokenType::Select,
-                        })
+                        }),
                     }
                 }
                 Some((offset, b'"')) => {
@@ -188,7 +218,7 @@ impl<'a> Iterator for NixLexer<'a> {
             },
             Some(NixLexerState::String) => {
                 let start = self.iter.peek().unwrap().0; // TODO FIXME throw proper parse error (maybe error token)
-                
+
                 // $ read
                 // peek for {
                 // if it is one? we need to revert to before it?
@@ -199,22 +229,21 @@ impl<'a> Iterator for NixLexer<'a> {
                     match self.iter.next() {
                         Some((offset, b'"')) => {
                             self.state.pop();
-                            
+
                             let string = &self.data[start..offset];
                             println!("{:?}", std::str::from_utf8(string));
                             break Some(NixToken {
                                 token_type: NixTokenType::String(string),
-                            })
+                            });
                         }
-                        Some((offset, char)) => {
-                        }
+                        Some((offset, char)) => {}
                         _ => todo!(),
                     }
                 }
-            },
+            }
             Some(NixLexerState::Path) => {
                 let start = self.iter.peek().unwrap().0; // TODO FIXME throw proper parse error (maybe error token)
-                
+
                 // $ read
                 // peek for {
                 // if it is one? we need to revert to before it?
@@ -224,23 +253,23 @@ impl<'a> Iterator for NixLexer<'a> {
                 loop {
                     match self.iter.peek() {
                         Some((_, b'a'..=b'z'))
-                            | Some((_, b'A'..=b'Z'))
-                            | Some((_, b'0'..=b'9'))
-                            | Some((_, b'.'))
-                            | Some((_, b'_'))
-                            | Some((_, b'-')) 
-                            | Some((_, b'+'))
-                            | Some((_, b'/')) => {
+                        | Some((_, b'A'..=b'Z'))
+                        | Some((_, b'0'..=b'9'))
+                        | Some((_, b'.'))
+                        | Some((_, b'_'))
+                        | Some((_, b'-'))
+                        | Some((_, b'+'))
+                        | Some((_, b'/')) => {
                             self.iter.next();
                         }
                         Some((offset, _)) => {
                             self.state.pop();
-                            
-                            let path = &self.data[start-1..*offset];
+
+                            let path = &self.data[start - 1..*offset];
                             println!("{:?}", std::str::from_utf8(path));
                             break Some(NixToken {
                                 token_type: NixTokenType::PathSegment(path),
-                            })
+                            });
                         }
                         _ => todo!(),
                     }
