@@ -60,6 +60,8 @@ pub enum NixTokenType<'a> {
     Update,
     Concatenate,
     Assign,
+    Semicolon,
+    Colon,
 }
 
 #[derive(Debug)]
@@ -100,8 +102,17 @@ impl<'a> Iterator for NixLexer<'a> {
                 Some((offset, b'{')) => Some(NixToken {
                     token_type: NixTokenType::CurlyOpen,
                 }),
+                Some((offset, b'}')) => Some(NixToken {
+                    token_type: NixTokenType::CurlyClose,
+                }),
+                Some((offset, b':')) => Some(NixToken {
+                    token_type: NixTokenType::Colon,
+                }),
                 Some((offset, b'=')) => Some(NixToken {
                     token_type: NixTokenType::Assign,
+                }),
+                Some((offset, b';')) => Some(NixToken {
+                    token_type: NixTokenType::Semicolon,
                 }),
                 Some((offset, b'"')) => {
                     self.state.push(NixLexerState::String);
