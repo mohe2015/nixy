@@ -1,4 +1,4 @@
-use std::slice::Iter;
+use std::{slice::Iter, iter::Peekable};
 
 
 #[derive(Debug)]
@@ -63,13 +63,13 @@ pub struct NixToken<'a> {
 }
 
 pub struct NixLexer<'a>{
-    pub iter: Iter<'a, u8>,
+    pub iter: Peekable<Iter<'a, u8>>,
     line_start: bool,
 }
 
 impl<'a> NixLexer<'a> {
 
-    pub fn new(iter: Iter<'a, u8>) -> Self {
+    pub fn new(iter: Peekable<Iter<'a, u8>>) -> Self {
         Self { 
             iter: iter,
             line_start: true,
@@ -84,7 +84,28 @@ impl<'a> Iterator for NixLexer<'a> {
         match self.iter.next() {
             //Some(b'i') => Some(NixToken { token_type: NixTokenType::If }),
             Some(b'{') => Some(NixToken { token_type: NixTokenType::CurlyOpen }),
-            Some(b'#') if self.line_start => Some(NixToken { token_type: NixTokenType::SingleLineComment }),
+            Some(b'#') if self.line_start => {
+                loop {
+                    match self.iter.next() {
+                        Some(b'\n') => {
+                            break;
+                        }
+                        _ => ()
+                    }
+                }
+                Some(NixToken { token_type: NixTokenType::SingleLineComment })
+            },
+            Some(b' ') | Some(b'\t') | Some(b'\r') | Some(b'\n') => {
+                loop {
+                    match self.iter.peek() {
+                        Some(b' ') | Some(b'\t') | Some(b'\r') | Some(b'\n') => {
+                            self.iter.next();
+                        }
+                        _ => break
+                    }
+                }
+                Some(NixToken { token_type: NixTokenType::Whitespace })
+            },
             None => None,
             _ => todo!()
         }
