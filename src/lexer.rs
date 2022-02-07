@@ -1,3 +1,5 @@
+use std::slice::Iter;
+
 
 #[derive(Debug)]
 pub struct SourcePosition {
@@ -57,18 +59,34 @@ pub enum NixTokenType<'a> {
 #[derive(Debug)]
 pub struct NixToken<'a> {
     pub token_type: NixTokenType<'a>,
-    pub location: SourceLocation,
+    //pub location: SourceLocation,
 }
 
+pub struct NixLexer<'a>{
+    pub iter: Iter<'a, u8>,
+    line_start: bool,
+}
 
-pub struct NixLexer<'a>(pub &'a [u8]);
+impl<'a> NixLexer<'a> {
+
+    pub fn new(iter: Iter<'a, u8>) -> Self {
+        Self { 
+            iter: iter,
+            line_start: true,
+        }
+    }
+}
 
 impl<'a> Iterator for NixLexer<'a> {
     type Item = NixToken<'a>;
 
     fn next(&mut self) -> Option<Self::Item> {
-
-        
-        todo!()
+        match self.iter.next() {
+            //Some(b'i') => Some(NixToken { token_type: NixTokenType::If }),
+            Some(b'{') => Some(NixToken { token_type: NixTokenType::CurlyOpen }),
+            Some(b'#') if self.line_start => Some(NixToken { token_type: NixTokenType::SingleLineComment }),
+            None => None,
+            _ => todo!()
+        }
     }
 }
