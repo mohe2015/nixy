@@ -38,6 +38,8 @@ pub enum NixTokenType<'a> {
     CurlyClose,
     ParenOpen,
     ParenClose,
+    BracketOpen,
+    BracketClose,
     Whitespace,
     SingleLineComment,
     MultiLineComment,
@@ -118,6 +120,12 @@ impl<'a> Iterator for NixLexer<'a> {
                 Some((offset, b')')) => Some(NixToken {
                     token_type: NixTokenType::ParenClose,
                 }),
+                Some((offset, b'[')) => Some(NixToken {
+                    token_type: NixTokenType::BracketOpen,
+                }),
+                Some((offset, b']')) => Some(NixToken {
+                    token_type: NixTokenType::BracketClose,
+                }),
                 Some((offset, b':')) => Some(NixToken {
                     token_type: NixTokenType::Colon,
                 }),
@@ -133,6 +141,22 @@ impl<'a> Iterator for NixLexer<'a> {
                 Some((offset, b'@')) => Some(NixToken {
                     token_type: NixTokenType::AtSign,
                 }),
+                Some((offset, b'/')) => match self.iter.next() {
+                    Some((_, b'/')) => {
+                        Some(NixToken {
+                            token_type: NixTokenType::Update,
+                        })
+                    }
+                    _ => todo!()
+                }
+                Some((offset, b'+')) => match self.iter.next() {
+                    Some((_, b'+')) => {
+                        Some(NixToken {
+                            token_type: NixTokenType::Concatenate,
+                        })
+                    }
+                    _ => todo!()
+                }
                 Some((offset, b'.')) => {
                     // ./ for path
                     // ... for ellipsis
