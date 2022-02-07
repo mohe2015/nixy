@@ -94,7 +94,7 @@ impl<'a> Iterator for NixLexer<'a> {
                 println!("{:?}", std::str::from_utf8(comment));
                 Some(NixToken { token_type: NixTokenType::SingleLineComment })
             },
-            Some((_, b' ')) | Some((_, b'\t')) | Some((_, b'\r')) | Some((_, b'\n')) => {
+            Some((offset, b' ')) | Some((offset, b'\t')) | Some((offset, b'\r')) | Some((offset, b'\n')) => {
                 loop {
                     match self.iter.peek() {
                         Some((_, b' ')) | Some((_, b'\t')) | Some((_, b'\r')) | Some((_, b'\n')) => {
@@ -103,6 +103,8 @@ impl<'a> Iterator for NixLexer<'a> {
                         _ => break
                     }
                 }
+                let whitespace = &self.data[offset..self.iter.peek().unwrap().0];
+                println!("{:?}", std::str::from_utf8(whitespace));
                 Some(NixToken { token_type: NixTokenType::Whitespace })
             },
             Some((_, b'A'..=b'Z')) => {
