@@ -58,6 +58,7 @@ pub enum NixTokenType<'a> {
     Implies,
     Update,
     Concatenate,
+    Assign,
 }
 
 #[derive(Debug)]
@@ -90,6 +91,13 @@ impl<'a> Iterator for NixLexer<'a> {
             Some((offset, b'{')) => Some(NixToken {
                 token_type: NixTokenType::CurlyOpen,
             }),
+            Some((offset, b'=')) => Some(NixToken {
+                token_type: NixTokenType::Assign,
+            }),
+            Some((offset, b'"')) => {
+                
+                
+            }
             Some((offset, b'#')) if self.line_start => {
                 let end = self.iter.find(|(_, c)| **c == b'\n');
                 let comment = &self.data[offset..=end.map(|v| v.0).unwrap_or(usize::MAX)];
