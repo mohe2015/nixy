@@ -107,9 +107,19 @@ impl<'a> Iterator for NixLexer<'a> {
                 println!("{:?}", std::str::from_utf8(whitespace));
                 Some(NixToken { token_type: NixTokenType::Whitespace })
             },
-            Some((_, b'A'..=b'Z')) => {
-            
-                Some(NixToken { token_type: NixTokenType::Identifier(self.data) })
+            // this can be literally anything (path, ..)
+            Some((offset, b'a'..=b'z')) | Some((offset, b'A'..=b'Z')) | Some((offset, b'_')) => {
+                loop {
+                    match self.iter.peek() {
+                        Some((_, b'a'..=b'z')) | Some((_, b'A'..=b'Z')) | Some((_, b'0'..=b'9')) | Some((_, b'_')) | Some((_, b'\'')) | Some((_, b'-'))  => {
+                            self.iter.next();
+                        }
+                        _ => break
+                    }
+                }
+                let identifier = &self.data[offset..self.iter.peek().unwrap().0];
+                println!("{:?}", std::str::from_utf8(identifier));
+                Some(NixToken { token_type: NixTokenType::Identifier(identifier) })
             },
             None => None,
             _ => todo!()
