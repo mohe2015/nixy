@@ -62,6 +62,7 @@ pub enum NixTokenType<'a> {
     Assign,
     Semicolon,
     Colon,
+    Select,
 }
 
 #[derive(Debug)]
@@ -73,6 +74,7 @@ pub struct NixToken<'a> {
 enum NixLexerState {
     Default,
     String,
+    Path,
 }
 
 pub struct NixLexer<'a> {
@@ -96,6 +98,7 @@ impl<'a> NixLexer<'a> {
 impl<'a> Iterator for NixLexer<'a> {
     type Item = NixToken<'a>;
 
+    // TODO keywords import let in
     fn next(&mut self) -> Option<Self::Item> {
         match self.state.last() {
             Some(NixLexerState::Default) => match self.iter.next() {
@@ -114,6 +117,18 @@ impl<'a> Iterator for NixLexer<'a> {
                 Some((offset, b';')) => Some(NixToken {
                     token_type: NixTokenType::Semicolon,
                 }),
+                Some((offset, b'.')) => {
+                    // ./ for path
+                    // or select
+                    if let Some((_, b'/')) = self.iter.peek() {
+                        self.state.push(NixLexerState::Path);
+                        self.next()
+                    } else {
+                        Some(NixToken {
+                            token_type: NixTokenType::Select,
+                        })
+                    }
+                }
                 Some((offset, b'"')) => {
                     self.state.push(NixLexerState::String);
                     self.next()
@@ -192,6 +207,40 @@ impl<'a> Iterator for NixLexer<'a> {
                             })
                         }
                         Some((offset, char)) => {
+                        }
+                        _ => todo!(),
+                    }
+                }
+            },
+            Some(NixLexerState::Path) => {
+                let start = self.iter.peek().unwrap().0; // TODO FIXME throw proper parse error (maybe error token)
+                
+                // $ read
+                // peek for {
+                // if it is one? we need to revert to before it?
+                // I think we need to do slice magic to peekahead of this or somehow get a two-ahead peeker.
+                // rust should probably have a constant peekahead iterator
+
+                loop {
+                    match self.iter.peek() {
+                        Some((_, b'a'..=b'z'))
+                            | Some((_, b'A'..=b'Z'))
+                            | Some((_, b'0'..=b'9'))
+                            | Some((_, b'.'))
+                            | Some((_, b'_'))
+                            | Some((_, b'-')) 
+                            | Some((_, b'+'))
+                            | Some((_, b'/')) => {
+                            self.iter.next();
+                        }
+                        Some((offset, _)) => {
+                            self.state.pop();
+                            
+                            let path = &self.data[start-1..*offset];
+                            println!("{:?}", std::str::from_utf8(path));
+                            break Some(NixToken {
+                                token_type: NixTokenType::PathSegment(path),
+                            })
                         }
                         _ => todo!(),
                     }
