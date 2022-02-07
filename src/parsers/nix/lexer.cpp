@@ -21,6 +21,7 @@ import <iostream>;
 import <fstream>;
 import <sstream>;
 import <iterator>;
+import <concepts>;
 //import <format>;
 
 // https://nixos.wiki/wiki/Nix_Expression_Language
@@ -28,39 +29,42 @@ import <iterator>;
 /*
 DESIGN:
 We need to read in the file somehow so either in blocks or the whole file (this memory allocation can not be prevented)
-For memory locality it may make sense to then do one reallocation which removes all comments, whitespace etc.
+For memory locality it may make sense to then do one reallocation which removes all comments, whitespace etc. (and also unescapes?)
 */
+
+// https://en.cppreference.com/w/cpp/iterator#C.2B.2B20_iterator_concepts
+// https://en.cppreference.com/w/cpp/named_req/ForwardIterator
+
+export struct Token {
+
+};
 
 export struct Iterator 
 {
-    using iterator_category = std::forward_iterator_tag;
-    using difference_type   = std::ptrdiff_t;
-    using value_type        = int;
-    using pointer           = int*;
-    using reference         = int&;
+    using iterator_category = std::input_iterator_tag;
+    using value_type        = Token;
+    using reference         = const Token&;
 
-    Iterator(pointer ptr) : m_ptr(ptr) {}
+    Iterator(std::ifstream input) : input(std::move(input)) {}
 
-    reference operator*() const { return *m_ptr; }
-    pointer operator->() { return m_ptr; }
-    Iterator& operator++() { m_ptr++; return *this; }  
-    Iterator operator++(int) { Iterator tmp = *this; ++(*this); return tmp; }
-    friend bool operator== (const Iterator& a, const Iterator& b) { return a.m_ptr == b.m_ptr; };
-    friend bool operator!= (const Iterator& a, const Iterator& b) { return a.m_ptr != b.m_ptr; };  
+    reference operator*() const { return currentToken; }
+    Token operator->() { return currentToken; }
+    Iterator& operator++() { return *this; }  
+    friend bool operator== (const Iterator& a, const Iterator& b) { return false; };
+    friend bool operator!= (const Iterator& a, const Iterator& b) { return true; };  
 
 private:
-    pointer m_ptr;
+    std::ifstream input;
+    Token currentToken;
 };
 
 export int main() {
     std::cout << "Hello world!" << std::endl;
 
     std::ifstream f("/etc/nixos/nixpkgs/flake.nix");
-    if(f) {
-        std::ostringstream ss;
-        ss << f.rdbuf(); // reading data
-        std::string str = ss.str();
-        //parse(str);
+        
+    for (auto& elem : Iterator(std::move(f))) {
+        std::cout << elem << std::endl;
     }
 
     return 0;
