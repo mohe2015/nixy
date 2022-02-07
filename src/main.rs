@@ -7,7 +7,7 @@ pub mod lexer;
 fn main() -> Result<()> {
     println!("Hello, world!");
 
-    let file = fs::read_to_string("/etc/nixos/nixpkgs/flake.nix")?;
+    let file = fs::read("/etc/nixos/nixpkgs/flake.nix")?;
 
     let lexer = NixLexer(file);
 

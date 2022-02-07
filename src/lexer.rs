@@ -1,9 +1,60 @@
 
+#[derive(Debug)]
+pub struct SourcePosition {
+    pub line: u16,
+    pub column: u16,
+}
 
 #[derive(Debug)]
-pub struct NixToken {}
+pub struct SourceLocation {
+    pub start_location: SourcePosition,
+    pub end_location: SourcePosition,
+}
 
-pub struct NixLexer(pub String);
+#[derive(Debug)]
+pub enum NixTokenType<'a> {
+    Identifier(&'a [u8]),
+    Integer(i64),
+    // FLOAT,
+    PathStart,
+    PathSegment,
+    PathEnd,
+    StringStart,
+    String,
+    StringEnd,
+    IndentedStringStart,
+    IndentedString,
+    IndentedStringEnd,
+    // URI,
+    If,
+    Then,
+    Else,
+    Assert,
+    With,
+    Let,
+    In,
+    Rec,
+    Inherit,
+    Or,
+    Ellipsis,
+    Equals,
+    NotEquals,
+    LessThanOrEqual,
+    GreaterThanOrEqual,
+    And,
+    Implies,
+    Update,
+    Concatenate,
+}
+
+#[derive(Debug)]
+pub struct NixToken {
+    pub token_type: NixTokenType,
+    pub location: SourceLocation,
+}
+
+
+pub struct NixLexer(pub Vec<u8>);
 
 impl Iterator for NixLexer {
     type Item = NixToken;
