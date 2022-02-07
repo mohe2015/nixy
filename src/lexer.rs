@@ -24,13 +24,13 @@ pub enum NixTokenType<'a> {
     Integer(i64),
     // Float,
     PathStart,
-    PathSegment,
+    PathSegment(&'a [u8]),
     PathEnd,
     StringStart,
-    String,
+    String(&'a [u8]),
     StringEnd,
     IndentedStringStart,
-    IndentedString,
+    IndentedString(&'a [u8]),
     IndentedStringEnd,
     InterpolateStart,
     InterpolateEnd,
@@ -104,7 +104,8 @@ impl<'a> Iterator for NixLexer<'a> {
                     token_type: NixTokenType::Assign,
                 }),
                 Some((offset, b'"')) => {
-                    todo!()
+                    self.state.push(NixLexerState::String);
+                    self.next()
                 }
                 Some((offset, b'#')) if self.line_start => {
                     let end = self.iter.find(|(_, c)| **c == b'\n');
@@ -160,7 +161,30 @@ impl<'a> Iterator for NixLexer<'a> {
                 _ => todo!(),
             },
             Some(NixLexerState::String) => {
-                todo!()
+                let start = self.iter.peek().unwrap().0; // TODO FIXME throw proper parse error (maybe error token)
+                
+                // $ read
+                // peek for {
+                // if it is one? we need to revert to before it?
+                // I think we need to do slice magic to peekahead of this or somehow get a two-ahead peeker.
+                // rust should probably have a constant peekahead iterator
+
+                loop {
+                    match self.iter.next() {
+                        Some((offset, b'"')) => {
+                            self.state.pop();
+                            
+                            let string = &self.data[start..offset];
+                            println!("{:?}", std::str::from_utf8(string));
+                            break Some(NixToken {
+                                token_type: NixTokenType::String(string),
+                            })
+                        }
+                        Some((offset, char)) => {
+                        }
+                        _ => todo!(),
+                    }
+                }
             }
             None => todo!(),
         }
