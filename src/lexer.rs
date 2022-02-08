@@ -95,7 +95,7 @@ impl<'a> NixLexer<'a> {
     pub fn new(data: &'a [u8]) -> Self {
         Self {
             data,
-            iter: data.into_iter().enumerate().peekable(),
+            iter: data.iter().enumerate().peekable(),
             state: vec![NixLexerState::Default],
             line_start: true,
         }
@@ -109,62 +109,58 @@ impl<'a> Iterator for NixLexer<'a> {
     fn next(&mut self) -> Option<Self::Item> {
         match self.state.last() {
             Some(NixLexerState::Default) => match self.iter.next() {
-                Some((offset, b'{')) => { 
+                Some((_offset, b'{')) => {
                     self.state.push(NixLexerState::Default);
                     Some(NixToken {
                         token_type: NixTokenType::CurlyOpen,
                     })
                 }
-                Some((offset, b'}')) => {
+                Some((_offset, b'}')) => {
                     self.state.pop();
                     Some(NixToken {
                         token_type: NixTokenType::CurlyClose,
                     })
                 }
-                Some((offset, b'(')) => Some(NixToken {
+                Some((_offset, b'(')) => Some(NixToken {
                     token_type: NixTokenType::ParenOpen,
                 }),
-                Some((offset, b')')) => Some(NixToken {
+                Some((_offset, b')')) => Some(NixToken {
                     token_type: NixTokenType::ParenClose,
                 }),
-                Some((offset, b'[')) => Some(NixToken {
+                Some((_offset, b'[')) => Some(NixToken {
                     token_type: NixTokenType::BracketOpen,
                 }),
-                Some((offset, b']')) => Some(NixToken {
+                Some((_offset, b']')) => Some(NixToken {
                     token_type: NixTokenType::BracketClose,
                 }),
-                Some((offset, b':')) => Some(NixToken {
+                Some((_offset, b':')) => Some(NixToken {
                     token_type: NixTokenType::Colon,
                 }),
-                Some((offset, b'=')) => Some(NixToken {
+                Some((_offset, b'=')) => Some(NixToken {
                     token_type: NixTokenType::Assign,
                 }),
-                Some((offset, b';')) => Some(NixToken {
+                Some((_offset, b';')) => Some(NixToken {
                     token_type: NixTokenType::Semicolon,
                 }),
-                Some((offset, b',')) => Some(NixToken {
+                Some((_offset, b',')) => Some(NixToken {
                     token_type: NixTokenType::Comma,
                 }),
-                Some((offset, b'@')) => Some(NixToken {
+                Some((_offset, b'@')) => Some(NixToken {
                     token_type: NixTokenType::AtSign,
                 }),
-                Some((offset, b'/')) => match self.iter.next() {
-                    Some((_, b'/')) => {
-                        Some(NixToken {
-                            token_type: NixTokenType::Update,
-                        })
-                    }
-                    _ => todo!()
-                }
-                Some((offset, b'+')) => match self.iter.next() {
-                    Some((_, b'+')) => {
-                        Some(NixToken {
-                            token_type: NixTokenType::Concatenate,
-                        })
-                    }
-                    _ => todo!()
-                }
-                Some((offset, b'.')) => {
+                Some((_offset, b'/')) => match self.iter.next() {
+                    Some((_, b'/')) => Some(NixToken {
+                        token_type: NixTokenType::Update,
+                    }),
+                    _ => todo!(),
+                },
+                Some((_offset, b'+')) => match self.iter.next() {
+                    Some((_, b'+')) => Some(NixToken {
+                        token_type: NixTokenType::Concatenate,
+                    }),
+                    _ => todo!(),
+                },
+                Some((_offset, b'.')) => {
                     // ./ for path
                     // ... for ellipsis
                     // or select
@@ -177,12 +173,10 @@ impl<'a> Iterator for NixLexer<'a> {
                         Some((_, b'.')) => {
                             self.iter.next();
                             match self.iter.next() {
-                                Some((_, b'.')) => {
-                                    Some(NixToken {
-                                        token_type: NixTokenType::Ellipsis,
-                                    })
-                                }
-                                _ => todo!()
+                                Some((_, b'.')) => Some(NixToken {
+                                    token_type: NixTokenType::Ellipsis,
+                                }),
+                                _ => todo!(),
                             }
                         }
                         _ => Some(NixToken {
@@ -190,7 +184,7 @@ impl<'a> Iterator for NixLexer<'a> {
                         }),
                     }
                 }
-                Some((offset, b'"')) => {
+                Some((_offset, b'"')) => {
                     self.state.push(NixLexerState::String);
                     self.next()
                 }
@@ -267,7 +261,7 @@ impl<'a> Iterator for NixLexer<'a> {
                                 token_type: NixTokenType::String(string),
                             });
                         }
-                        Some((offset, char)) => {}
+                        Some((_offset, _char)) => {}
                         _ => todo!(),
                     }
                 }
