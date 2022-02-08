@@ -268,11 +268,15 @@ impl<'a> Iterator for NixLexer<'a> {
                 Some((_offset, b'!')) => Some(NixToken {
                     token_type: NixTokenType::ExclamationMark,
                 }),
-                Some((offset, b'/')) => match self.iter.next() {
-                    Some((_, b'/')) => Some(NixToken {
+                Some((offset, b'/')) => match self.iter.peek() {
+                    Some((_, b'/')) => { 
+                        self.iter.next();
+                        Some(NixToken {
                         token_type: NixTokenType::Update,
-                    }),
+                    })
+                },
                     Some((_, b'*')) => {
+                        self.iter.next();
                         loop {
                             let current = self.iter.next().unwrap().0;
 
@@ -285,6 +289,18 @@ impl<'a> Iterator for NixLexer<'a> {
                                 });
                             }
                         }
+                    }
+                    Some((_, b'a'..=b'z'))
+                    | Some((_, b'A'..=b'Z'))
+                    | Some((_, b'0'..=b'9'))
+                    | Some((_, b'.'))
+                    | Some((_, b'_'))
+                    | Some((_, b'-'))
+                    | Some((_, b'+')) => {
+                        self.state.push(NixLexerState::Path);
+                        Some(NixToken {
+                            token_type: NixTokenType::PathStart,
+                        })
                     }
                     _ => {
                         panic!("{}", std::str::from_utf8(&self.data[offset..]).unwrap());
@@ -462,7 +478,7 @@ impl<'a> Iterator for NixLexer<'a> {
                     })
                 }
                 None => None,
-                _ => todo!(),
+                Some((offset, _)) => panic!("{}", std::str::from_utf8(&self.data[offset..]).unwrap()),
             },
             state @ (Some(NixLexerState::String) | Some(NixLexerState::IndentedString)) => {
                 let start = self.iter.peek().unwrap().0; // TODO FIXME throw proper parse error (maybe error token)

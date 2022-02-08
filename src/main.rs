@@ -6,7 +6,7 @@ use crate::lexer::NixLexer;
 
 pub mod lexer;
 
-// cargo run |& sort | uniq -c
+// cargo run |& sort | uniq -c | sort -n
 
 fn main() -> Result<()> {
     println!("Hello, world!");
@@ -40,7 +40,7 @@ fn main() -> Result<()> {
         }
     }
 
-    // 51470/51886
+    // 51502/51886
     println!("{}/{}", success, success + failure);
 
     Ok(())
