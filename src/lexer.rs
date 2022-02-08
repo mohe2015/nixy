@@ -90,6 +90,8 @@ pub enum NixTokenType<'a> {
     NotEquals,
     LessThanOrEqual,
     GreaterThanOrEqual,
+    LessThan,
+    GreaterThan,
     And,
     Implies,
     Update,
@@ -135,6 +137,8 @@ impl<'a> fmt::Debug for NixTokenType<'a> {
             Self::InterpolateStart => write!(f, "InterpolateStart"),
             Self::InterpolateEnd => write!(f, "InterpolateEnd"),
             Self::CurlyOpen => write!(f, "CurlyOpen"),
+            Self::GreaterThan => write!(f, "GreaterThan"),
+            Self::LessThan => write!(f, "LessThan"),
             Self::CurlyClose => write!(f, "CurlyClose"),
             Self::ParenOpen => write!(f, "ParenOpen"),
             Self::ParenClose => write!(f, "ParenClose"),
@@ -357,6 +361,16 @@ impl<'a> Iterator for NixLexer<'a> {
                     }
                     _ => todo!(),
                 },
+                Some((_offset, b'>')) => match self.iter.peek() {
+                    Some((_, b'=')) => {
+                        Some(NixToken {
+                            token_type: NixTokenType::GreaterThanOrEqual,
+                        })
+                    }
+                    _ => Some(NixToken {
+                        token_type: NixTokenType::GreaterThan,
+                    }),
+                },
                 Some((offset, b'<')) => {
                     match self.iter.peek() {
                         Some((_, b'a'..=b'z'))
@@ -373,7 +387,15 @@ impl<'a> Iterator for NixLexer<'a> {
                                 token_type: NixTokenType::PathStart,
                             })
                         }
-                        _ => todo!(),
+                        Some((_, b'=')) => {
+                            self.iter.next();
+                            Some(NixToken {
+                                token_type: NixTokenType::LessThanOrEqual,
+                            })
+                        }
+                        _ => Some(NixToken {
+                            token_type: NixTokenType::LessThan,
+                        }),
                     }
                 }
                 Some((_offset, b'.')) => {
