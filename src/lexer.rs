@@ -25,6 +25,20 @@ This kind of string literal intelligently strips indentation from the start of e
 Note that the whitespace and newline following the opening '' is ignored if there is no non-whitespace text on the initial line.
 */
 
+// another idiotic syntax instead of "${bar}"
+// { foo = 123; }.${bar} or 456
+
+// and another one
+// { ${if foo then "bar" else null} = true; }
+
+/*
+A set that has a __functor attribute whose value is callable (i.e. is itself a function or a set with a __functor attribute whose value is callable) can be applied as if it were a function, with the set itself passed in first , e.g.,
+
+let add = { __functor = self: x: x + self.x; };
+    inc = add // { x = 1; };
+in inc 1
+*/
+
 #[derive(Debug)]
 pub struct SourcePosition {
     pub line: u16,
@@ -58,9 +72,9 @@ pub enum NixTokenType<'a> {
     ParenClose,
     BracketOpen,
     BracketClose,
-    Whitespace,
-    SingleLineComment,
-    MultiLineComment,
+    Whitespace(&'a [u8]),
+    SingleLineComment(&'a [u8]),
+    MultiLineComment(&'a [u8]),
     // Uri,
     If,
     Then,
@@ -125,9 +139,18 @@ impl<'a> fmt::Debug for NixTokenType<'a> {
             Self::ParenClose => write!(f, "ParenClose"),
             Self::BracketOpen => write!(f, "BracketOpen"),
             Self::BracketClose => write!(f, "BracketClose"),
-            Self::Whitespace => write!(f, "Whitespace"),
-            Self::SingleLineComment => write!(f, "SingleLineComment"),
-            Self::MultiLineComment => write!(f, "MultiLineComment"),
+            Self::Whitespace(arg0) => f
+                .debug_tuple("Whitespace")
+                .field(&std::str::from_utf8(arg0).unwrap().to_owned())
+                .finish(),
+            Self::SingleLineComment(arg0) => f
+                .debug_tuple("SingleLineComment")
+                .field(&std::str::from_utf8(arg0).unwrap().to_owned())
+                .finish(),
+            Self::MultiLineComment(arg0) => f
+                .debug_tuple("MultiLineComment")
+                .field(&std::str::from_utf8(arg0).unwrap().to_owned())
+                .finish(),
             Self::If => write!(f, "If"),
             Self::Then => write!(f, "Then"),
             Self::Else => write!(f, "Else"),
@@ -243,10 +266,24 @@ impl<'a> Iterator for NixLexer<'a> {
                 Some((_offset, b'!')) => Some(NixToken {
                     token_type: NixTokenType::ExclamationMark,
                 }),
-                Some((_offset, b'/')) => match self.iter.next() {
+                Some((offset, b'/')) => match self.iter.next() {
                     Some((_, b'/')) => Some(NixToken {
                         token_type: NixTokenType::Update,
                     }),
+                    Some((_, b'*')) => {
+                        loop {
+                            let current = self.iter.next().unwrap().0;
+
+                            if self.data[current..].starts_with(b"*/") {
+                                self.iter.next();
+                                let string = &self.data[offset..current];
+                                //println!("{:?}", std::str::from_utf8(string));
+                                break Some(NixToken {
+                                    token_type: NixTokenType::MultiLineComment(string),
+                                });
+                            }
+                        }
+                    }
                     _ => todo!(),
                 },
                 Some((_offset, b'|')) => match self.iter.next() {
@@ -309,7 +346,7 @@ impl<'a> Iterator for NixLexer<'a> {
                     let comment = &self.data[offset..=end.map(|v| v.0).unwrap_or(usize::MAX)];
                     //println!("{:?}", std::str::from_utf8(comment));
                     Some(NixToken {
-                        token_type: NixTokenType::SingleLineComment,
+                        token_type: NixTokenType::SingleLineComment(comment),
                     })
                 }
                 Some((offset, b' '))
@@ -325,7 +362,7 @@ impl<'a> Iterator for NixLexer<'a> {
                     let whitespace = &self.data[offset..end];
                     //println!("{:?}", std::str::from_utf8(whitespace));
                     Some(NixToken {
-                        token_type: NixTokenType::Whitespace,
+                        token_type: NixTokenType::Whitespace(whitespace),
                     })
                 }
                 // this can be literally anything (path, ..)

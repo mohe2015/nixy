@@ -20,7 +20,7 @@ fn main() -> Result<()> {
             let lexer = NixLexer::new(&file);
 
             for token in lexer {
-                println!("{:?}", token);
+                println!("{:?}", token.token_type);
             }
         }
     }
