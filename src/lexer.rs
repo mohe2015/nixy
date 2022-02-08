@@ -1,8 +1,9 @@
 use core::fmt;
 use std::{
+    fmt::Display,
     iter::{Enumerate, Peekable},
     slice::Iter,
-    vec, fmt::Display,
+    vec,
 };
 
 // https://wduquette.github.io/parsing-strings-into-slices/
@@ -93,16 +94,28 @@ pub enum NixTokenType<'a> {
 impl<'a> fmt::Debug for NixTokenType<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Identifier(arg0) => f.debug_tuple("Identifier").field(&std::str::from_utf8(arg0).unwrap().to_owned()).finish(),
+            Self::Identifier(arg0) => f
+                .debug_tuple("Identifier")
+                .field(&std::str::from_utf8(arg0).unwrap().to_owned())
+                .finish(),
             Self::Integer(arg0) => f.debug_tuple("Integer").field(arg0).finish(),
             Self::PathStart => write!(f, "PathStart"),
-            Self::PathSegment(arg0) => f.debug_tuple("PathSegment").field(&std::str::from_utf8(arg0).unwrap().to_owned()).finish(),
+            Self::PathSegment(arg0) => f
+                .debug_tuple("PathSegment")
+                .field(&std::str::from_utf8(arg0).unwrap().to_owned())
+                .finish(),
             Self::PathEnd => write!(f, "PathEnd"),
             Self::StringStart => write!(f, "StringStart"),
-            Self::String(arg0) => f.debug_tuple("String").field(&std::str::from_utf8(arg0).unwrap().to_owned()).finish(),
+            Self::String(arg0) => f
+                .debug_tuple("String")
+                .field(&std::str::from_utf8(arg0).unwrap().to_owned())
+                .finish(),
             Self::StringEnd => write!(f, "StringEnd"),
             Self::IndentedStringStart => write!(f, "IndentedStringStart"),
-            Self::IndentedString(arg0) => f.debug_tuple("IndentedString").field(&std::str::from_utf8(arg0).unwrap().to_owned()).finish(),
+            Self::IndentedString(arg0) => f
+                .debug_tuple("IndentedString")
+                .field(&std::str::from_utf8(arg0).unwrap().to_owned())
+                .finish(),
             Self::IndentedStringEnd => write!(f, "IndentedStringEnd"),
             Self::InterpolateStart => write!(f, "InterpolateStart"),
             Self::InterpolateEnd => write!(f, "InterpolateEnd"),
@@ -371,7 +384,9 @@ impl<'a> Iterator for NixLexer<'a> {
                 }
 
                 // TODO FIXME escaped '''
-                if state == Some(&NixLexerState::IndentedString) && self.data[start..].starts_with(b"''") {
+                if state == Some(&NixLexerState::IndentedString)
+                    && self.data[start..].starts_with(b"''")
+                {
                     self.iter.next();
                     self.iter.next();
 
@@ -407,7 +422,9 @@ impl<'a> Iterator for NixLexer<'a> {
                             token_type: NixTokenType::String(string),
                         });
                     }
-                    if state == Some(&NixLexerState::IndentedString) && self.data[current..].starts_with(b"''") {    
+                    if state == Some(&NixLexerState::IndentedString)
+                        && self.data[current..].starts_with(b"''")
+                    {
                         let string = &self.data[start..current];
                         //println!("{:?}", std::str::from_utf8(string));
                         break Some(NixToken {

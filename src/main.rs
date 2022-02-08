@@ -22,7 +22,6 @@ fn main() -> Result<()> {
             for token in lexer {
                 println!("{:?}", token);
             }
-
         }
     }
 
