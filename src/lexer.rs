@@ -7,6 +7,22 @@ use std::{
 
 // https://wduquette.github.io/parsing-strings-into-slices/
 // https://github.com/NixOS/nix/blob/master/src/libexpr/lexer.l
+// https://learnxinyminutes.com/docs/nix/
+// https://nixos.org/manual/nix/stable/expressions/language-values.html
+
+// cant convert let to lambda because it can refer to itself?
+// their order does not matter? (maybe we could ignore that)
+/*
+ (let y = x + "b";
+       x = "a"; in
+    y + "c")
+*/
+// our lambdas always have 1 parameter (currying)?
+/*
+This kind of string literal intelligently strips indentation from the start of each line. To be precise, it strips from each line a number of spaces equal to the minimal indentation of the string as a whole (disregarding the indentation of empty lines). For instance, the first and second line are indented two spaces, while the third line is indented four spaces. Thus, two spaces are stripped from each line, so the resulting string is
+
+Note that the whitespace and newline following the opening '' is ignored if there is no non-whitespace text on the initial line.
+*/
 
 #[derive(Debug)]
 pub struct SourcePosition {
@@ -136,9 +152,11 @@ pub struct NixToken<'a> {
     //pub location: SourceLocation,
 }
 
+#[derive(PartialEq)]
 enum NixLexerState {
     Default,
     String,
+    IndentedString,
     Path,
 }
 
@@ -230,10 +248,21 @@ impl<'a> Iterator for NixLexer<'a> {
                     }),
                     _ => todo!(),
                 },
+                Some((_offset, b'\'')) => match self.iter.next() {
+                    Some((_, b'\'')) => {
+                        self.state.push(NixLexerState::IndentedString);
+                        Some(NixToken {
+                            token_type: NixTokenType::IndentedStringStart,
+                        })
+                    }
+                    _ => todo!(),
+                },
                 Some((_offset, b'.')) => {
                     // ./ for path
                     // ... for ellipsis
                     // or select
+
+                    // TODO FIXME absolute path
 
                     match self.iter.peek() {
                         Some((_, b'/')) => {
@@ -329,15 +358,26 @@ impl<'a> Iterator for NixLexer<'a> {
                 None => None,
                 _ => todo!(),
             },
-            Some(NixLexerState::String) => {
+            state @ (Some(NixLexerState::String) | Some(NixLexerState::IndentedString)) => {
                 let start = self.iter.peek().unwrap().0; // TODO FIXME throw proper parse error (maybe error token)
 
-                if self.data[start] == b'"' {
+                if state == Some(&NixLexerState::String) && self.data[start] == b'"' {
                     self.iter.next();
 
                     self.state.pop();
                     return Some(NixToken {
                         token_type: NixTokenType::StringEnd,
+                    });
+                }
+
+                // TODO FIXME escaped '''
+                if state == Some(&NixLexerState::IndentedString) && self.data[start..].starts_with(b"''") {
+                    self.iter.next();
+                    self.iter.next();
+
+                    self.state.pop();
+                    return Some(NixToken {
+                        token_type: NixTokenType::IndentedStringEnd,
                     });
                 }
 
@@ -353,7 +393,7 @@ impl<'a> Iterator for NixLexer<'a> {
 
                 loop {
                     let current = self.iter.peek().unwrap().0;
-                    if self.data[current] == b'"' {
+                    if state == Some(&NixLexerState::String) && self.data[current] == b'"' {
                         let string = &self.data[start..current];
                         //println!("{:?}", std::str::from_utf8(string));
                         break Some(NixToken {
@@ -361,15 +401,17 @@ impl<'a> Iterator for NixLexer<'a> {
                         });
                     }
                     if self.data[current..].starts_with(b"${") {
-                        self.iter.next().unwrap();
-                        self.iter.next().unwrap();
-
-                        self.state.push(NixLexerState::Default);
-
                         let string = &self.data[start..current];
                         //println!("{:?}", std::str::from_utf8(string));
                         break Some(NixToken {
                             token_type: NixTokenType::String(string),
+                        });
+                    }
+                    if state == Some(&NixLexerState::IndentedString) && self.data[current..].starts_with(b"''") {    
+                        let string = &self.data[start..current];
+                        //println!("{:?}", std::str::from_utf8(string));
+                        break Some(NixToken {
+                            token_type: NixTokenType::IndentedString(string),
                         });
                     }
                     self.iter.next();
