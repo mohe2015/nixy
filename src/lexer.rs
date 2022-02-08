@@ -71,6 +71,7 @@ pub enum NixTokenType<'a> {
     Comma,
     AtSign,
     QuestionMark,
+    ExclamationMark,
 }
 
 impl<'a> fmt::Debug for NixTokenType<'a> {
@@ -124,6 +125,7 @@ impl<'a> fmt::Debug for NixTokenType<'a> {
             Self::Comma => write!(f, "Comma"),
             Self::AtSign => write!(f, "AtSign"),
             Self::QuestionMark => write!(f, "QuestionMark"),
+            Self::ExclamationMark => write!(f, "ExclamationMark"),
         }
     }
 }
@@ -207,9 +209,18 @@ impl<'a> Iterator for NixLexer<'a> {
                 Some((_offset, b'@')) => Some(NixToken {
                     token_type: NixTokenType::AtSign,
                 }),
+                Some((_offset, b'!')) => Some(NixToken {
+                    token_type: NixTokenType::ExclamationMark,
+                }),
                 Some((_offset, b'/')) => match self.iter.next() {
                     Some((_, b'/')) => Some(NixToken {
                         token_type: NixTokenType::Update,
+                    }),
+                    _ => todo!(),
+                },
+                Some((_offset, b'|')) => match self.iter.next() {
+                    Some((_, b'|')) => Some(NixToken {
+                        token_type: NixTokenType::Or,
                     }),
                     _ => todo!(),
                 },
