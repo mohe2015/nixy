@@ -292,6 +292,12 @@ impl<'a> Iterator for NixLexer<'a> {
                     }),
                     _ => todo!(),
                 },
+                Some((_offset, b'-')) => match self.iter.next() {
+                    Some((_, b'>')) => Some(NixToken {
+                        token_type: NixTokenType::Implies,
+                    }),
+                    _ => todo!(),
+                },
                 Some((_offset, b'&')) => match self.iter.next() {
                     Some((_, b'&')) => Some(NixToken {
                         token_type: NixTokenType::Or,
