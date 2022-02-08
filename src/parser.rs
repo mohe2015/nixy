@@ -1,8 +1,8 @@
-use core::fmt;
-use std::mem::{discriminant, Discriminant};
-use tracing::{instrument, info_span};
 use crate::lexer::{NixToken, NixTokenType};
+use core::fmt;
 use itertools::{multipeek, MultiPeek};
+use std::mem::{discriminant, Discriminant};
+use tracing::{info_span, instrument};
 
 // TODO FIXME expect token primitive
 
@@ -10,7 +10,7 @@ pub enum AST<'a> {
     Select(Box<AST<'a>>, Box<AST<'a>>),
     Identifier(&'a [u8]),
     PathConcatenate(Box<AST<'a>>, Box<AST<'a>>),
-    PathSegment(&'a [u8])
+    PathSegment(&'a [u8]),
 }
 
 impl<'a> fmt::Debug for AST<'a> {
@@ -21,29 +21,34 @@ impl<'a> fmt::Debug for AST<'a> {
                 .debug_tuple("Identifier")
                 .field(&std::str::from_utf8(arg0).unwrap().to_owned())
                 .finish(),
-            Self::PathConcatenate(arg0, arg1) => f.debug_tuple("PathConcatenate").field(arg0).field(arg1).finish(),
+            Self::PathConcatenate(arg0, arg1) => f
+                .debug_tuple("PathConcatenate")
+                .field(arg0)
+                .field(arg1)
+                .finish(),
             Self::PathSegment(arg0) => f
-                    .debug_tuple("PathSegment")
-                    .field(&std::str::from_utf8(arg0).unwrap().to_owned())
-                    .finish(),
+                .debug_tuple("PathSegment")
+                .field(&std::str::from_utf8(arg0).unwrap().to_owned())
+                .finish(),
         }
     }
 }
 
-#[instrument(name="expect", skip_all)]
-pub fn expect<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(lexer: &mut MultiPeek<I>, t: NixTokenType<'a>) {
-    tracing::trace!("Hello, world!");
-
+#[instrument(name = "expect", skip_all, ret)]
+pub fn expect<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
+    lexer: &mut MultiPeek<I>,
+    t: NixTokenType<'a>,
+) {
     let token = lexer.next();
     if discriminant(&token.as_ref().unwrap().token_type) != discriminant(&t) {
         panic!("expected {:?} but got {:?}", &token, t)
     }
 }
 
-#[instrument(name="attrpath", skip_all)]
-pub fn parse_attrpath<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(lexer: &mut MultiPeek<I>) -> AST<'a> {
-    tracing::trace!("Hello, world!");
-
+#[instrument(name = "attrpath", skip_all, ret)]
+pub fn parse_attrpath<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
+    lexer: &mut MultiPeek<I>,
+) -> AST<'a> {
     let mut result: Option<AST<'a>> = None;
     loop {
         match lexer.peek() {
@@ -78,10 +83,10 @@ pub fn parse_attrpath<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(le
     result.unwrap()
 }
 
-#[instrument(name="bind", skip_all)]
-pub fn parse_bind<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(lexer: &mut MultiPeek<I>) {
-    tracing::trace!("Hello, world!");
-
+#[instrument(name = "bind", skip_all, ret)]
+pub fn parse_bind<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
+    lexer: &mut MultiPeek<I>,
+) {
     loop {
         match lexer.peek() {
             Some(NixToken {
@@ -105,12 +110,10 @@ pub fn parse_bind<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(lexer:
     }
 }
 
-#[instrument(name="let", skip_all)]
+#[instrument(name = "let", skip_all, ret)]
 pub fn parse_let<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
     lexer: &mut MultiPeek<I>,
 ) -> Option<AST<'a>> {
-    tracing::trace!("Hello, world!");
-
     loop {
         match lexer.peek() {
             Some(NixToken {
@@ -127,16 +130,13 @@ pub fn parse_let<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
     }
 }
 
-#[instrument(name="path", skip_all)]
+#[instrument(name = "path", skip_all, ret)]
 pub fn parse_path<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
     lexer: &mut MultiPeek<I>,
 ) -> Option<AST<'a>> {
-    tracing::trace!("Hello, world!");
-
     let mut result = None;
     loop {
         let val = lexer.next();
-        tracing::trace!("{:?}", val);
         match val {
             Some(NixToken {
                 token_type: NixTokenType::PathEnd,
@@ -149,22 +149,21 @@ pub fn parse_path<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
                 let expr = parse_expr(lexer).unwrap();
                 expect(lexer, NixTokenType::CurlyClose);
                 match result {
-                    Some(a) => {
-                        result = Some(AST::PathConcatenate(Box::new(a), Box::new(expr)))
-                    }
+                    Some(a) => result = Some(AST::PathConcatenate(Box::new(a), Box::new(expr))),
                     None => result = Some(expr),
                 }
             }
             Some(NixToken {
                 token_type: NixTokenType::PathSegment(segment),
-            }) => {
-                match result {
-                    Some(a) => {
-                        result = Some(AST::PathConcatenate(Box::new(a), Box::new(AST::PathSegment(segment))))
-                    }
-                    None => result = Some(AST::PathSegment(segment)),
+            }) => match result {
+                Some(a) => {
+                    result = Some(AST::PathConcatenate(
+                        Box::new(a),
+                        Box::new(AST::PathSegment(segment)),
+                    ))
                 }
-            }
+                None => result = Some(AST::PathSegment(segment)),
+            },
             _ => {
                 todo!();
             }
@@ -172,14 +171,11 @@ pub fn parse_path<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
     }
 }
 
-#[instrument(name="simple", skip_all)]
+#[instrument(name = "simple", skip_all, ret)]
 pub fn parse_expr_simple<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
     lexer: &mut MultiPeek<I>,
 ) -> Option<AST<'a>> {
-    tracing::trace!("Hello, world!");
-
     let val = lexer.next();
-    tracing::trace!("{:?}", val);
     match val {
         Some(NixToken {
             token_type: NixTokenType::Identifier(id),
@@ -194,23 +190,17 @@ pub fn parse_expr_simple<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>
     }
 }
 
-#[instrument(name="select", skip_all)]
+#[instrument(name = "sel", skip_all, ret)]
 pub fn parse_expr_select<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
     lexer: &mut MultiPeek<I>,
 ) -> Option<AST<'a>> {
-    tracing::trace!("Hello, world!");
-
-    let val = parse_expr_simple(lexer);
-    tracing::trace!("{:?}", val);
-    val
+    parse_expr_simple(lexer)
 }
 
-#[instrument(name="app", skip_all)]
+#[instrument(name = "app", skip_all, ret)]
 pub fn parse_expr_app<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
     lexer: &mut MultiPeek<I>,
 ) -> Option<AST<'a>> {
-    tracing::trace!("Hello, world!");
-
     let mut result: Option<AST<'a>> = None;
     loop {
         let jo = parse_expr_select(lexer);
@@ -231,30 +221,24 @@ pub fn parse_expr_app<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
     result
 }
 
-#[instrument(name="op", skip_all)]
+#[instrument(name = "op", skip_all, ret)]
 pub fn parse_expr_op<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
     lexer: &mut MultiPeek<I>,
 ) -> Option<AST<'a>> {
-    tracing::trace!("Hello, world!");
-
     parse_expr_app(lexer)
 }
 
-#[instrument(name="if", skip_all)]
+#[instrument(name = "if", skip_all, ret)]
 pub fn parse_expr_if<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
     lexer: &mut MultiPeek<I>,
 ) -> Option<AST<'a>> {
-    tracing::trace!("Hello, world!");
-
     parse_expr_op(lexer)
 }
 
-#[instrument(name="function", skip_all)]
+#[instrument(name = "f", skip_all, ret)]
 pub fn parse_expr_function<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
     lexer: &mut MultiPeek<I>,
 ) -> Option<AST<'a>> {
-    tracing::trace!("Hello, world!");
-
     let token = lexer.next();
     match token.map(|t| t.token_type) {
         Some(NixTokenType::Identifier(b"let")) => {
@@ -265,19 +249,19 @@ pub fn parse_expr_function<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debu
     }
 }
 
-#[instrument(name="expr", skip_all)]
+#[instrument(name = "e", skip_all, ret)]
 pub fn parse_expr<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
     lexer: &mut MultiPeek<I>,
 ) -> Option<AST<'a>> {
-    tracing::trace!("Hello, world!");
-
     let result = parse_expr_function(lexer);
     assert_eq!(None, lexer.next());
     result
 }
 
-#[instrument(name="p", skip_all)]
-pub fn parse<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(lexer: &mut I) -> Option<AST<'a>> {
+#[instrument(name = "p", skip_all, ret)]
+pub fn parse<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
+    lexer: &mut I,
+) -> Option<AST<'a>> {
     tracing::trace!("Hello, world!");
 
     parse_expr(&mut multipeek(lexer))

@@ -1,8 +1,8 @@
 use std::panic;
 use std::{fs, io::Result};
-use walkdir::WalkDir;
 use tracing::{info, Level};
-use tracing_subscriber::{FmtSubscriber, fmt::format::FmtSpan};
+use tracing_subscriber::{fmt::format::FmtSpan, FmtSubscriber};
+use walkdir::WalkDir;
 
 use crate::{
     lexer::{NixLexer, NixTokenType},
@@ -16,13 +16,11 @@ pub mod parser;
 
 fn main() -> Result<()> {
     let subscriber = tracing_subscriber::fmt()
-    //.with_span_events(FmtSpan::ACTIVE)
-    .with_max_level(Level::TRACE)
-    .finish();
+        .with_span_events(FmtSpan::ACTIVE)
+        .with_max_level(Level::TRACE)
+        .finish();
 
     tracing::subscriber::set_global_default(subscriber).unwrap();
-
-    tracing::trace!("Hello, world!");
 
     let mut success = 0;
     let mut failure = 0;
