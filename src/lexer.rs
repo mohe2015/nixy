@@ -103,6 +103,7 @@ pub enum NixTokenType<'a> {
     QuestionMark,
     ExclamationMark,
     Addition,
+    Subtraction,
 }
 
 impl<'a> fmt::Debug for NixTokenType<'a> {
@@ -155,6 +156,7 @@ impl<'a> fmt::Debug for NixTokenType<'a> {
             Self::If => write!(f, "If"),
             Self::Then => write!(f, "Then"),
             Self::Else => write!(f, "Else"),
+            Self::Subtraction => write!(f, "Subtraction"),
             Self::Assert => write!(f, "Assert"),
             Self::With => write!(f, "With"),
             Self::Let => write!(f, "Let"),
@@ -269,12 +271,12 @@ impl<'a> Iterator for NixLexer<'a> {
                     token_type: NixTokenType::ExclamationMark,
                 }),
                 Some((offset, b'/')) => match self.iter.peek() {
-                    Some((_, b'/')) => { 
+                    Some((_, b'/')) => {
                         self.iter.next();
                         Some(NixToken {
-                        token_type: NixTokenType::Update,
-                    })
-                },
+                            token_type: NixTokenType::Update,
+                        })
+                    }
                     Some((_, b'*')) => {
                         self.iter.next();
                         loop {
@@ -316,7 +318,9 @@ impl<'a> Iterator for NixLexer<'a> {
                     Some((_, b'>')) => Some(NixToken {
                         token_type: NixTokenType::Implies,
                     }),
-                    _ => todo!(),
+                    _ => Some(NixToken {
+                        token_type: NixTokenType::Subtraction,
+                    }),
                 },
                 Some((_offset, b'&')) => match self.iter.next() {
                     Some((_, b'&')) => Some(NixToken {
@@ -478,7 +482,9 @@ impl<'a> Iterator for NixLexer<'a> {
                     })
                 }
                 None => None,
-                Some((offset, _)) => panic!("{}", std::str::from_utf8(&self.data[offset..]).unwrap()),
+                Some((offset, _)) => {
+                    panic!("{}", std::str::from_utf8(&self.data[offset..]).unwrap())
+                }
             },
             state @ (Some(NixLexerState::String) | Some(NixLexerState::IndentedString)) => {
                 let start = self.iter.peek().unwrap().0; // TODO FIXME throw proper parse error (maybe error token)
