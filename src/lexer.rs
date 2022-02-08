@@ -196,6 +196,7 @@ enum NixLexerState {
     String,
     IndentedString,
     Path,
+    SearchPath
 }
 
 pub struct NixLexer<'a> {
@@ -337,6 +338,25 @@ impl<'a> Iterator for NixLexer<'a> {
                     }
                     _ => todo!(),
                 },
+                Some((offset, b'<')) => {
+                    match self.iter.peek() {
+                        Some((_, b'a'..=b'z'))
+                        | Some((_, b'A'..=b'Z'))
+                        | Some((_, b'0'..=b'9'))
+                        | Some((_, b'.'))
+                        | Some((_, b'_'))
+                        | Some((_, b'-'))
+                        | Some((_, b'+'))
+                        | Some((_, b'/')) => {
+                            self.state.push(NixLexerState::SearchPath);
+                            // TODO FIXME SearchPath
+                            Some(NixToken {
+                                token_type: NixTokenType::PathStart,
+                            })
+                        }
+                        _ => todo!()
+                    }
+                }
                 Some((_offset, b'.')) => {
                     // ./ for path
                     // ../ for path
@@ -508,7 +528,7 @@ impl<'a> Iterator for NixLexer<'a> {
                     self.iter.next();
                 }
             }
-            Some(NixLexerState::Path) => {
+            state @ (Some(NixLexerState::Path) | Some(NixLexerState::SearchPath))  => {
                 let start = self.iter.peek().unwrap().0; // TODO FIXME throw proper parse error (maybe error token)
 
                 // $ read
@@ -528,6 +548,21 @@ impl<'a> Iterator for NixLexer<'a> {
                         | Some((_, b'+'))
                         | Some((_, b'/')) => {
                             self.iter.next();
+                        }
+                        Some((offset, b'>')) if state == Some(&NixLexerState::SearchPath) => {
+                            if start == *offset {
+                                self.iter.next();
+                                self.state.pop();
+                                break Some(NixToken {
+                                    token_type: NixTokenType::PathEnd,
+                                });
+                            } else {
+                                let path = &self.data[start - 1..*offset];
+                                //println!("{:?}", std::str::from_utf8(path));
+                                break Some(NixToken {
+                                    token_type: NixTokenType::PathSegment(path),
+                                });
+                            }
                         }
                         Some((offset, _)) => {
                             if start == *offset {
