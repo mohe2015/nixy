@@ -240,26 +240,41 @@ impl<'a> Iterator for NixLexer<'a> {
             Some(NixLexerState::String) => {
                 let start = self.iter.peek().unwrap().0; // TODO FIXME throw proper parse error (maybe error token)
 
-                // $ read
-                // peek for {
-                // if it is one? we need to revert to before it?
-                // I think we need to do slice magic to peekahead of this or somehow get a two-ahead peeker.
-                // rust should probably have a constant peekahead iterator
+                if self.data[start..].starts_with(b"${") {
+                    self.iter.next();
+                    self.iter.next();
+
+                    self.state.push(NixLexerState::Default);
+                    return Some(NixToken {
+                        token_type: NixTokenType::InterpolateStart,
+                    });
+                }
 
                 loop {
-                    match self.iter.next() {
-                        Some((offset, b'"')) => {
-                            self.state.pop();
+                    let current = self.iter.peek().unwrap().0;
+                    if self.data[current] == b'"' {
+                        let (offset, _) = self.iter.next().unwrap(); // TODO FIXME
+                        self.state.pop();
 
-                            let string = &self.data[start..offset];
-                            println!("{:?}", std::str::from_utf8(string));
-                            break Some(NixToken {
-                                token_type: NixTokenType::String(string),
-                            });
-                        }
-                        Some((_offset, _char)) => {}
-                        _ => todo!(),
+                        let string = &self.data[start..offset];
+                        println!("{:?}", std::str::from_utf8(string));
+                        break Some(NixToken {
+                            token_type: NixTokenType::String(string),
+                        });
                     }
+                    if self.data[current..].starts_with(b"${") {
+                        let (offset, _) = self.iter.next().unwrap(); // TODO FIXME
+                        self.iter.next().unwrap();
+
+                        self.state.push(NixLexerState::Default);
+
+                        let string = &self.data[start..current];
+                        println!("{:?}", std::str::from_utf8(string));
+                        break Some(NixToken {
+                            token_type: NixTokenType::String(string),
+                        });
+                    }
+                    self.iter.next();
                 }
             }
             Some(NixLexerState::Path) => {
