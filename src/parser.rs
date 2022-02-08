@@ -9,6 +9,8 @@ use itertools::{multipeek, MultiPeek};
 pub enum AST<'a> {
     Select(Box<AST<'a>>, Box<AST<'a>>),
     Identifier(&'a [u8]),
+    PathConcatenate(Box<AST<'a>>, Box<AST<'a>>),
+    PathSegment(&'a [u8])
 }
 
 impl<'a> fmt::Debug for AST<'a> {
@@ -19,6 +21,11 @@ impl<'a> fmt::Debug for AST<'a> {
                 .debug_tuple("Identifier")
                 .field(&std::str::from_utf8(arg0).unwrap().to_owned())
                 .finish(),
+            Self::PathConcatenate(arg0, arg1) => f.debug_tuple("PathConcatenate").field(arg0).field(arg1).finish(),
+            Self::PathSegment(arg0) => f
+                    .debug_tuple("PathSegment")
+                    .field(&std::str::from_utf8(arg0).unwrap().to_owned())
+                    .finish(),
         }
     }
 }
@@ -126,22 +133,38 @@ pub fn parse_path<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
 ) -> Option<AST<'a>> {
     tracing::trace!("Hello, world!");
 
+    let mut result = None;
     loop {
-        match lexer.next() {
+        let val = lexer.next();
+        tracing::trace!("{:?}", val);
+        match val {
             Some(NixToken {
                 token_type: NixTokenType::PathEnd,
             }) => {
-                break None;
+                break result;
             }
             Some(NixToken {
                 token_type: NixTokenType::InterpolateStart,
             }) => {
-                parse_expr(lexer);
+                let expr = parse_expr(lexer).unwrap();
                 expect(lexer, NixTokenType::CurlyClose);
+                match result {
+                    Some(a) => {
+                        result = Some(AST::PathConcatenate(Box::new(a), Box::new(expr)))
+                    }
+                    None => result = Some(expr),
+                }
             }
             Some(NixToken {
                 token_type: NixTokenType::PathSegment(segment),
-            }) => {}
+            }) => {
+                match result {
+                    Some(a) => {
+                        result = Some(AST::PathConcatenate(Box::new(a), Box::new(AST::PathSegment(segment))))
+                    }
+                    None => result = Some(AST::PathSegment(segment)),
+                }
+            }
             _ => {
                 todo!();
             }
