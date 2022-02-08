@@ -200,7 +200,7 @@ pub struct NixToken<'a> {
     //pub location: SourceLocation,
 }
 
-#[derive(PartialEq, Clone)]
+#[derive(PartialEq, Clone, Debug)]
 enum NixLexerState {
     Default,
     String,
@@ -210,7 +210,7 @@ enum NixLexerState {
     HomePath,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct NixLexer<'a> {
     pub data: &'a [u8],
     pub iter: Peekable<Enumerate<Iter<'a, u8>>>,

@@ -8,3 +8,5 @@ edition = "2021"
 [dependencies]
 walkdir = "2"
 itertools = "0.10"
+tracing = { version = "0.1", features = ["attributes"] }
+tracing-subscriber = "0.3"
