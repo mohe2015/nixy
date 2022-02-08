@@ -6,6 +6,8 @@ use crate::lexer::NixLexer;
 
 pub mod lexer;
 
+// cargo run |& sort | uniq -c
+
 fn main() -> Result<()> {
     println!("Hello, world!");
 
@@ -26,14 +28,14 @@ fn main() -> Result<()> {
                 let lexer = NixLexer::new(&file);
 
                 for token in lexer {
-                    //println!("{:?}", token.token_type);
+                    println!("{:?}", token.token_type);
                 }
             };
         }) {
             Ok(_) => success += 1,
             Err(_) => {
                 failure += 1;
-                println!("{}", path.display());
+                panic!("{}", path.display());
             }
         }
     }

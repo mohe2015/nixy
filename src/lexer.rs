@@ -103,6 +103,7 @@ pub enum NixTokenType<'a> {
     AtSign,
     QuestionMark,
     ExclamationMark,
+    Addition,
 }
 
 impl<'a> fmt::Debug for NixTokenType<'a> {
@@ -137,6 +138,7 @@ impl<'a> fmt::Debug for NixTokenType<'a> {
             Self::CurlyClose => write!(f, "CurlyClose"),
             Self::ParenOpen => write!(f, "ParenOpen"),
             Self::ParenClose => write!(f, "ParenClose"),
+            Self::Addition => write!(f, "Addition"),
             Self::BracketOpen => write!(f, "BracketOpen"),
             Self::BracketClose => write!(f, "BracketClose"),
             Self::Whitespace(arg0) => f
@@ -284,7 +286,9 @@ impl<'a> Iterator for NixLexer<'a> {
                             }
                         }
                     }
-                    _ => todo!(),
+                    _ => {
+                        panic!("{}", std::str::from_utf8(&self.data[offset..]).unwrap());
+                    },
                 },
                 Some((_offset, b'|')) => match self.iter.next() {
                     Some((_, b'|')) => Some(NixToken {
@@ -313,11 +317,16 @@ impl<'a> Iterator for NixLexer<'a> {
                     }
                     _ => todo!(),
                 },
-                Some((_offset, b'+')) => match self.iter.next() {
-                    Some((_, b'+')) => Some(NixToken {
-                        token_type: NixTokenType::Concatenate,
+                Some((_offset, b'+')) => match self.iter.peek() {
+                    Some((_, b'+')) => {
+                        self.iter.next();
+                        Some(NixToken {
+                            token_type: NixTokenType::Concatenate,
+                        })
+                    }
+                    _ => Some(NixToken {
+                        token_type: NixTokenType::Addition,
                     }),
-                    _ => todo!(),
                 },
                 Some((_offset, b'\'')) => match self.iter.next() {
                     Some((_, b'\'')) => {
