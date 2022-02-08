@@ -200,14 +200,10 @@ impl<'a> Iterator for NixLexer<'a> {
                 | Some((offset, b'\t'))
                 | Some((offset, b'\r'))
                 | Some((offset, b'\n')) => {
-                    loop {
-                        match self.iter.peek() {
-                            Some((_, b' ')) | Some((_, b'\t')) | Some((_, b'\r'))
-                            | Some((_, b'\n')) => {
-                                self.iter.next();
-                            }
-                            _ => break,
-                        }
+                    while let Some((_, b' ')) | Some((_, b'\t')) | Some((_, b'\r'))
+                    | Some((_, b'\n')) = self.iter.peek()
+                    {
+                        self.iter.next();
                     }
                     let whitespace = &self.data[offset..self.iter.peek().unwrap().0];
                     println!("{:?}", std::str::from_utf8(whitespace));
