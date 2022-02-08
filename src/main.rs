@@ -40,6 +40,7 @@ fn main() -> Result<()> {
         }
     }
 
+    // 50620/51886
     println!("{}/{}", success, success + failure);
 
     Ok(())

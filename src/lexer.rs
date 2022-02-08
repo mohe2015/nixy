@@ -1,6 +1,5 @@
 use core::fmt;
 use std::{
-    fmt::Display,
     iter::{Enumerate, Peekable},
     slice::Iter,
     vec,
@@ -468,63 +467,59 @@ impl<'a> Iterator for NixLexer<'a> {
             state @ (Some(NixLexerState::String) | Some(NixLexerState::IndentedString)) => {
                 let start = self.iter.peek().unwrap().0; // TODO FIXME throw proper parse error (maybe error token)
 
-                if state == Some(&NixLexerState::String) && self.data[start] == b'"' {
-                    self.iter.next();
-
-                    self.state.pop();
-                    return Some(NixToken {
-                        token_type: NixTokenType::StringEnd,
-                    });
-                }
-
-                // TODO FIXME escaped '''
-                if state == Some(&NixLexerState::IndentedString)
-                    && self.data[start..].starts_with(b"''")
-                {
-                    self.iter.next();
-                    self.iter.next();
-
-                    self.state.pop();
-                    return Some(NixToken {
-                        token_type: NixTokenType::IndentedStringEnd,
-                    });
-                }
-
-                // TODO FIXME ''${
-                if self.data[start..].starts_with(b"${") {
-                    self.iter.next();
-                    self.iter.next();
-
-                    self.state.push(NixLexerState::Default);
-                    return Some(NixToken {
-                        token_type: NixTokenType::InterpolateStart,
-                    });
-                }
-
                 loop {
                     let current = self.iter.peek().unwrap().0;
                     if state == Some(&NixLexerState::String) && self.data[current] == b'"' {
-                        let string = &self.data[start..current];
-                        //println!("{:?}", std::str::from_utf8(string));
-                        break Some(NixToken {
-                            token_type: NixTokenType::String(string),
-                        });
+                        if current == start {
+                            self.iter.next();
+
+                            self.state.pop();
+                            return Some(NixToken {
+                                token_type: NixTokenType::StringEnd,
+                            });
+                        } else {
+                            let string = &self.data[start..current];
+                            //println!("{:?}", std::str::from_utf8(string));
+                            break Some(NixToken {
+                                token_type: NixTokenType::String(string),
+                            });
+                        }
                     }
                     if self.data[current..].starts_with(b"${") {
-                        let string = &self.data[start..current];
-                        //println!("{:?}", std::str::from_utf8(string));
-                        break Some(NixToken {
-                            token_type: NixTokenType::String(string),
-                        });
+                        if current == start {
+                            self.iter.next();
+                            self.iter.next();
+
+                            self.state.push(NixLexerState::Default);
+                            return Some(NixToken {
+                                token_type: NixTokenType::InterpolateStart,
+                            });
+                        } else {
+                            let string = &self.data[start..current];
+                            //println!("{:?}", std::str::from_utf8(string));
+                            break Some(NixToken {
+                                token_type: NixTokenType::String(string),
+                            });
+                        }
                     }
                     if state == Some(&NixLexerState::IndentedString)
                         && self.data[current..].starts_with(b"''")
                     {
-                        let string = &self.data[start..current];
-                        //println!("{:?}", std::str::from_utf8(string));
-                        break Some(NixToken {
-                            token_type: NixTokenType::IndentedString(string),
-                        });
+                        if current == start {
+                            self.iter.next();
+                            self.iter.next();
+
+                            self.state.pop();
+                            return Some(NixToken {
+                                token_type: NixTokenType::IndentedStringEnd,
+                            });
+                        } else {
+                            let string = &self.data[start..current];
+                            //println!("{:?}", std::str::from_utf8(string));
+                            break Some(NixToken {
+                                token_type: NixTokenType::IndentedString(string),
+                            });
+                        }
                     }
                     self.iter.next();
                 }
