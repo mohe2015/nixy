@@ -7,10 +7,12 @@ use tracing::{info_span, instrument};
 // TODO FIXME expect token primitive
 
 pub enum AST<'a> {
+    // TODO FIXME specify stricter types?
     Select(Box<AST<'a>>, Box<AST<'a>>),
     Identifier(&'a [u8]),
     PathConcatenate(Box<AST<'a>>, Box<AST<'a>>),
     PathSegment(&'a [u8]),
+    Bind(Box<AST<'a>>, Box<AST<'a>>),
 }
 
 impl<'a> fmt::Debug for AST<'a> {
@@ -23,6 +25,11 @@ impl<'a> fmt::Debug for AST<'a> {
                 .finish(),
             Self::PathConcatenate(arg0, arg1) => f
                 .debug_tuple("PathConcatenate")
+                .field(arg0)
+                .field(arg1)
+                .finish(),
+                Self::Bind(arg0, arg1) => f
+                .debug_tuple("Bind")
                 .field(arg0)
                 .field(arg1)
                 .finish(),
@@ -86,26 +93,23 @@ pub fn parse_attrpath<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
 #[instrument(name = "bind", skip_all, ret)]
 pub fn parse_bind<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
     lexer: &mut MultiPeek<I>,
-) {
-    loop {
-        match lexer.peek() {
-            Some(NixToken {
-                token_type: NixTokenType::Identifier(b"inherit"),
-            }) => {
-                lexer.next();
-                todo!();
-                break;
-            }
-            _ => {
-                lexer.reset_peek();
-                let attrpath = parse_attrpath(lexer);
-                println!("{:?}", attrpath);
-                expect(lexer, NixTokenType::Assign);
-                parse_expr(lexer);
-                expect(lexer, NixTokenType::Semicolon);
+) -> AST<'a> {
+    match lexer.peek() {
+        Some(NixToken {
+            token_type: NixTokenType::Identifier(b"inherit"),
+        }) => {
+            lexer.next();
+            todo!();
+        }
+        _ => {
+            lexer.reset_peek();
+            let attrpath = parse_attrpath(lexer);
+            println!("{:?}", attrpath);
+            expect(lexer, NixTokenType::Assign);
+            let expr = parse_expr(lexer).unwrap();
+            expect(lexer, NixTokenType::Semicolon);
 
-                todo!();
-            }
+            AST::Bind(Box::new(attrpath), Box::new(expr))
         }
     }
 }
@@ -114,26 +118,44 @@ pub fn parse_bind<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
 pub fn parse_let<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
     lexer: &mut MultiPeek<I>,
 ) -> Option<AST<'a>> {
+    let result = None;
+    let current = None;
     loop {
         match lexer.peek() {
             Some(NixToken {
                 token_type: NixTokenType::In,
             }) => {
                 lexer.next();
-                break None;
+
+                let body = parse_expr_function(lexer);
+
+                current.1 = body;
+                break result;
             }
             _ => {
                 lexer.reset_peek();
-                parse_bind(lexer);
+                let bind = parse_bind(lexer);
+
+                match result {
+                    Some(a) => {
+                        current.1 = AST::Let(bind, fakeBody);
+                        current = current.1;
+                    }
+                    None => {
+                        result = current = AST::Let(bind, fakeBody);
+                    },
+                }
             }
         }
     }
+    result
 }
 
 #[instrument(name = "path", skip_all, ret)]
 pub fn parse_path<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
     lexer: &mut MultiPeek<I>,
 ) -> Option<AST<'a>> {
+    expect(lexer, NixTokenType::PathStart);
     let mut result = None;
     loop {
         let val = lexer.next();
@@ -175,18 +197,19 @@ pub fn parse_path<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
 pub fn parse_expr_simple<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
     lexer: &mut MultiPeek<I>,
 ) -> Option<AST<'a>> {
-    let val = lexer.next();
+    let val = lexer.peek();
     match val {
         Some(NixToken {
             token_type: NixTokenType::Identifier(id),
-        }) => Some(AST::Identifier(id)),
+        }) => {
+            let ret = Some(AST::Identifier(id));
+            lexer.next();
+            ret
+        },
         Some(NixToken {
             token_type: NixTokenType::PathStart,
         }) => parse_path(lexer),
-        other => {
-            // TODO FIXME return None
-            panic!("{:?}", other);
-        }
+        other => None
     }
 }
 
@@ -207,6 +230,7 @@ pub fn parse_expr_app<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
         match jo {
             Some(expr) => {
                 match result {
+                    // TODO FIXME apply?
                     Some(a) => result = Some(AST::Select(Box::new(a), Box::new(expr))),
                     None => result = Some(expr),
                 }
@@ -235,7 +259,7 @@ pub fn parse_expr_if<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
     parse_expr_op(lexer)
 }
 
-#[instrument(name = "f", skip_all, ret)]
+#[instrument(name = "fn", skip_all, ret)]
 pub fn parse_expr_function<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
     lexer: &mut MultiPeek<I>,
 ) -> Option<AST<'a>> {
