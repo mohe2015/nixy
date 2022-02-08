@@ -5,6 +5,7 @@ use std::{
 };
 
 // https://wduquette.github.io/parsing-strings-into-slices/
+// https://github.com/NixOS/nix/blob/master/src/libexpr/lexer.l
 
 #[derive(Debug)]
 pub struct SourcePosition {
@@ -108,12 +109,18 @@ impl<'a> Iterator for NixLexer<'a> {
     fn next(&mut self) -> Option<Self::Item> {
         match self.state.last() {
             Some(NixLexerState::Default) => match self.iter.next() {
-                Some((offset, b'{')) => Some(NixToken {
-                    token_type: NixTokenType::CurlyOpen,
-                }),
-                Some((offset, b'}')) => Some(NixToken {
-                    token_type: NixTokenType::CurlyClose,
-                }),
+                Some((offset, b'{')) => { 
+                    self.state.push(NixLexerState::Default);
+                    Some(NixToken {
+                        token_type: NixTokenType::CurlyOpen,
+                    })
+                }
+                Some((offset, b'}')) => {
+                    self.state.pop();
+                    Some(NixToken {
+                        token_type: NixTokenType::CurlyClose,
+                    })
+                }
                 Some((offset, b'(')) => Some(NixToken {
                     token_type: NixTokenType::ParenOpen,
                 }),
