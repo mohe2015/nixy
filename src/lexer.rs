@@ -559,6 +559,25 @@ impl<'a> Iterator for NixLexer<'a> {
                         }
                     }
                     if state == Some(&NixLexerState::IndentedString)
+                        && self.data[current..].starts_with(b"''\\")
+                    {
+                        if current == start {
+                            self.iter.next();
+                            self.iter.next();
+                            let current = self.iter.next().unwrap().0;
+
+                            break Some(NixToken {
+                                token_type: NixTokenType::String(&self.data[current..current]),
+                            });
+                        } else {
+                            let string = &self.data[start..current];
+                            //println!("{:?}", std::str::from_utf8(string));
+                            break Some(NixToken {
+                                token_type: NixTokenType::String(string),
+                            });
+                        }
+                    }
+                    if state == Some(&NixLexerState::IndentedString)
                         && self.data[current..].starts_with(b"''$")
                     {
                         if current == start {
