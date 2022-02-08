@@ -374,7 +374,7 @@ impl<'a> Iterator for NixLexer<'a> {
                         token_type: NixTokenType::GreaterThan,
                     }),
                 },
-                Some((offset, b'<')) => {
+                Some((_offset, b'<')) => {
                     match self.iter.peek() {
                         Some((_, b'a'..=b'z'))
                         | Some((_, b'A'..=b'Z'))
@@ -509,7 +509,7 @@ impl<'a> Iterator for NixLexer<'a> {
                         token_type: NixTokenType::Integer(integer.parse().unwrap()),
                     })
                 }
-                Some((offset, b'~')) => {
+                Some((_offset, b'~')) => {
                     // I think this is used by exactly one file?
                     self.state.push(NixLexerState::HomePath);
                     Some(NixToken {

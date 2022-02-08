@@ -27,7 +27,7 @@ fn main() -> Result<()> {
 
                 let lexer = NixLexer::new(&file);
 
-                for token in lexer {
+                for _token in lexer {
                     //println!("{:?}", token.token_type);
                 }
             };
