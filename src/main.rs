@@ -16,7 +16,8 @@ pub mod parser;
 
 fn main() -> Result<()> {
     let subscriber = tracing_subscriber::fmt()
-    .with_span_events(FmtSpan::ACTIVE)
+    //.with_span_events(FmtSpan::ACTIVE)
+    .with_max_level(Level::TRACE)
     .finish();
 
     tracing::subscriber::set_global_default(subscriber).unwrap();

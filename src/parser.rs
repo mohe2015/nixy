@@ -155,7 +155,9 @@ pub fn parse_expr_simple<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>
 ) -> Option<AST<'a>> {
     tracing::trace!("Hello, world!");
 
-    match lexer.next() {
+    let val = lexer.next();
+    tracing::trace!("{:?}", val);
+    match val {
         Some(NixToken {
             token_type: NixTokenType::Identifier(id),
         }) => Some(AST::Identifier(id)),
@@ -175,7 +177,9 @@ pub fn parse_expr_select<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>
 ) -> Option<AST<'a>> {
     tracing::trace!("Hello, world!");
 
-    info_span!("json.parse").in_scope(||parse_expr_simple(lexer))
+    let val = parse_expr_simple(lexer);
+    tracing::trace!("{:?}", val);
+    val
 }
 
 #[instrument(name="app", skip_all)]
