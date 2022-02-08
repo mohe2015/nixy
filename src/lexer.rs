@@ -1,7 +1,8 @@
+use core::fmt;
 use std::{
     iter::{Enumerate, Peekable},
     slice::Iter,
-    vec,
+    vec, fmt::Display,
 };
 
 // https://wduquette.github.io/parsing-strings-into-slices/
@@ -19,7 +20,6 @@ pub struct SourceLocation {
     pub end_location: SourcePosition,
 }
 
-#[derive(Debug)]
 pub enum NixTokenType<'a> {
     Identifier(&'a [u8]),
     Integer(i64),
@@ -71,6 +71,61 @@ pub enum NixTokenType<'a> {
     Comma,
     AtSign,
     QuestionMark,
+}
+
+impl<'a> fmt::Debug for NixTokenType<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Identifier(arg0) => f.debug_tuple("Identifier").field(&std::str::from_utf8(arg0).unwrap().to_owned()).finish(),
+            Self::Integer(arg0) => f.debug_tuple("Integer").field(arg0).finish(),
+            Self::PathStart => write!(f, "PathStart"),
+            Self::PathSegment(arg0) => f.debug_tuple("PathSegment").field(&std::str::from_utf8(arg0).unwrap().to_owned()).finish(),
+            Self::PathEnd => write!(f, "PathEnd"),
+            Self::StringStart => write!(f, "StringStart"),
+            Self::String(arg0) => f.debug_tuple("String").field(&std::str::from_utf8(arg0).unwrap().to_owned()).finish(),
+            Self::StringEnd => write!(f, "StringEnd"),
+            Self::IndentedStringStart => write!(f, "IndentedStringStart"),
+            Self::IndentedString(arg0) => f.debug_tuple("IndentedString").field(&std::str::from_utf8(arg0).unwrap().to_owned()).finish(),
+            Self::IndentedStringEnd => write!(f, "IndentedStringEnd"),
+            Self::InterpolateStart => write!(f, "InterpolateStart"),
+            Self::InterpolateEnd => write!(f, "InterpolateEnd"),
+            Self::CurlyOpen => write!(f, "CurlyOpen"),
+            Self::CurlyClose => write!(f, "CurlyClose"),
+            Self::ParenOpen => write!(f, "ParenOpen"),
+            Self::ParenClose => write!(f, "ParenClose"),
+            Self::BracketOpen => write!(f, "BracketOpen"),
+            Self::BracketClose => write!(f, "BracketClose"),
+            Self::Whitespace => write!(f, "Whitespace"),
+            Self::SingleLineComment => write!(f, "SingleLineComment"),
+            Self::MultiLineComment => write!(f, "MultiLineComment"),
+            Self::If => write!(f, "If"),
+            Self::Then => write!(f, "Then"),
+            Self::Else => write!(f, "Else"),
+            Self::Assert => write!(f, "Assert"),
+            Self::With => write!(f, "With"),
+            Self::Let => write!(f, "Let"),
+            Self::In => write!(f, "In"),
+            Self::Rec => write!(f, "Rec"),
+            Self::Inherit => write!(f, "Inherit"),
+            Self::Or => write!(f, "Or"),
+            Self::Ellipsis => write!(f, "Ellipsis"),
+            Self::Equals => write!(f, "Equals"),
+            Self::NotEquals => write!(f, "NotEquals"),
+            Self::LessThanOrEqual => write!(f, "LessThanOrEqual"),
+            Self::GreaterThanOrEqual => write!(f, "GreaterThanOrEqual"),
+            Self::And => write!(f, "And"),
+            Self::Implies => write!(f, "Implies"),
+            Self::Update => write!(f, "Update"),
+            Self::Concatenate => write!(f, "Concatenate"),
+            Self::Assign => write!(f, "Assign"),
+            Self::Semicolon => write!(f, "Semicolon"),
+            Self::Colon => write!(f, "Colon"),
+            Self::Select => write!(f, "Select"),
+            Self::Comma => write!(f, "Comma"),
+            Self::AtSign => write!(f, "AtSign"),
+            Self::QuestionMark => write!(f, "QuestionMark"),
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -172,7 +227,9 @@ impl<'a> Iterator for NixLexer<'a> {
                     match self.iter.peek() {
                         Some((_, b'/')) => {
                             self.state.push(NixLexerState::Path);
-                            self.next()
+                            Some(NixToken {
+                                token_type: NixTokenType::PathStart,
+                            })
                         }
                         Some((_, b'.')) => {
                             self.iter.next();
@@ -190,12 +247,14 @@ impl<'a> Iterator for NixLexer<'a> {
                 }
                 Some((_offset, b'"')) => {
                     self.state.push(NixLexerState::String);
-                    self.next()
+                    Some(NixToken {
+                        token_type: NixTokenType::StringStart,
+                    })
                 }
                 Some((offset, b'#')) if self.line_start => {
                     let end = self.iter.find(|(_, c)| **c == b'\n');
                     let comment = &self.data[offset..=end.map(|v| v.0).unwrap_or(usize::MAX)];
-                    println!("{:?}", std::str::from_utf8(comment));
+                    //println!("{:?}", std::str::from_utf8(comment));
                     Some(NixToken {
                         token_type: NixTokenType::SingleLineComment,
                     })
@@ -211,7 +270,7 @@ impl<'a> Iterator for NixLexer<'a> {
                         end = self.iter.next().unwrap().0;
                     }
                     let whitespace = &self.data[offset..end];
-                    println!("{:?}", std::str::from_utf8(whitespace));
+                    //println!("{:?}", std::str::from_utf8(whitespace));
                     Some(NixToken {
                         token_type: NixTokenType::Whitespace,
                     })
@@ -234,7 +293,7 @@ impl<'a> Iterator for NixLexer<'a> {
                         }
                     }
                     let identifier = &self.data[offset..self.iter.peek().unwrap().0];
-                    println!("{:?}", std::str::from_utf8(identifier));
+                    //println!("{:?}", std::str::from_utf8(identifier));
                     Some(NixToken {
                         token_type: NixTokenType::Identifier(identifier),
                     })
@@ -251,7 +310,7 @@ impl<'a> Iterator for NixLexer<'a> {
                     let integer =
                         std::str::from_utf8(&self.data[offset..self.iter.peek().unwrap().0])
                             .unwrap();
-                    println!("{:?}", integer);
+                    //println!("{:?}", integer);
                     Some(NixToken {
                         token_type: NixTokenType::Integer(integer.parse().unwrap()),
                     })
@@ -261,6 +320,15 @@ impl<'a> Iterator for NixLexer<'a> {
             },
             Some(NixLexerState::String) => {
                 let start = self.iter.peek().unwrap().0; // TODO FIXME throw proper parse error (maybe error token)
+
+                if self.data[start] == b'"' {
+                    self.iter.next();
+
+                    self.state.pop();
+                    return Some(NixToken {
+                        token_type: NixTokenType::StringEnd,
+                    });
+                }
 
                 if self.data[start..].starts_with(b"${") {
                     self.iter.next();
@@ -275,23 +343,20 @@ impl<'a> Iterator for NixLexer<'a> {
                 loop {
                     let current = self.iter.peek().unwrap().0;
                     if self.data[current] == b'"' {
-                        let (offset, _) = self.iter.next().unwrap(); // TODO FIXME
-                        self.state.pop();
-
-                        let string = &self.data[start..offset];
-                        println!("{:?}", std::str::from_utf8(string));
+                        let string = &self.data[start..current];
+                        //println!("{:?}", std::str::from_utf8(string));
                         break Some(NixToken {
                             token_type: NixTokenType::String(string),
                         });
                     }
                     if self.data[current..].starts_with(b"${") {
-                        let (offset, _) = self.iter.next().unwrap(); // TODO FIXME
+                        self.iter.next().unwrap();
                         self.iter.next().unwrap();
 
                         self.state.push(NixLexerState::Default);
 
                         let string = &self.data[start..current];
-                        println!("{:?}", std::str::from_utf8(string));
+                        //println!("{:?}", std::str::from_utf8(string));
                         break Some(NixToken {
                             token_type: NixTokenType::String(string),
                         });
@@ -321,13 +386,18 @@ impl<'a> Iterator for NixLexer<'a> {
                             self.iter.next();
                         }
                         Some((offset, _)) => {
-                            self.state.pop();
-
-                            let path = &self.data[start - 1..*offset];
-                            println!("{:?}", std::str::from_utf8(path));
-                            break Some(NixToken {
-                                token_type: NixTokenType::PathSegment(path),
-                            });
+                            if start == *offset {
+                                self.state.pop();
+                                break Some(NixToken {
+                                    token_type: NixTokenType::PathEnd,
+                                });
+                            } else {
+                                let path = &self.data[start - 1..*offset];
+                                //println!("{:?}", std::str::from_utf8(path));
+                                break Some(NixToken {
+                                    token_type: NixTokenType::PathSegment(path),
+                                });
+                            }
                         }
                         _ => todo!(),
                     }
