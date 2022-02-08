@@ -1,18 +1,42 @@
 use crate::lexer::{NixToken, NixTokenType};
 use core::fmt;
 use itertools::{multipeek, MultiPeek};
-use std::mem::{discriminant, Discriminant};
-use tracing::{info_span, instrument};
+use std::mem::discriminant;
+use tracing::instrument;
 
 // TODO FIXME expect token primitive
 
+pub struct ASTBind<'a> {
+    path: Box<AST<'a>>,
+    value: Box<AST<'a>>
+}
+
+pub struct ASTLet<'a> {
+    bind: ASTBind<'a>,
+    body: Box<AST<'a>>,
+}
+
+pub struct ASTPathSegment<'a>(&'a [u8]);
+
+pub struct ASTConcatenate<'a> {
+    first: Box<AST<'a>>,
+    rest: Box<AST<'a>>,
+}
+
+pub struct ASTSelect<'a> {
+    first: Box<AST<'a>>,
+    rest: Box<AST<'a>>,
+}
+
+pub struct ASTIdentifier<'a>(&'a [u8]);
+
 pub enum AST<'a> {
-    // TODO FIXME specify stricter types?
-    Select(Box<AST<'a>>, Box<AST<'a>>),
-    Identifier(&'a [u8]),
-    PathConcatenate(Box<AST<'a>>, Box<AST<'a>>),
-    PathSegment(&'a [u8]),
-    Bind(Box<AST<'a>>, Box<AST<'a>>),
+    Select(ASTSelect<'a>),
+    Identifier(ASTIdentifier<'a>),
+    PathConcatenate(ASTConcatenate<'a>),
+    PathSegment(ASTPathSegment<'a>),
+    Bind(ASTBind<'a>),
+    Let(ASTLet<'a>)
 }
 
 impl<'a> fmt::Debug for AST<'a> {
