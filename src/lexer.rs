@@ -292,6 +292,21 @@ impl<'a> Iterator for NixLexer<'a> {
                     }),
                     _ => todo!(),
                 },
+                Some((_offset, b'&')) => match self.iter.next() {
+                    Some((_, b'&')) => Some(NixToken {
+                        token_type: NixTokenType::Or,
+                    }),
+                    _ => todo!(),
+                },
+                Some((_offset, b'$')) => match self.iter.next() {
+                    Some((_, b'{')) => {
+                        self.state.push(NixLexerState::Default);
+                        Some(NixToken {
+                            token_type: NixTokenType::InterpolateStart,
+                        })
+                    }
+                    _ => todo!(),
+                },
                 Some((_offset, b'+')) => match self.iter.next() {
                     Some((_, b'+')) => Some(NixToken {
                         token_type: NixTokenType::Concatenate,
@@ -309,6 +324,7 @@ impl<'a> Iterator for NixLexer<'a> {
                 },
                 Some((_offset, b'.')) => {
                     // ./ for path
+                    // ../ for path
                     // ... for ellipsis
                     // or select
 
@@ -327,6 +343,12 @@ impl<'a> Iterator for NixLexer<'a> {
                                 Some((_, b'.')) => Some(NixToken {
                                     token_type: NixTokenType::Ellipsis,
                                 }),
+                                Some((_, b'/')) => {
+                                    self.state.push(NixLexerState::Path);
+                                    Some(NixToken {
+                                        token_type: NixTokenType::PathStart,
+                                    })
+                                }
                                 _ => todo!(),
                             }
                         }
