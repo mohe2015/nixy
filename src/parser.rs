@@ -22,7 +22,7 @@ pub struct ASTLet<'a> {
 pub struct ASTPathSegment<'a>(&'a [u8]);
 
 #[derive(Debug)]
-pub struct ASTConcatenate<'a> {
+pub struct ASTPathConcatenate<'a> {
     first: Box<AST<'a>>,
     rest: Box<AST<'a>>,
 }
@@ -30,7 +30,7 @@ pub struct ASTConcatenate<'a> {
 #[derive(Debug)]
 pub struct ASTSelect<'a> {
     first: Box<AST<'a>>,
-    rest: ASTIdentifier<'a>,
+    rest: Box<AST<'a>>,
 }
 
 #[derive(Debug)]
@@ -39,7 +39,7 @@ pub struct ASTIdentifier<'a>(&'a [u8]);
 pub enum AST<'a> {
     Select(ASTSelect<'a>),
     Identifier(ASTIdentifier<'a>),
-    PathConcatenate(ASTConcatenate<'a>),
+    PathConcatenate(ASTPathConcatenate<'a>),
     PathSegment(ASTPathSegment<'a>),
     Bind(ASTBind<'a>),
     Let(ASTLet<'a>),
@@ -83,7 +83,7 @@ pub fn parse_attrpath<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
             }) => {
                 match result {
                     Some(a) => {
-                        result = Some(AST::Select(ASTSelect { first: Box::new(a), rest: ASTIdentifier(id)}))
+                        result = Some(AST::Select(ASTSelect { first: Box::new(a), rest: Box::new(AST::Identifier(ASTIdentifier(id)))}))
                     }
                     None => result = Some(AST::Identifier(ASTIdentifier(id))),
                 }
@@ -137,8 +137,8 @@ pub fn parse_bind<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
 pub fn parse_let<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
     lexer: &mut MultiPeek<I>,
 ) -> Option<ASTLet<'a>> {
-    let result: Option<ASTLet<'a>> = None;
-    let current: Option<&ASTLet<'a>> = None;
+    let mut result: Option<ASTLet<'a>> = None;
+    let mut current: Option<ASTLet<'a>> = None;
     loop {
         match lexer.peek() {
             Some(NixToken {
@@ -159,12 +159,12 @@ pub fn parse_let<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
                     Some(a) => {
                         let the_let = ASTLet{ bind, body: Box::new(AST::FakeDontUse) };
                         current.unwrap().body = Box::new(AST::Let(the_let));
-                        current = Some(&the_let);
+                        current = Some(current.unwrap().body);
                     }
                     None => {
                         let the_let = ASTLet{bind, body: Box::new(AST::FakeDontUse) };
                         result = Some(the_let);
-                        current = Some(&the_let);
+                        current = Some(result.unwrap());
                     },
                 }
             }
@@ -193,7 +193,7 @@ pub fn parse_path<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
                 let expr = parse_expr(lexer).unwrap();
                 expect(lexer, NixTokenType::CurlyClose);
                 match result {
-                    Some(a) => result = Some(AST::PathConcatenate(ASTConcatenate{ first: Box::new(a), rest: Box::new(expr)})),
+                    Some(a) => result = Some(AST::PathConcatenate(ASTPathConcatenate{ first: Box::new(a), rest: Box::new(expr)})),
                     None => result = Some(expr),
                 }
             }
@@ -201,7 +201,7 @@ pub fn parse_path<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
                 token_type: NixTokenType::PathSegment(segment),
             }) => match result {
                 Some(a) => {
-                    result = Some(AST::PathConcatenate(ASTConcatenate{
+                    result = Some(AST::PathConcatenate(ASTPathConcatenate{
                         first: Box::new(a),
                         rest: Box::new(AST::PathSegment(ASTPathSegment(segment))),
                     }))
