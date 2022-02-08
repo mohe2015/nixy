@@ -106,6 +106,8 @@ pub enum NixTokenType<'a> {
     ExclamationMark,
     Addition,
     Subtraction,
+    Multiplication,
+    Division,
 }
 
 impl<'a> fmt::Debug for NixTokenType<'a> {
@@ -122,6 +124,8 @@ impl<'a> fmt::Debug for NixTokenType<'a> {
                 .field(&std::str::from_utf8(arg0).unwrap().to_owned())
                 .finish(),
             Self::PathEnd => write!(f, "PathEnd"),
+            Self::Multiplication => write!(f, "Multiplication"),
+            Self::Division => write!(f, "Division"),
             Self::StringStart => write!(f, "StringStart"),
             Self::String(arg0) => f
                 .debug_tuple("String")
@@ -202,6 +206,7 @@ enum NixLexerState {
     IndentedString,
     Path,
     SearchPath,
+    HomePath,
 }
 
 pub struct NixLexer<'a> {
@@ -308,9 +313,9 @@ impl<'a> Iterator for NixLexer<'a> {
                             token_type: NixTokenType::PathStart,
                         })
                     }
-                    _ => {
-                        panic!("{}", std::str::from_utf8(&self.data[offset..]).unwrap());
-                    }
+                    _ => Some(NixToken {
+                        token_type: NixTokenType::Multiplication,
+                    }),
                 },
                 Some((_offset, b'|')) => match self.iter.next() {
                     Some((_, b'|')) => Some(NixToken {
@@ -362,11 +367,9 @@ impl<'a> Iterator for NixLexer<'a> {
                     _ => todo!(),
                 },
                 Some((_offset, b'>')) => match self.iter.peek() {
-                    Some((_, b'=')) => {
-                        Some(NixToken {
-                            token_type: NixTokenType::GreaterThanOrEqual,
-                        })
-                    }
+                    Some((_, b'=')) => Some(NixToken {
+                        token_type: NixTokenType::GreaterThanOrEqual,
+                    }),
                     _ => Some(NixToken {
                         token_type: NixTokenType::GreaterThan,
                     }),
@@ -439,6 +442,9 @@ impl<'a> Iterator for NixLexer<'a> {
                         token_type: NixTokenType::StringStart,
                     })
                 }
+                Some((_offset, b'*')) => Some(NixToken {
+                    token_type: NixTokenType::Multiplication,
+                }),
                 Some((offset, b'#')) if self.line_start => {
                     let end = self.iter.find(|(_, c)| **c == b'\n');
                     let comment = &self.data[offset..=end.map(|v| v.0).unwrap_or(usize::MAX)];
@@ -501,6 +507,13 @@ impl<'a> Iterator for NixLexer<'a> {
                     //println!("{:?}", integer);
                     Some(NixToken {
                         token_type: NixTokenType::Integer(integer.parse().unwrap()),
+                    })
+                }
+                Some((offset, b'~')) => {
+                    // I think this is used by exactly one file?
+                    self.state.push(NixLexerState::HomePath);
+                    Some(NixToken {
+                        token_type: NixTokenType::PathStart,
                     })
                 }
                 None => None,
@@ -622,7 +635,9 @@ impl<'a> Iterator for NixLexer<'a> {
                     self.iter.next();
                 }
             }
-            state @ (Some(NixLexerState::Path) | Some(NixLexerState::SearchPath)) => {
+            state @ (Some(NixLexerState::Path)
+            | Some(NixLexerState::SearchPath)
+            | Some(NixLexerState::HomePath)) => {
                 let start = self.iter.peek().unwrap().0; // TODO FIXME throw proper parse error (maybe error token)
 
                 // $ read
