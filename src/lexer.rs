@@ -70,6 +70,7 @@ pub enum NixTokenType<'a> {
     Select,
     Comma,
     AtSign,
+    QuestionMark
 }
 
 #[derive(Debug)]
@@ -121,6 +122,9 @@ impl<'a> Iterator for NixLexer<'a> {
                         token_type: NixTokenType::CurlyClose,
                     })
                 }
+                Some((_offset, b'?')) => Some(NixToken {
+                    token_type: NixTokenType::QuestionMark,
+                }),
                 Some((_offset, b'(')) => Some(NixToken {
                     token_type: NixTokenType::ParenOpen,
                 }),
@@ -200,12 +204,13 @@ impl<'a> Iterator for NixLexer<'a> {
                 | Some((offset, b'\t'))
                 | Some((offset, b'\r'))
                 | Some((offset, b'\n')) => {
+                    let mut end = offset;
                     while let Some((_, b' ')) | Some((_, b'\t')) | Some((_, b'\r'))
                     | Some((_, b'\n')) = self.iter.peek()
                     {
-                        self.iter.next();
+                        end = self.iter.next().unwrap().0;
                     }
-                    let whitespace = &self.data[offset..self.iter.peek().unwrap().0];
+                    let whitespace = &self.data[offset..end];
                     println!("{:?}", std::str::from_utf8(whitespace));
                     Some(NixToken {
                         token_type: NixTokenType::Whitespace,
@@ -232,6 +237,21 @@ impl<'a> Iterator for NixLexer<'a> {
                     println!("{:?}", std::str::from_utf8(identifier));
                     Some(NixToken {
                         token_type: NixTokenType::Identifier(identifier),
+                    })
+                }
+                Some((offset, b'0'..=b'9')) => {
+                    loop {
+                        match self.iter.peek() {
+                            Some((_, b'0'..=b'9')) => {
+                                self.iter.next();
+                            }
+                            _ => break,
+                        }
+                    }
+                    let integer = std::str::from_utf8(&self.data[offset..self.iter.peek().unwrap().0]).unwrap();
+                    println!("{:?}", integer);
+                    Some(NixToken {
+                        token_type: NixTokenType::Integer(integer.parse().unwrap()),
                     })
                 }
                 None => None,
