@@ -1,7 +1,10 @@
 use core::fmt;
+use std::mem::{discriminant, Discriminant};
 
 use crate::lexer::{NixToken, NixTokenType};
 use itertools::{multipeek, MultiPeek};
+
+// TODO FIXME expect token primitive
 
 pub enum AST<'a> {
     Select(Box<AST<'a>>, Box<AST<'a>>),
@@ -17,6 +20,13 @@ impl<'a> fmt::Debug for AST<'a> {
                 .field(&std::str::from_utf8(arg0).unwrap().to_owned())
                 .finish(),
         }
+    }
+}
+
+pub fn expect<'a, I: Iterator<Item = NixToken<'a>>>(lexer: &mut MultiPeek<I>, t: NixTokenType<'a>) {
+    let token = lexer.next();
+    if discriminant(&token.as_ref().unwrap().token_type) != discriminant(&t) {
+        panic!("expected {:?} but got {:?}", &token, t)
     }
 }
 
@@ -107,6 +117,31 @@ pub fn parse_let<'a, I: Iterator<Item = NixToken<'a>>>(
         }
     }
 }
+pub fn parse_path<'a, I: Iterator<Item = NixToken<'a>>>(
+    lexer: &mut MultiPeek<I>,
+) -> Option<AST<'a>> {
+    loop {
+        match lexer.next() {
+            Some(NixToken {
+                token_type: NixTokenType::PathEnd,
+            }) => {
+                break None;
+            }
+            Some(NixToken {
+                token_type: NixTokenType::InterpolateStart,
+            }) => {
+                parse_expr(lexer);
+                expect(lexer, NixTokenType::CurlyClose);
+            }
+            Some(NixToken {
+                token_type: NixTokenType::PathSegment(segment),
+            }) => {}
+            _ => {
+                todo!();
+            }
+        }
+    }
+}
 
 pub fn parse_expr_simple<'a, I: Iterator<Item = NixToken<'a>>>(
     lexer: &mut MultiPeek<I>,
@@ -115,9 +150,12 @@ pub fn parse_expr_simple<'a, I: Iterator<Item = NixToken<'a>>>(
         Some(NixToken {
             token_type: NixTokenType::Identifier(id),
         }) => Some(AST::Identifier(id)),
-        _ => {
+        Some(NixToken {
+            token_type: NixTokenType::PathStart,
+        }) => parse_path(lexer),
+        other => {
             // TODO FIXME return None
-            todo!();
+            panic!("{:?}", other);
         }
     }
 }
