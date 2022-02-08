@@ -50,6 +50,7 @@ pub struct SourceLocation {
     pub end_location: SourcePosition,
 }
 
+#[derive(PartialEq)]
 pub enum NixTokenType<'a> {
     Identifier(&'a [u8]),
     Integer(i64),
@@ -193,13 +194,13 @@ impl<'a> fmt::Debug for NixTokenType<'a> {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct NixToken<'a> {
     pub token_type: NixTokenType<'a>,
     //pub location: SourceLocation,
 }
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Clone)]
 enum NixLexerState {
     Default,
     String,
@@ -209,6 +210,7 @@ enum NixLexerState {
     HomePath,
 }
 
+#[derive(Clone)]
 pub struct NixLexer<'a> {
     pub data: &'a [u8],
     pub iter: Peekable<Enumerate<Iter<'a, u8>>>,
