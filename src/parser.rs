@@ -6,28 +6,34 @@ use tracing::instrument;
 
 // TODO FIXME expect token primitive
 
+#[derive(Debug)]
 pub struct ASTBind<'a> {
     path: Box<AST<'a>>,
     value: Box<AST<'a>>
 }
 
+#[derive(Debug)]
 pub struct ASTLet<'a> {
     bind: ASTBind<'a>,
     body: Box<AST<'a>>,
 }
 
+#[derive(Debug)]
 pub struct ASTPathSegment<'a>(&'a [u8]);
 
+#[derive(Debug)]
 pub struct ASTConcatenate<'a> {
     first: Box<AST<'a>>,
     rest: Box<AST<'a>>,
 }
 
+#[derive(Debug)]
 pub struct ASTSelect<'a> {
     first: Box<AST<'a>>,
-    rest: Box<AST<'a>>,
+    rest: ASTIdentifier<'a>,
 }
 
+#[derive(Debug)]
 pub struct ASTIdentifier<'a>(&'a [u8]);
 
 pub enum AST<'a> {
@@ -36,31 +42,20 @@ pub enum AST<'a> {
     PathConcatenate(ASTConcatenate<'a>),
     PathSegment(ASTPathSegment<'a>),
     Bind(ASTBind<'a>),
-    Let(ASTLet<'a>)
+    Let(ASTLet<'a>),
+    FakeDontUse,
 }
 
 impl<'a> fmt::Debug for AST<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Select(arg0, arg1) => f.debug_tuple("Select").field(arg0).field(arg1).finish(),
-            Self::Identifier(arg0) => f
-                .debug_tuple("Identifier")
-                .field(&std::str::from_utf8(arg0).unwrap().to_owned())
-                .finish(),
-            Self::PathConcatenate(arg0, arg1) => f
-                .debug_tuple("PathConcatenate")
-                .field(arg0)
-                .field(arg1)
-                .finish(),
-                Self::Bind(arg0, arg1) => f
-                .debug_tuple("Bind")
-                .field(arg0)
-                .field(arg1)
-                .finish(),
-            Self::PathSegment(arg0) => f
-                .debug_tuple("PathSegment")
-                .field(&std::str::from_utf8(arg0).unwrap().to_owned())
-                .finish(),
+            Self::Select(arg0) => f.debug_tuple("Select").field(arg0).finish(),
+            Self::Identifier(arg0) => f.debug_tuple("Identifier").field(arg0).finish(),
+            Self::PathConcatenate(arg0) => f.debug_tuple("PathConcatenate").field(arg0).finish(),
+            Self::PathSegment(arg0) => f.debug_tuple("PathSegment").field(arg0).finish(),
+            Self::Bind(arg0) => f.debug_tuple("Bind").field(arg0).finish(),
+            Self::Let(arg0) => f.debug_tuple("Let").field(arg0).finish(),
+            Self::FakeDontUse => f.debug_tuple("FakeDontUse").finish(),
         }
     }
 }
@@ -88,9 +83,9 @@ pub fn parse_attrpath<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
             }) => {
                 match result {
                     Some(a) => {
-                        result = Some(AST::Select(Box::new(a), Box::new(AST::Identifier(id))))
+                        result = Some(AST::Select(ASTSelect { first: Box::new(a), rest: ASTIdentifier(id)}))
                     }
-                    None => result = Some(AST::Identifier(id)),
+                    None => result = Some(AST::Identifier(ASTIdentifier(id))),
                 }
 
                 lexer.next();
@@ -117,7 +112,7 @@ pub fn parse_attrpath<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
 #[instrument(name = "bind", skip_all, ret)]
 pub fn parse_bind<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
     lexer: &mut MultiPeek<I>,
-) -> AST<'a> {
+) -> ASTBind<'a> {
     match lexer.peek() {
         Some(NixToken {
             token_type: NixTokenType::Identifier(b"inherit"),
@@ -133,7 +128,7 @@ pub fn parse_bind<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
             let expr = parse_expr(lexer).unwrap();
             expect(lexer, NixTokenType::Semicolon);
 
-            AST::Bind(Box::new(attrpath), Box::new(expr))
+            ASTBind {path: Box::new(attrpath), value: Box::new(expr)}
         }
     }
 }
@@ -141,9 +136,9 @@ pub fn parse_bind<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
 #[instrument(name = "let", skip_all, ret)]
 pub fn parse_let<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
     lexer: &mut MultiPeek<I>,
-) -> Option<AST<'a>> {
-    let result = None;
-    let current = None;
+) -> Option<ASTLet<'a>> {
+    let result: Option<ASTLet<'a>> = None;
+    let current: Option<ASTLet<'a>> = None;
     loop {
         match lexer.peek() {
             Some(NixToken {
@@ -151,10 +146,10 @@ pub fn parse_let<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
             }) => {
                 lexer.next();
 
-                let body = parse_expr_function(lexer);
+                let body = parse_expr_function(lexer).unwrap();
 
-                current.1 = body;
-                break result;
+                current.unwrap().body = Box::new(body);
+                break;
             }
             _ => {
                 lexer.reset_peek();
@@ -162,11 +157,12 @@ pub fn parse_let<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
 
                 match result {
                     Some(a) => {
-                        current.1 = AST::Let(bind, fakeBody);
-                        current = current.1;
+                        current.unwrap().body = Box::new(AST::Let(ASTLet{ bind, body: Box::new(AST::FakeDontUse) }));
+                        current = Some(current.unwrap().body);
                     }
                     None => {
-                        result = current = AST::Let(bind, fakeBody);
+                        current = Some(ASTLet{bind, body: Box::new(AST::FakeDontUse) });
+                        result = current;
                     },
                 }
             }
