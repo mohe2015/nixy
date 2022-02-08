@@ -196,7 +196,7 @@ enum NixLexerState {
     String,
     IndentedString,
     Path,
-    SearchPath
+    SearchPath,
 }
 
 pub struct NixLexer<'a> {
@@ -289,7 +289,7 @@ impl<'a> Iterator for NixLexer<'a> {
                     }
                     _ => {
                         panic!("{}", std::str::from_utf8(&self.data[offset..]).unwrap());
-                    },
+                    }
                 },
                 Some((_offset, b'|')) => match self.iter.next() {
                     Some((_, b'|')) => Some(NixToken {
@@ -354,7 +354,7 @@ impl<'a> Iterator for NixLexer<'a> {
                                 token_type: NixTokenType::PathStart,
                             })
                         }
-                        _ => todo!()
+                        _ => todo!(),
                     }
                 }
                 Some((_offset, b'.')) => {
@@ -490,6 +490,7 @@ impl<'a> Iterator for NixLexer<'a> {
                     });
                 }
 
+                // TODO FIXME ''${
                 if self.data[start..].starts_with(b"${") {
                     self.iter.next();
                     self.iter.next();
@@ -528,7 +529,7 @@ impl<'a> Iterator for NixLexer<'a> {
                     self.iter.next();
                 }
             }
-            state @ (Some(NixLexerState::Path) | Some(NixLexerState::SearchPath))  => {
+            state @ (Some(NixLexerState::Path) | Some(NixLexerState::SearchPath)) => {
                 let start = self.iter.peek().unwrap().0; // TODO FIXME throw proper parse error (maybe error token)
 
                 // $ read

@@ -28,19 +28,19 @@ fn main() -> Result<()> {
                 let lexer = NixLexer::new(&file);
 
                 for token in lexer {
-                    println!("{:?}", token.token_type);
+                    //println!("{:?}", token.token_type);
                 }
             };
         }) {
             Ok(_) => success += 1,
             Err(_) => {
                 failure += 1;
-                panic!("{}", path.display());
+                println!("{}", path.display());
             }
         }
     }
 
-    println!("{}/{}", success, success+failure);
+    println!("{}/{}", success, success + failure);
 
     Ok(())
 }
