@@ -117,7 +117,7 @@ pub fn parse_let<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
     loop {
         match lexer.peek() {
             Some(NixToken {
-                token_type: NixTokenType::Identifier(b"in"),
+                token_type: NixTokenType::In,
             }) => {
                 lexer.next();
                 break None;
@@ -241,7 +241,7 @@ pub fn parse_expr_function<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debu
 ) -> Option<AST<'a>> {
     let token = lexer.next();
     match token.map(|t| t.token_type) {
-        Some(NixTokenType::Identifier(b"let")) => {
+        Some(NixTokenType::Let) => {
             println!("letttt");
             parse_let(lexer)
         }

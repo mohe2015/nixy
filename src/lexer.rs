@@ -485,10 +485,21 @@ impl<'a> Iterator for NixLexer<'a> {
                         self.iter.next();
                     }
                     let identifier = &self.data[offset..self.iter.peek().unwrap().0];
-                    //println!("{:?}", std::str::from_utf8(identifier));
                     Some(NixToken {
-                        token_type: NixTokenType::Identifier(identifier),
+                        token_type: (match identifier {
+                            b"if" => NixTokenType::If,
+                            b"then" => NixTokenType::Then,
+                            b"else" => NixTokenType::Else,
+                            b"assert" => NixTokenType::Assert,
+                            b"with" => NixTokenType::With,
+                            b"let" => NixTokenType::Let,
+                            b"in" => NixTokenType::In,
+                            b"rec" => NixTokenType::Rec,
+                            b"inherit" => NixTokenType::Inherit,
+                            _ => NixTokenType::Identifier(identifier),
+                        }),
                     })
+                    //println!("{:?}", std::str::from_utf8(identifier));
                 }
                 Some((offset, b'0'..=b'9')) => {
                     while let Some((_, b'0'..=b'9')) = self.iter.peek() {
