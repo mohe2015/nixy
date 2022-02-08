@@ -70,7 +70,7 @@ pub enum NixTokenType<'a> {
     Select,
     Comma,
     AtSign,
-    QuestionMark
+    QuestionMark,
 }
 
 #[derive(Debug)]
@@ -248,7 +248,9 @@ impl<'a> Iterator for NixLexer<'a> {
                             _ => break,
                         }
                     }
-                    let integer = std::str::from_utf8(&self.data[offset..self.iter.peek().unwrap().0]).unwrap();
+                    let integer =
+                        std::str::from_utf8(&self.data[offset..self.iter.peek().unwrap().0])
+                            .unwrap();
                     println!("{:?}", integer);
                     Some(NixToken {
                         token_type: NixTokenType::Integer(integer.parse().unwrap()),
