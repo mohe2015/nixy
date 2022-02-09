@@ -223,27 +223,29 @@ pub fn parse_indented_string<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::De
     lexer: &mut MultiPeek<I>,
 ) -> Option<AST<'a>> {
     expect(lexer, NixTokenType::IndentedStringStart);
-    lexer.fold_while(None, |acc, item| {
-        match item {
-            NixToken {
+    let mut accum = AST::String(b"");
+    loop {
+        match lexer.next() {
+            Some(NixToken {
                 token_type: NixTokenType::String(string),
-            } => {
-                Continue(Some(AST::Call(ASTCall(Box::new(AST::Identifier(BUILTIN_STRING_CONCATENATE)), Box::new(AST::String(string))))))
+            }) => {
+                accum = AST::Call(ASTCall(Box::new(AST::Identifier(BUILTIN_STRING_CONCATENATE)), Box::new(AST::String(string))))
             }
-            NixToken {
+            Some(NixToken {
                 token_type: NixTokenType::InterpolateStart,
-            } => {
+            }) => {
                 let expr = parse_expr(lexer).unwrap();
-                Continue(Some(AST::Call(ASTCall(Box::new(AST::Identifier(BUILTIN_STRING_CONCATENATE)), Box::new(expr)))))
+                accum = AST::Call(ASTCall(Box::new(AST::Identifier(BUILTIN_STRING_CONCATENATE)), Box::new(expr)))
             }
-            NixToken {
+            Some(NixToken {
                 token_type: NixTokenType::IndentedStringEnd,
-            } => {
-                Done(acc)
+            }) => {
+                break
             }
             _ => panic!()
         }
-    }).into_inner()
+    }
+    Some(accum)
 }
 
 #[instrument(name = "simple", skip_all, ret)]
