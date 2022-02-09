@@ -1,7 +1,7 @@
 use crate::lexer::{NixToken, NixTokenType};
 use core::fmt;
 use itertools::MultiPeek;
-use std::mem::discriminant;
+use std::{mem::discriminant, fmt::{Display, Debug}};
 use tracing::instrument;
 
 // TODO FIXME call lexer.reset_peek(); everywhere
@@ -15,26 +15,52 @@ const BUILTIN_PATH_CONCATENATE: &[u8] = b"__builtin_path_concatenate";
 const BUILTIN_SELECT: &[u8] = b"__builtin_select";
 const BUILTIN_IF: &[u8] = b"__builtin_if";
 
-#[derive(Debug)]
 pub struct ASTBind<'a> {
     path: Box<AST<'a>>,
     value: Box<AST<'a>>
 }
 
-#[derive(Debug)]
+impl<'a> Debug for ASTBind<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{:?} = {:?}", self.path, self.value)
+    }
+}
+
 pub struct ASTLet<'a> {
     bind: ASTBind<'a>,
     body: Box<AST<'a>>,
 }
 
-#[derive(Debug)]
+
+impl<'a> Debug for ASTLet<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "let {:?} in {:?}", self.bind, self.body)
+    }
+}
+
 pub struct ASTPathSegment<'a>(&'a [u8]);
 
-#[derive(Debug)]
+impl<'a> Debug for ASTPathSegment<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}",  std::str::from_utf8(self.0).unwrap())
+    }
+}
+
 pub struct ASTCall<'a>(Box<AST<'a>>,Box<AST<'a>>);
 
-#[derive(Debug)]
+impl<'a> Debug for ASTCall<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "({:?} {:?})", self.0, self.1)
+    }
+}
+
 pub struct ASTIdentifier<'a>(&'a [u8]);
+
+impl<'a> Debug for ASTIdentifier<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", std::str::from_utf8(self.0).unwrap())
+    }
+}
 
 pub enum AST<'a> {
     Identifier(ASTIdentifier<'a>),
@@ -42,18 +68,16 @@ pub enum AST<'a> {
     Bind(ASTBind<'a>),
     Let(ASTLet<'a>),
     Call(ASTCall<'a>),
-    FakeDontUse,
 }
 
-impl<'a> fmt::Debug for AST<'a> {
+impl<'a> Debug for AST<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::Call(arg0) => f.debug_tuple("Call").field(arg0).finish(),
-            Self::Identifier(arg0) => f.debug_tuple("Identifier").field(arg0).finish(),
-            Self::PathSegment(arg0) => f.debug_tuple("PathSegment").field(arg0).finish(),
-            Self::Bind(arg0) => f.debug_tuple("Bind").field(arg0).finish(),
-            Self::Let(arg0) => f.debug_tuple("Let").field(arg0).finish(),
-            Self::FakeDontUse => f.debug_tuple("FakeDontUse").finish(),
+       match self {
+            AST::Identifier(v) => write!(f, "{:?}", v),
+            AST::PathSegment(v) =>  write!(f, "{:?}", v),
+            AST::Bind(v) =>  write!(f, "{:?}", v),
+            AST::Let(v) =>  write!(f, "{:?}", v),
+            AST::Call(v) =>  write!(f, "{:?}", v),
         }
     }
 }
@@ -249,7 +273,7 @@ pub fn parse_expr_app<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
             Some(expr) => {
                 match result {
                     Some(a) => {
-                        result = Some(AST::Call(ASTCall(Box::new(AST::Call(ASTCall(Box::new(AST::Identifier(ASTIdentifier(BUILTIN_SELECT))), Box::new(a)))),  Box::new(expr))));
+                        result = Some(AST::Call(ASTCall(Box::new(a),  Box::new(expr))));
                     }
                     None => result = Some(expr),
                 }
