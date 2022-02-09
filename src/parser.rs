@@ -136,9 +136,9 @@ pub fn parse_bind<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
 #[instrument(name = "let", skip_all, ret)]
 pub fn parse_let<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
     lexer: &mut MultiPeek<I>,
-) -> Option<ASTLet<'a>> {
+) -> Option<AST<'a>> {
     let mut result: Option<ASTLet<'a>> = None;
-    let mut current: Option<ASTLet<'a>> = None;
+    let mut current: Option<&mut ASTLet<'a>> = None;
     loop {
         match lexer.peek() {
             Some(NixToken {
@@ -148,7 +148,10 @@ pub fn parse_let<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
 
                 let body = parse_expr_function(lexer).unwrap();
 
-                current.unwrap().body = Box::new(body);
+                match current {
+                    Some(_) => current.unwrap().body = Box::new(body),
+                    None => { return Some(body); }
+                }
                 break;
             }
             _ => {
@@ -156,21 +159,24 @@ pub fn parse_let<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
                 let bind = parse_bind(lexer);
 
                 match result {
-                    Some(a) => {
+                    Some(ref mut a) => {
                         let the_let = ASTLet{ bind, body: Box::new(AST::FakeDontUse) };
                         current.unwrap().body = Box::new(AST::Let(the_let));
-                        current = Some(current.unwrap().body);
+                        current = Some(match current.unwrap().body.as_ref() {
+                            AST::Let(ref mut a) => a,
+                            _ => panic!(),
+                        });
                     }
                     None => {
                         let the_let = ASTLet{bind, body: Box::new(AST::FakeDontUse) };
                         result = Some(the_let);
-                        current = Some(result.unwrap());
+                        current = Some(result.as_mut().unwrap());
                     },
                 }
             }
         }
     }
-    result
+    Some(AST::Let(result.unwrap()))
 }
 
 #[instrument(name = "path", skip_all, ret)]
@@ -289,7 +295,7 @@ pub fn parse_expr_function<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debu
     match token.map(|t| t.token_type) {
         Some(NixTokenType::Let) => {
             println!("letttt");
-            parse_let(lexer).map(AST::Let)
+            parse_let(lexer)
         }
         _ => parse_expr_if(lexer),
     }
