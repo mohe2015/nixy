@@ -433,6 +433,8 @@ pub fn parse<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
 
 #[test]
 fn test_operators() {
+    use itertools::multipeek;
+
     let r = parse_expr_op(&mut multipeek(
         [
             NixToken {
