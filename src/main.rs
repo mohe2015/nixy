@@ -1,5 +1,6 @@
 use std::panic;
 use std::{fs, io::Result};
+use itertools::multipeek;
 use tracing::{info, Level};
 use tracing_subscriber::{fmt::format::FmtSpan, FmtSubscriber};
 use walkdir::WalkDir;
@@ -49,7 +50,7 @@ fn main() -> Result<()> {
 
                 println!("parsing");
 
-                parse(&mut lexer);
+                parse(&mut multipeek(lexer));
             };
         }) {
             Ok(_) => success += 1,
