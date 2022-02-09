@@ -10,6 +10,9 @@ use tracing::instrument;
 // TODO https://matklad.github.io/2020/04/15/from-pratt-to-dijkstra.html
 // https://matklad.github.io/2020/03/22/fast-simple-rust-interner.html
 
+const BUILTIN_UNARY_NOT: &[u8] = b"__builtin_unary_not";
+const BUILTIN_PATH_CONCATENATE: &[u8] = b"__builtin_path_concatenate";
+
 #[derive(Debug)]
 pub struct ASTBind<'a> {
     path: Box<AST<'a>>,
@@ -26,16 +29,13 @@ pub struct ASTLet<'a> {
 pub struct ASTPathSegment<'a>(&'a [u8]);
 
 #[derive(Debug)]
-pub struct ASTPathConcatenate<'a> {
+pub struct ASTSelect<'a> {
     first: Box<AST<'a>>,
     rest: Box<AST<'a>>,
 }
 
 #[derive(Debug)]
-pub struct ASTSelect<'a> {
-    first: Box<AST<'a>>,
-    rest: Box<AST<'a>>,
-}
+pub struct ASTCall<'a>(Box<AST<'a>>,Box<AST<'a>>);
 
 #[derive(Debug)]
 pub struct ASTIf<'a> {
@@ -44,18 +44,17 @@ pub struct ASTIf<'a> {
     false_case: Box<AST<'a>>,
 }
 
-
 #[derive(Debug)]
 pub struct ASTIdentifier<'a>(&'a [u8]);
 
 pub enum AST<'a> {
     Select(ASTSelect<'a>),
     Identifier(ASTIdentifier<'a>),
-    PathConcatenate(ASTPathConcatenate<'a>),
     PathSegment(ASTPathSegment<'a>),
     Bind(ASTBind<'a>),
     Let(ASTLet<'a>),
     If(ASTIf<'a>),
+    Call(ASTCall<'a>),
     FakeDontUse,
 }
 
@@ -63,8 +62,8 @@ impl<'a> fmt::Debug for AST<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Select(arg0) => f.debug_tuple("Select").field(arg0).finish(),
+            Self::Call(arg0) => f.debug_tuple("Call").field(arg0).finish(),
             Self::Identifier(arg0) => f.debug_tuple("Identifier").field(arg0).finish(),
-            Self::PathConcatenate(arg0) => f.debug_tuple("PathConcatenate").field(arg0).finish(),
             Self::PathSegment(arg0) => f.debug_tuple("PathSegment").field(arg0).finish(),
             Self::Bind(arg0) => f.debug_tuple("Bind").field(arg0).finish(),
             Self::Let(arg0) => f.debug_tuple("Let").field(arg0).finish(),
@@ -184,7 +183,7 @@ pub fn parse_path<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
     lexer: &mut MultiPeek<I>,
 ) -> Option<AST<'a>> {
     expect(lexer, NixTokenType::PathStart);
-    let mut result = None;
+    let mut result: Option<AST<'a>> = None;
     loop {
         let val = lexer.next();
         match val {
@@ -199,7 +198,9 @@ pub fn parse_path<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
                 let expr = parse_expr(lexer).unwrap();
                 expect(lexer, NixTokenType::CurlyClose);
                 match result {
-                    Some(a) => result = Some(AST::PathConcatenate(ASTPathConcatenate{ first: Box::new(a), rest: Box::new(expr)})),
+                    Some(a) => {
+                        result = Some(AST::Call(ASTCall(Box::new(AST::Call(ASTCall(Box::new(AST::Identifier(ASTIdentifier(BUILTIN_PATH_CONCATENATE))), Box::new(a)))), Box::new(expr))))
+                    }
                     None => result = Some(expr),
                 }
             }
@@ -207,10 +208,8 @@ pub fn parse_path<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
                 token_type: NixTokenType::PathSegment(segment),
             }) => match result {
                 Some(a) => {
-                    result = Some(AST::PathConcatenate(ASTPathConcatenate{
-                        first: Box::new(a),
-                        rest: Box::new(AST::PathSegment(ASTPathSegment(segment))),
-                    }))
+                    result = Some(AST::Call(ASTCall(Box::new(AST::Call(ASTCall(Box::new(AST::Identifier(ASTIdentifier(BUILTIN_PATH_CONCATENATE))), Box::new(a)))), Box::new(AST::PathSegment(ASTPathSegment(segment))))))
+
                 }
                 None => result = Some(AST::PathSegment(ASTPathSegment(segment))),
             },
@@ -283,7 +282,19 @@ pub fn parse_expr_app<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
 pub fn parse_expr_op<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
     lexer: &mut MultiPeek<I>,
 ) -> Option<AST<'a>> {
-    parse_expr_app(lexer)
+    match lexer.peek() {
+        Some(NixToken {
+            token_type: NixTokenType::ExclamationMark
+        }) => {
+            expect(lexer, NixTokenType::ExclamationMark);
+            let expr = parse_expr(lexer).expect("failed to parse negated expression");
+            Some(AST::Call(ASTCall(Box::new(AST::Identifier(ASTIdentifier(BUILTIN_UNARY_NOT))), Box::new(expr))))
+        }
+        _ => {
+            lexer.reset_peek();
+            parse_expr_app(lexer)
+        }
+    }
 }
 
 #[instrument(name = "if", skip_all, ret)]
