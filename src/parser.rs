@@ -1,9 +1,12 @@
 use crate::lexer::{NixToken, NixTokenType};
 use core::fmt;
-use itertools::{MultiPeek, Itertools, multipeek};
-use std::{mem::discriminant, fmt::{Display, Debug}};
+use itertools::FoldWhile::{Continue, Done};
+use itertools::{multipeek, Itertools, MultiPeek};
+use std::{
+    fmt::{Debug, Display},
+    mem::discriminant,
+};
 use tracing::instrument;
-use itertools::FoldWhile::{Done, Continue};
 
 // TODO FIXME call lexer.reset_peek(); everywhere
 
@@ -27,10 +30,10 @@ addition = number + multiplication
 addition = number + number * number
 
 3+4*5+3
-addition = multiplication {+ multiplication} 
-addition = number {+ multiplication} 
-addition = number + multiplication {+ multiplication} 
-addition = number + (number * number) {+ multiplication} 
+addition = multiplication {+ multiplication}
+addition = number {+ multiplication}
+addition = number + multiplication {+ multiplication}
+addition = number + (number * number) {+ multiplication}
 
 */
 
@@ -47,18 +50,18 @@ pub enum AST<'a> {
     PathSegment(&'a [u8]), // merge into String
     Integer(i64),
     Let(Box<AST<'a>>, Box<AST<'a>>, Box<AST<'a>>),
-    Call(Box<AST<'a>>,Box<AST<'a>>),
+    Call(Box<AST<'a>>, Box<AST<'a>>),
 }
 
 impl<'a> Debug for AST<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-       match self {
+        match self {
             AST::Identifier(v) => write!(f, "{}", std::str::from_utf8(v).unwrap()),
-            AST::PathSegment(v) =>  write!(f, "`{}`", std::str::from_utf8(v).unwrap()),
-            AST::String(v) =>  write!(f, "\"{}\"", std::str::from_utf8(v).unwrap()),
-            AST::Integer(v) =>  write!(f, "{}", v),
-            AST::Let(a, b, c) =>  write!(f, "{:?} {:?} {:?}", a, b, c),
-            AST::Call(a, b) =>  write!(f, "({:?} {:?})", a, b),
+            AST::PathSegment(v) => write!(f, "`{}`", std::str::from_utf8(v).unwrap()),
+            AST::String(v) => write!(f, "\"{}\"", std::str::from_utf8(v).unwrap()),
+            AST::Integer(v) => write!(f, "{}", v),
+            AST::Let(a, b, c) => write!(f, "{:?} {:?} {:?}", a, b, c),
+            AST::Call(a, b) => write!(f, "({:?} {:?})", a, b),
         }
     }
 }
@@ -86,7 +89,13 @@ pub fn parse_attrpath<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
             }) => {
                 match result {
                     Some(a) => {
-                        result = Some(AST::Call(Box::new(AST::Call(Box::new(AST::Identifier(BUILTIN_SELECT)), Box::new(a))), Box::new(AST::Identifier(id))));
+                        result = Some(AST::Call(
+                            Box::new(AST::Call(
+                                Box::new(AST::Identifier(BUILTIN_SELECT)),
+                                Box::new(a),
+                            )),
+                            Box::new(AST::Identifier(id)),
+                        ));
                     }
                     None => result = Some(AST::Identifier(id)),
                 }
@@ -153,7 +162,7 @@ pub fn parse_let<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
 
                 break Some(binds.into_iter().fold(body, |accum, item| {
                     AST::Let(item.0, item.1, Box::new(accum))
-                }))
+                }));
             }
             _ => {
                 lexer.reset_peek();
@@ -186,7 +195,13 @@ pub fn parse_path<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
                 expect(lexer, NixTokenType::CurlyClose);
                 match result {
                     Some(a) => {
-                        result = Some(AST::Call(Box::new(AST::Call(Box::new(AST::Identifier(BUILTIN_PATH_CONCATENATE)), Box::new(a))), Box::new(expr)))
+                        result = Some(AST::Call(
+                            Box::new(AST::Call(
+                                Box::new(AST::Identifier(BUILTIN_PATH_CONCATENATE)),
+                                Box::new(a),
+                            )),
+                            Box::new(expr),
+                        ))
                     }
                     None => result = Some(expr),
                 }
@@ -195,8 +210,13 @@ pub fn parse_path<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
                 token_type: NixTokenType::PathSegment(segment),
             }) => match result {
                 Some(a) => {
-                    result = Some(AST::Call(Box::new(AST::Call(Box::new(AST::Identifier(BUILTIN_PATH_CONCATENATE)), Box::new(a))), Box::new(AST::PathSegment(segment))))
-
+                    result = Some(AST::Call(
+                        Box::new(AST::Call(
+                            Box::new(AST::Identifier(BUILTIN_PATH_CONCATENATE)),
+                            Box::new(a),
+                        )),
+                        Box::new(AST::PathSegment(segment)),
+                    ))
                 }
                 None => result = Some(AST::PathSegment(segment)),
             },
@@ -206,7 +226,6 @@ pub fn parse_path<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
         }
     }
 }
-
 
 #[instrument(name = "ind_str", skip_all, ret)]
 pub fn parse_indented_string<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
@@ -219,26 +238,42 @@ pub fn parse_indented_string<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::De
             Some(NixToken {
                 token_type: NixTokenType::String(string),
             }) => {
-                accum = AST::Call(Box::new(AST::Call(Box::new(AST::Identifier(BUILTIN_STRING_CONCATENATE)), Box::new(accum))), Box::new(AST::String(string)))
+                accum = AST::Call(
+                    Box::new(AST::Call(
+                        Box::new(AST::Identifier(BUILTIN_STRING_CONCATENATE)),
+                        Box::new(accum),
+                    )),
+                    Box::new(AST::String(string)),
+                )
             }
             Some(NixToken {
                 token_type: NixTokenType::IndentedString(string),
             }) => {
-                accum = AST::Call(Box::new(AST::Call(Box::new(AST::Identifier(BUILTIN_STRING_CONCATENATE)), Box::new(accum))), Box::new(AST::String(string)))
+                accum = AST::Call(
+                    Box::new(AST::Call(
+                        Box::new(AST::Identifier(BUILTIN_STRING_CONCATENATE)),
+                        Box::new(accum),
+                    )),
+                    Box::new(AST::String(string)),
+                )
             }
             Some(NixToken {
                 token_type: NixTokenType::InterpolateStart,
             }) => {
                 let expr = parse_expr(lexer).unwrap();
                 expect(lexer, NixTokenType::CurlyClose);
-                accum = AST::Call(Box::new(AST::Call(Box::new(AST::Identifier(BUILTIN_STRING_CONCATENATE)), Box::new(accum))), Box::new(expr))
+                accum = AST::Call(
+                    Box::new(AST::Call(
+                        Box::new(AST::Identifier(BUILTIN_STRING_CONCATENATE)),
+                        Box::new(accum),
+                    )),
+                    Box::new(expr),
+                )
             }
             Some(NixToken {
                 token_type: NixTokenType::IndentedStringEnd,
-            }) => {
-                break Some(accum)
-            }
-            v => panic!("unexpected {:?}", v)
+            }) => break Some(accum),
+            v => panic!("unexpected {:?}", v),
         }
     }
 }
@@ -255,13 +290,13 @@ pub fn parse_expr_simple<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>
             let ret = Some(AST::Identifier(id));
             lexer.next();
             ret
-        },
+        }
         Some(NixToken {
             token_type: NixTokenType::PathStart,
         }) => {
             lexer.reset_peek();
             parse_path(lexer)
-        },
+        }
         Some(NixToken {
             token_type: NixTokenType::IndentedStringStart,
         }) => {
@@ -314,11 +349,14 @@ pub fn parse_expr_op<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
 ) -> Option<AST<'a>> {
     match lexer.peek() {
         Some(NixToken {
-            token_type: NixTokenType::ExclamationMark
+            token_type: NixTokenType::ExclamationMark,
         }) => {
             expect(lexer, NixTokenType::ExclamationMark);
             let expr = parse_expr(lexer).expect("failed to parse negated expression");
-            Some(AST::Call(Box::new(AST::Identifier(BUILTIN_UNARY_NOT)), Box::new(expr)))
+            Some(AST::Call(
+                Box::new(AST::Identifier(BUILTIN_UNARY_NOT)),
+                Box::new(expr),
+            ))
         }
         _ => {
             lexer.reset_peek();
@@ -333,7 +371,7 @@ pub fn parse_expr_if<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
 ) -> Option<AST<'a>> {
     match lexer.peek() {
         Some(NixToken {
-            token_type: NixTokenType::If
+            token_type: NixTokenType::If,
         }) => {
             expect(lexer, NixTokenType::If);
             let condition = parse_expr(lexer).expect("failed to parse if condition");
@@ -341,7 +379,16 @@ pub fn parse_expr_if<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
             let true_case = parse_expr(lexer).expect("failed to parse if true case");
             expect(lexer, NixTokenType::Else);
             let false_case = parse_expr(lexer).expect("failed to parse if false case");
-            Some(AST::Call(Box::new(AST::Call(Box::new(AST::Call(Box::new(AST::Identifier(BUILTIN_IF)), Box::new(condition))), Box::new(true_case))), Box::new(false_case)))
+            Some(AST::Call(
+                Box::new(AST::Call(
+                    Box::new(AST::Call(
+                        Box::new(AST::Identifier(BUILTIN_IF)),
+                        Box::new(condition),
+                    )),
+                    Box::new(true_case),
+                )),
+                Box::new(false_case),
+            ))
         }
         _ => {
             lexer.reset_peek();
@@ -388,18 +435,29 @@ pub fn parse<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
 
 #[test]
 fn test_operators() {
-    let r = parse_expr_op(&mut multipeek([
-        NixToken {
-            token_type: NixTokenType::Integer(1)
-        },
-        NixToken {
-            token_type: NixTokenType::Addition
-        },
-        NixToken {
-            token_type: NixTokenType::Integer(41)
-        }
-    ].into_iter())).unwrap();
-    assert_eq!(AST::Call(Box::new(AST::Call(Box::new(AST::Identifier(b"add")), Box::new(AST::Integer(1)))), Box::new(AST::Integer(1))), r);
-
-
+    let r = parse_expr_op(&mut multipeek(
+        [
+            NixToken {
+                token_type: NixTokenType::Integer(1),
+            },
+            NixToken {
+                token_type: NixTokenType::Addition,
+            },
+            NixToken {
+                token_type: NixTokenType::Integer(41),
+            },
+        ]
+        .into_iter(),
+    ))
+    .unwrap();
+    assert_eq!(
+        AST::Call(
+            Box::new(AST::Call(
+                Box::new(AST::Identifier(b"add")),
+                Box::new(AST::Integer(1))
+            )),
+            Box::new(AST::Integer(1))
+        ),
+        r
+    );
 }
