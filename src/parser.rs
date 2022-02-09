@@ -137,8 +137,7 @@ pub fn parse_bind<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
 pub fn parse_let<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
     lexer: &mut MultiPeek<I>,
 ) -> Option<AST<'a>> {
-    let mut result: Option<ASTLet<'a>> = None;
-    let mut current: Option<&mut ASTLet<'a>> = None;
+    let mut binds = Vec::new();
     loop {
         match lexer.peek() {
             Some(NixToken {
@@ -148,35 +147,21 @@ pub fn parse_let<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
 
                 let body = parse_expr_function(lexer).unwrap();
 
-                match current {
-                    Some(_) => current.unwrap().body = Box::new(body),
-                    None => { return Some(body); }
-                }
-                break;
+                break Some(binds.into_iter().fold(body, |accum, item| {
+                    AST::Let(ASTLet {
+                        bind: item,
+                        body: Box::new(accum)
+                    })
+                }))
             }
             _ => {
                 lexer.reset_peek();
                 let bind = parse_bind(lexer);
 
-                match result {
-                    Some(ref mut a) => {
-                        let the_let = ASTLet{ bind, body: Box::new(AST::FakeDontUse) };
-                        current.unwrap().body = Box::new(AST::Let(the_let));
-                        current = Some(match current.unwrap().body.as_ref() {
-                            AST::Let(ref mut a) => a,
-                            _ => panic!(),
-                        });
-                    }
-                    None => {
-                        let the_let = ASTLet{bind, body: Box::new(AST::FakeDontUse) };
-                        result = Some(the_let);
-                        current = Some(result.as_mut().unwrap());
-                    },
-                }
+                binds.push(bind);
             }
         }
     }
-    Some(AST::Let(result.unwrap()))
 }
 
 #[instrument(name = "path", skip_all, ret)]
