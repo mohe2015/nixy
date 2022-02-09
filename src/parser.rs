@@ -44,7 +44,8 @@ const BUILTIN_STRING_CONCATENATE: &[u8] = b"__builtin_string_concatenate";
 pub enum AST<'a> {
     Identifier(&'a [u8]),
     String(&'a [u8]),
-    PathSegment(&'a [u8]),
+    PathSegment(&'a [u8]), // merge into String
+    Integer(i64),
     Let(Box<AST<'a>>, Box<AST<'a>>, Box<AST<'a>>),
     Call(Box<AST<'a>>,Box<AST<'a>>),
 }
@@ -55,6 +56,7 @@ impl<'a> Debug for AST<'a> {
             AST::Identifier(v) => write!(f, "{}", std::str::from_utf8(v).unwrap()),
             AST::PathSegment(v) =>  write!(f, "`{}`", std::str::from_utf8(v).unwrap()),
             AST::String(v) =>  write!(f, "\"{}\"", std::str::from_utf8(v).unwrap()),
+            AST::Integer(v) =>  write!(f, "{}", v),
             AST::Let(a, b, c) =>  write!(f, "{:?} {:?} {:?}", a, b, c),
             AST::Call(a, b) =>  write!(f, "({:?} {:?})", a, b),
         }
@@ -386,12 +388,18 @@ pub fn parse<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
 
 #[test]
 fn test_operators() {
-    let r = parse(&mut multipeek([
+    let r = parse_expr_op(&mut multipeek([
+        NixToken {
+            token_type: NixTokenType::Integer(1)
+        },
         NixToken {
             token_type: NixTokenType::Addition
+        },
+        NixToken {
+            token_type: NixTokenType::Integer(41)
         }
     ].into_iter())).unwrap();
-    assert_eq!(AST::Call(Box::new(AST::String(b"hi")), Box::new(AST::String(b"jo"))), r);
+    assert_eq!(AST::Call(Box::new(AST::Call(Box::new(AST::Identifier(b"add")), Box::new(AST::Integer(1)))), Box::new(AST::Integer(1))), r);
 
 
 }
