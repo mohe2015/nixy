@@ -229,23 +229,28 @@ pub fn parse_indented_string<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::De
             Some(NixToken {
                 token_type: NixTokenType::String(string),
             }) => {
-                accum = AST::Call(ASTCall(Box::new(AST::Identifier(BUILTIN_STRING_CONCATENATE)), Box::new(AST::String(string))))
+                accum = AST::Call(ASTCall(Box::new(AST::Call(ASTCall(Box::new(AST::Identifier(BUILTIN_STRING_CONCATENATE)), Box::new(accum)))), Box::new(AST::String(string))))
+            }
+            Some(NixToken {
+                token_type: NixTokenType::IndentedString(string),
+            }) => {
+                accum = AST::Call(ASTCall(Box::new(AST::Call(ASTCall(Box::new(AST::Identifier(BUILTIN_STRING_CONCATENATE)), Box::new(accum)))), Box::new(AST::String(string))))
             }
             Some(NixToken {
                 token_type: NixTokenType::InterpolateStart,
             }) => {
                 let expr = parse_expr(lexer).unwrap();
-                accum = AST::Call(ASTCall(Box::new(AST::Identifier(BUILTIN_STRING_CONCATENATE)), Box::new(expr)))
+                expect(lexer, NixTokenType::CurlyClose);
+                accum = AST::Call(ASTCall(Box::new(AST::Call(ASTCall(Box::new(AST::Identifier(BUILTIN_STRING_CONCATENATE)), Box::new(accum)))), Box::new(expr)))
             }
             Some(NixToken {
                 token_type: NixTokenType::IndentedStringEnd,
             }) => {
-                break
+                break Some(accum)
             }
-            _ => panic!()
+            v => panic!("unexpected {:?}", v)
         }
     }
-    Some(accum)
 }
 
 #[instrument(name = "simple", skip_all, ret)]
