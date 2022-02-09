@@ -1,9 +1,8 @@
 use crate::lexer::{NixToken, NixTokenType};
 use core::fmt;
-use itertools::FoldWhile::{Continue, Done};
-use itertools::{multipeek, Itertools, MultiPeek};
+use itertools::MultiPeek;
 use std::{
-    fmt::{Debug, Display},
+    fmt::Debug,
     mem::discriminant,
 };
 use tracing::instrument;
@@ -303,7 +302,7 @@ pub fn parse_expr_simple<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>
             lexer.reset_peek();
             parse_indented_string(lexer)
         }
-        other => {
+        _ => {
             lexer.reset_peek();
             None
         }
@@ -418,8 +417,7 @@ pub fn parse_expr_function<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debu
 pub fn parse_expr<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
     lexer: &mut MultiPeek<I>,
 ) -> Option<AST<'a>> {
-    let result = parse_expr_function(lexer);
-    result
+    parse_expr_function(lexer)
 }
 
 #[instrument(name = "p", skip_all, ret)]

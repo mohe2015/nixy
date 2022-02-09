@@ -1,8 +1,7 @@
 use itertools::multipeek;
-use std::panic;
 use std::{fs, io::Result};
-use tracing::{info, Level};
-use tracing_subscriber::{fmt::format::FmtSpan, FmtSubscriber};
+use tracing::Level;
+use tracing_subscriber::fmt::format::FmtSpan;
 use walkdir::WalkDir;
 
 use crate::{
@@ -23,8 +22,8 @@ fn main() -> Result<()> {
 
     tracing::subscriber::set_global_default(subscriber).unwrap();
 
-    let mut success = 0;
-    let mut failure = 0;
+    //let mut success = 0;
+    //let mut failure = 0;
 
     for entry in WalkDir::new("/etc/nixos/nixpkgs") {
         let entry = entry.unwrap();
@@ -37,7 +36,7 @@ fn main() -> Result<()> {
             // check whether this here is cache-wise better or if reading in chunks is better
             let file = fs::read(path).unwrap();
 
-            let mut lexer = NixLexer::new(&file).filter(|t| match t.token_type {
+            let lexer = NixLexer::new(&file).filter(|t| match t.token_type {
                 NixTokenType::Whitespace(_)
                 | NixTokenType::SingleLineComment(_)
                 | NixTokenType::MultiLineComment(_) => false,
@@ -62,7 +61,7 @@ fn main() -> Result<()> {
     }
 
     // 51886/51886
-    println!("{}/{}", success, success + failure);
+    //println!("{}/{}", success, success + failure);
 
     Ok(())
 }
