@@ -15,6 +15,23 @@ use itertools::FoldWhile::{Done, Continue};
 
 /*
 expr_op hard
+
+3+4*5
+
+addition = (multiplication {+ multiplication})
+multiplication = (number {* number})
+
+addition = multiplication {+ multiplication}
+addition = number {* number } {+ multiplication}
+addition = number + multiplication
+addition = number + number * number
+
+3+4*5+3
+addition = multiplication {+ multiplication} 
+addition = number {+ multiplication} 
+addition = number + multiplication {+ multiplication} 
+addition = number + (number * number) {+ multiplication} 
+
 */
 
 const BUILTIN_UNARY_NOT: &[u8] = b"__builtin_unary_not";
