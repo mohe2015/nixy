@@ -6,6 +6,10 @@ use tracing::instrument;
 
 // TODO FIXME call lexer.reset_peek(); everywhere
 
+// TODO https://matklad.github.io/2020/04/13/simple-but-powerful-pratt-parsing.html
+// TODO https://matklad.github.io/2020/04/15/from-pratt-to-dijkstra.html
+// https://matklad.github.io/2020/03/22/fast-simple-rust-interner.html
+
 #[derive(Debug)]
 pub struct ASTBind<'a> {
     path: Box<AST<'a>>,
@@ -34,6 +38,14 @@ pub struct ASTSelect<'a> {
 }
 
 #[derive(Debug)]
+pub struct ASTIf<'a> {
+    condition: Box<AST<'a>>,
+    true_case: Box<AST<'a>>,
+    false_case: Box<AST<'a>>,
+}
+
+
+#[derive(Debug)]
 pub struct ASTIdentifier<'a>(&'a [u8]);
 
 pub enum AST<'a> {
@@ -43,6 +55,7 @@ pub enum AST<'a> {
     PathSegment(ASTPathSegment<'a>),
     Bind(ASTBind<'a>),
     Let(ASTLet<'a>),
+    If(ASTIf<'a>),
     FakeDontUse,
 }
 
@@ -55,6 +68,7 @@ impl<'a> fmt::Debug for AST<'a> {
             Self::PathSegment(arg0) => f.debug_tuple("PathSegment").field(arg0).finish(),
             Self::Bind(arg0) => f.debug_tuple("Bind").field(arg0).finish(),
             Self::Let(arg0) => f.debug_tuple("Let").field(arg0).finish(),
+            Self::If(arg0) => f.debug_tuple("If").field(arg0).finish(),
             Self::FakeDontUse => f.debug_tuple("FakeDontUse").finish(),
         }
     }
@@ -146,7 +160,7 @@ pub fn parse_let<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
             }) => {
                 lexer.next();
 
-                let body = parse_expr_function(lexer).unwrap();
+                let body = parse_expr_function(lexer).expect("failed to parse body of let binding");
 
                 break Some(binds.into_iter().fold(body, |accum, item| {
                     AST::Let(ASTLet {
@@ -276,7 +290,27 @@ pub fn parse_expr_op<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
 pub fn parse_expr_if<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
     lexer: &mut MultiPeek<I>,
 ) -> Option<AST<'a>> {
-    parse_expr_op(lexer)
+    match lexer.peek() {
+        Some(NixToken {
+            token_type: NixTokenType::If
+        }) => {
+            expect(lexer, NixTokenType::If);
+            let condition = parse_expr(lexer).expect("failed to parse if condition");
+            expect(lexer, NixTokenType::Then);
+            let true_case = parse_expr(lexer).expect("failed to parse if true case");
+            expect(lexer, NixTokenType::Else);
+            let false_case = parse_expr(lexer).expect("failed to parse if false case");
+            Some(AST::If(ASTIf{
+                condition: Box::new(condition),
+                true_case: Box::new(true_case),
+                false_case: Box::new(false_case),
+            }))
+        }
+        _ => {
+            lexer.reset_peek();
+            parse_expr_op(lexer)
+        }
+    }
 }
 
 #[instrument(name = "fn", skip_all, ret)]

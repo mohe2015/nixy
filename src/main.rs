@@ -30,7 +30,7 @@ fn main() -> Result<()> {
         let entry = entry.unwrap();
         let f_name = entry.file_name().to_string_lossy();
         let path = entry.path();
-        match panic::catch_unwind(|| {
+        //match panic::catch_unwind(|| {
             if f_name.ends_with(".nix") {
                 println!("{}", path.display());
 
@@ -52,13 +52,13 @@ fn main() -> Result<()> {
 
                 parse(&mut multipeek(lexer));
             };
-        }) {
+        /* }) {
             Ok(_) => success += 1,
             Err(_) => {
                 failure += 1;
                 panic!("{}", path.display());
             }
-        }
+        }*/
     }
 
     // 51886/51886
