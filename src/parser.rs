@@ -1,6 +1,6 @@
 use crate::lexer::{NixToken, NixTokenType};
 use core::fmt;
-use itertools::{multipeek, MultiPeek};
+use itertools::MultiPeek;
 use std::mem::discriminant;
 use tracing::instrument;
 
@@ -12,6 +12,8 @@ use tracing::instrument;
 
 const BUILTIN_UNARY_NOT: &[u8] = b"__builtin_unary_not";
 const BUILTIN_PATH_CONCATENATE: &[u8] = b"__builtin_path_concatenate";
+const BUILTIN_SELECT: &[u8] = b"__builtin_select";
+const BUILTIN_IF: &[u8] = b"__builtin_if";
 
 #[derive(Debug)]
 pub struct ASTBind<'a> {
@@ -29,31 +31,16 @@ pub struct ASTLet<'a> {
 pub struct ASTPathSegment<'a>(&'a [u8]);
 
 #[derive(Debug)]
-pub struct ASTSelect<'a> {
-    first: Box<AST<'a>>,
-    rest: Box<AST<'a>>,
-}
-
-#[derive(Debug)]
 pub struct ASTCall<'a>(Box<AST<'a>>,Box<AST<'a>>);
-
-#[derive(Debug)]
-pub struct ASTIf<'a> {
-    condition: Box<AST<'a>>,
-    true_case: Box<AST<'a>>,
-    false_case: Box<AST<'a>>,
-}
 
 #[derive(Debug)]
 pub struct ASTIdentifier<'a>(&'a [u8]);
 
 pub enum AST<'a> {
-    Select(ASTSelect<'a>),
     Identifier(ASTIdentifier<'a>),
     PathSegment(ASTPathSegment<'a>),
     Bind(ASTBind<'a>),
     Let(ASTLet<'a>),
-    If(ASTIf<'a>),
     Call(ASTCall<'a>),
     FakeDontUse,
 }
@@ -61,13 +48,11 @@ pub enum AST<'a> {
 impl<'a> fmt::Debug for AST<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Select(arg0) => f.debug_tuple("Select").field(arg0).finish(),
             Self::Call(arg0) => f.debug_tuple("Call").field(arg0).finish(),
             Self::Identifier(arg0) => f.debug_tuple("Identifier").field(arg0).finish(),
             Self::PathSegment(arg0) => f.debug_tuple("PathSegment").field(arg0).finish(),
             Self::Bind(arg0) => f.debug_tuple("Bind").field(arg0).finish(),
             Self::Let(arg0) => f.debug_tuple("Let").field(arg0).finish(),
-            Self::If(arg0) => f.debug_tuple("If").field(arg0).finish(),
             Self::FakeDontUse => f.debug_tuple("FakeDontUse").finish(),
         }
     }
@@ -96,7 +81,7 @@ pub fn parse_attrpath<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
             }) => {
                 match result {
                     Some(a) => {
-                        result = Some(AST::Select(ASTSelect { first: Box::new(a), rest: Box::new(AST::Identifier(ASTIdentifier(id)))}))
+                        result = Some(AST::Call(ASTCall(Box::new(AST::Call(ASTCall(Box::new(AST::Identifier(ASTIdentifier(BUILTIN_SELECT))), Box::new(a)))), Box::new(AST::Identifier(ASTIdentifier(id))))));
                     }
                     None => result = Some(AST::Identifier(ASTIdentifier(id))),
                 }
@@ -263,8 +248,9 @@ pub fn parse_expr_app<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
         match jo {
             Some(expr) => {
                 match result {
-                    // TODO FIXME apply?
-                    Some(a) => result = Some(AST::Select(ASTSelect{first: Box::new(a), rest: Box::new(expr)})),
+                    Some(a) => {
+                        result = Some(AST::Call(ASTCall(Box::new(AST::Call(ASTCall(Box::new(AST::Identifier(ASTIdentifier(BUILTIN_SELECT))), Box::new(a)))),  Box::new(expr))));
+                    }
                     None => result = Some(expr),
                 }
 
@@ -311,11 +297,7 @@ pub fn parse_expr_if<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
             let true_case = parse_expr(lexer).expect("failed to parse if true case");
             expect(lexer, NixTokenType::Else);
             let false_case = parse_expr(lexer).expect("failed to parse if false case");
-            Some(AST::If(ASTIf{
-                condition: Box::new(condition),
-                true_case: Box::new(true_case),
-                false_case: Box::new(false_case),
-            }))
+            Some(AST::Call(ASTCall(Box::new(AST::Call(ASTCall(Box::new(AST::Call(ASTCall(Box::new(AST::Identifier(ASTIdentifier(BUILTIN_IF))), Box::new(condition)))), Box::new(true_case)))), Box::new(false_case))))
         }
         _ => {
             lexer.reset_peek();
