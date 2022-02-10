@@ -54,6 +54,7 @@ pub struct SourceLocation {
 pub enum NixTokenType<'a> {
     Identifier(&'a [u8]),
     Integer(i64),
+    Float(f64),
     // Float,
     PathStart,
     PathSegment(&'a [u8]),
@@ -119,6 +120,7 @@ impl<'a> fmt::Debug for NixTokenType<'a> {
                 .field(&std::str::from_utf8(arg0).unwrap().to_owned())
                 .finish(),
             Self::Integer(arg0) => f.debug_tuple("Integer").field(arg0).finish(),
+            Self::Float(arg0) => f.debug_tuple("Float").field(arg0).finish(),
             Self::PathStart => write!(f, "PathStart"),
             Self::PathSegment(arg0) => f
                 .debug_tuple("PathSegment")
@@ -528,11 +530,24 @@ impl<'a> Iterator for NixLexer<'a> {
                     while let Some((_, b'0'..=b'9')) = self.iter.peek() {
                         last = self.iter.next().unwrap().0;
                     }
-                    let integer = std::str::from_utf8(&self.data[offset..=last]).unwrap();
-                    //println!("{:?}", integer);
-                    Some(NixToken {
-                        token_type: NixTokenType::Integer(integer.parse().unwrap()),
-                    })
+                    if let Some((_, b'.')) = self.iter.peek() {
+                        // float
+                        self.iter.next();
+                        while let Some((_, b'0'..=b'9')) = self.iter.peek() {
+                            last = self.iter.next().unwrap().0;
+                        }
+                        let float = std::str::from_utf8(&self.data[offset..=last]).unwrap();
+                        //println!("{:?}", integer);
+                        Some(NixToken {
+                            token_type: NixTokenType::Float(float.parse().unwrap()),
+                        })
+                    } else {
+                        let integer = std::str::from_utf8(&self.data[offset..=last]).unwrap();
+                        //println!("{:?}", integer);
+                        Some(NixToken {
+                            token_type: NixTokenType::Integer(integer.parse().unwrap()),
+                        })
+                    }
                 }
                 Some((_offset, b'~')) => {
                     // I think this is used by exactly one file?

@@ -28,6 +28,7 @@ pub enum AST<'a> {
     String(&'a [u8]),
     PathSegment(&'a [u8]), // merge into String
     Integer(i64),
+    Float(f64),
     Let(Box<AST<'a>>, Box<AST<'a>>, Box<AST<'a>>),
     Call(Box<AST<'a>>, Box<AST<'a>>),
 }
@@ -52,6 +53,7 @@ impl<'a> Debug for AST<'a> {
                     .field(&std::str::from_utf8(arg0).unwrap())
                     .finish(),
                 Self::Integer(arg0) => f.debug_tuple("Integer").field(arg0).finish(),
+                Self::Float(arg0) => f.debug_tuple("Float").field(arg0).finish(),
                 Self::Let(arg0, arg1, arg2) => f
                     .debug_tuple("Let")
                     .field(arg0)
@@ -394,6 +396,13 @@ pub fn parse_expr_simple<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>
             token_type: NixTokenType::Integer(integer),
         }) => {
             let ret = Some(AST::Integer(*integer));
+            lexer.next();
+            ret
+        }
+        Some(NixToken {
+            token_type: NixTokenType::Float(float),
+        }) => {
+            let ret = Some(AST::Float(*float));
             lexer.next();
             ret
         }
@@ -1067,25 +1076,7 @@ fn test_operators() {
 
     tracing::subscriber::set_global_default(subscriber).unwrap();
 
-    can_parse(r##"
-    {a}: with a;
-    let
-   
-    fontcursormisc_hidpi = pkgs.xorg.fontxfree86type1.overrideAttrs (old:
-      let
-       
-        size = 2.39583 * config.services.xserver.dpi;
-        sizeString = builtins.head (builtins.split "\\." (toString size));
-      in
-      {
-        postInstall = ''
-          alias='cursor -xfree86-cursor-medium-r-normal--0-${sizeString}-0-0-p-0-adobe-fontspecific'
-          echo "$alias" > $out/lib/X11/fonts/Type1/fonts.alias
-        '';
-      });
-  
-  in 1
-    "##);
+    can_parse(r##"2.39583"##);
 
     can_parse(r##"{k}:
     (i: i ? ${k})
