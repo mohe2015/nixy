@@ -1,10 +1,7 @@
 use crate::lexer::{NixToken, NixTokenType};
 use core::fmt;
 use itertools::MultiPeek;
-use std::{
-    fmt::Debug,
-    mem::discriminant,
-};
+use std::{fmt::Debug, mem::discriminant};
 use tracing::instrument;
 
 // TODO FIXME call lexer.reset_peek(); everywhere
@@ -54,15 +51,30 @@ pub enum AST<'a> {
 
 impl<'a> Debug for AST<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        if !f.alternate() { // ugly hack for tracing macros
+        if !f.alternate() {
+            // ugly hack for tracing macros
             write!(f, "{:#?}", self)
         } else {
             match self {
-                Self::Identifier(arg0) => f.debug_tuple("Identifier").field(&std::str::from_utf8(arg0).unwrap()).finish(),
-                Self::String(arg0) => f.debug_tuple("String").field(&std::str::from_utf8(arg0).unwrap()).finish(),
-                Self::PathSegment(arg0) => f.debug_tuple("PathSegment").field(&std::str::from_utf8(arg0).unwrap()).finish(),
+                Self::Identifier(arg0) => f
+                    .debug_tuple("Identifier")
+                    .field(&std::str::from_utf8(arg0).unwrap())
+                    .finish(),
+                Self::String(arg0) => f
+                    .debug_tuple("String")
+                    .field(&std::str::from_utf8(arg0).unwrap())
+                    .finish(),
+                Self::PathSegment(arg0) => f
+                    .debug_tuple("PathSegment")
+                    .field(&std::str::from_utf8(arg0).unwrap())
+                    .finish(),
                 Self::Integer(arg0) => f.debug_tuple("Integer").field(arg0).finish(),
-                Self::Let(arg0, arg1, arg2) => f.debug_tuple("Let").field(arg0).field(arg1).field(arg2).finish(),
+                Self::Let(arg0, arg1, arg2) => f
+                    .debug_tuple("Let")
+                    .field(arg0)
+                    .field(arg1)
+                    .field(arg2)
+                    .finish(),
                 Self::Call(arg0, arg1) => f.debug_tuple("Call").field(arg0).field(arg1).finish(),
             }
         }
@@ -315,7 +327,9 @@ pub fn parse_expr_simple<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>
 
 #[instrument(name = "", skip_all, ret)]
 pub fn parse_expr_infix<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
-    lexer: &mut MultiPeek<I>, fun: fn(&mut MultiPeek<I>) -> Option<AST<'a>>, operators: &[NixTokenType]
+    lexer: &mut MultiPeek<I>,
+    fun: fn(&mut MultiPeek<I>) -> Option<AST<'a>>,
+    operators: &[NixTokenType],
 ) -> Option<AST<'a>> {
     let mut result = fun(lexer)?;
     loop {
@@ -327,7 +341,15 @@ pub fn parse_expr_infix<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
             let token = lexer.next().unwrap();
             let rhs = fun(lexer).unwrap();
             // TODO FIXME replace leaking by match to function name
-            result = AST::Call(Box::new(AST::Call(Box::new(AST::Identifier(Vec::leak(format!("{:?}", token.token_type).into_bytes()))), Box::new(result))), Box::new(rhs));
+            result = AST::Call(
+                Box::new(AST::Call(
+                    Box::new(AST::Identifier(Vec::leak(
+                        format!("{:?}", token.token_type).into_bytes(),
+                    ))),
+                    Box::new(result),
+                )),
+                Box::new(rhs),
+            );
         } else {
             lexer.reset_peek();
             return Some(result);
@@ -340,20 +362,41 @@ pub fn parse_expr_select<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>
     lexer: &mut MultiPeek<I>,
 ) -> Option<AST<'a>> {
     let expr = parse_expr_simple(lexer)?;
-    if let Some(NixToken { token_type: NixTokenType::Select }) = lexer.peek() {
+    if let Some(NixToken {
+        token_type: NixTokenType::Select,
+    }) = lexer.peek()
+    {
         lexer.next();
         // TODO FIXME we probably need to fix that method (use a custom one because of function application order)
         let attrpath = parse_attrpath(lexer);
         // we need to parse it specially because evaluation needs to abort if the attrpath does not exist and there is no or
-        let value = AST::Call(Box::new(AST::Call(Box::new(AST::Identifier(BUILTIN_SELECT)), Box::new(expr))), Box::new(attrpath));
-        if let Some(NixToken { token_type: NixTokenType::Identifier(b"or") }) = lexer.peek() {
+        let value = AST::Call(
+            Box::new(AST::Call(
+                Box::new(AST::Identifier(BUILTIN_SELECT)),
+                Box::new(expr),
+            )),
+            Box::new(attrpath),
+        );
+        if let Some(NixToken {
+            token_type: NixTokenType::Identifier(b"or"),
+        }) = lexer.peek()
+        {
             lexer.next();
             let default = parse_expr_simple(lexer).unwrap();
-            Some(AST::Call(Box::new(AST::Call(Box::new(AST::Identifier(b"__value_or_default")), Box::new(value))), Box::new(default)))
+            Some(AST::Call(
+                Box::new(AST::Call(
+                    Box::new(AST::Identifier(b"__value_or_default")),
+                    Box::new(value),
+                )),
+                Box::new(default),
+            ))
         } else {
             // also add abort call
             // TODO FIXME replace all inner calls in parse_attrpath for early abort (also mentions more accurate location then)
-            Some(AST::Call(Box::new(AST::Identifier(b"__abort_invalid_attrpath")), Box::new(value)))
+            Some(AST::Call(
+                Box::new(AST::Identifier(b"__abort_invalid_attrpath")),
+                Box::new(value),
+            ))
         }
     } else {
         lexer.reset_peek();
@@ -391,47 +434,59 @@ pub fn parse_expr_app<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
 pub fn parse_expr_arithmetic_negation<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
     lexer: &mut MultiPeek<I>,
 ) -> Option<AST<'a>> {
-   parse_expr_app(lexer)
+    parse_expr_app(lexer)
 }
-
 
 #[instrument(name = "?", skip_all, ret)]
 pub fn parse_expr_has_attribute<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
     lexer: &mut MultiPeek<I>,
 ) -> Option<AST<'a>> {
-    parse_expr_infix(lexer, parse_expr_arithmetic_negation, &[NixTokenType::QuestionMark])
+    parse_expr_infix(
+        lexer,
+        parse_expr_arithmetic_negation,
+        &[NixTokenType::QuestionMark],
+    )
 }
 
 #[instrument(name = "++", skip_all, ret)]
 pub fn parse_expr_list_concatenation<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
     lexer: &mut MultiPeek<I>,
 ) -> Option<AST<'a>> {
-   parse_expr_has_attribute(lexer)
+    parse_expr_has_attribute(lexer)
 }
 
 #[instrument(name = "*/", skip_all, ret)]
 pub fn parse_expr_arithmetic_mul_div<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
     lexer: &mut MultiPeek<I>,
 ) -> Option<AST<'a>> {
-   parse_expr_list_concatenation(lexer)
+    parse_expr_list_concatenation(lexer)
 }
 
 #[instrument(name = "+-", skip_all, ret)]
-pub fn parse_expr_arithmetic_or_concatenate<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
+pub fn parse_expr_arithmetic_or_concatenate<
+    'a,
+    I: Iterator<Item = NixToken<'a>> + std::fmt::Debug,
+>(
     lexer: &mut MultiPeek<I>,
 ) -> Option<AST<'a>> {
-   parse_expr_arithmetic_mul_div(lexer)
+    parse_expr_arithmetic_mul_div(lexer)
 }
 
 #[instrument(name = "!", skip_all, ret)]
 pub fn parse_expr_not<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
     lexer: &mut MultiPeek<I>,
 ) -> Option<AST<'a>> {
-    if let Some(NixToken { token_type: NixTokenType::ExclamationMark }) = lexer.peek() {
+    if let Some(NixToken {
+        token_type: NixTokenType::ExclamationMark,
+    }) = lexer.peek()
+    {
         expect(lexer, NixTokenType::ExclamationMark);
         Some(AST::Call(
             Box::new(AST::Identifier(BUILTIN_UNARY_NOT)),
-            Box::new(parse_expr_arithmetic_or_concatenate(lexer).expect("failed to parse negated expression")),
+            Box::new(
+                parse_expr_arithmetic_or_concatenate(lexer)
+                    .expect("failed to parse negated expression"),
+            ),
         ))
     } else {
         lexer.reset_peek();
@@ -443,28 +498,28 @@ pub fn parse_expr_not<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
 pub fn parse_expr_update<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
     lexer: &mut MultiPeek<I>,
 ) -> Option<AST<'a>> {
-   parse_expr_not(lexer)
+    parse_expr_not(lexer)
 }
 
 #[instrument(name = "<=>", skip_all, ret)]
 pub fn parse_expr_comparison<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
     lexer: &mut MultiPeek<I>,
 ) -> Option<AST<'a>> {
-   parse_expr_update(lexer)
+    parse_expr_update(lexer)
 }
 
 #[instrument(name = "=!=", skip_all, ret)]
 pub fn parse_expr_inequality_or_equality<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
     lexer: &mut MultiPeek<I>,
 ) -> Option<AST<'a>> {
-   parse_expr_comparison(lexer)
+    parse_expr_comparison(lexer)
 }
 
 #[instrument(name = "&&", skip_all, ret)]
 pub fn parse_expr_logical_and<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
     lexer: &mut MultiPeek<I>,
 ) -> Option<AST<'a>> {
-   parse_expr_inequality_or_equality(lexer)
+    parse_expr_inequality_or_equality(lexer)
 }
 
 #[instrument(name = "||", skip_all, ret)]
@@ -478,14 +533,14 @@ pub fn parse_expr_logical_or<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::De
 pub fn parse_expr_logical_implication<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
     lexer: &mut MultiPeek<I>,
 ) -> Option<AST<'a>> {
-   parse_expr_logical_or(lexer)
+    parse_expr_logical_or(lexer)
 }
 
 #[instrument(name = "op", skip_all, ret)]
 pub fn parse_expr_op<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
     lexer: &mut MultiPeek<I>,
 ) -> Option<AST<'a>> {
-   parse_expr_logical_implication(lexer)
+    parse_expr_logical_implication(lexer)
 }
 
 #[instrument(name = "if", skip_all, ret)]
