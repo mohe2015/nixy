@@ -286,9 +286,17 @@ impl<'a> Iterator for NixLexer<'a> {
                 Some((_offset, b'@')) => Some(NixToken {
                     token_type: NixTokenType::AtSign,
                 }),
-                Some((_offset, b'!')) => Some(NixToken {
-                    token_type: NixTokenType::ExclamationMark,
-                }),
+                Some((offset, b'!')) => match self.iter.peek() {
+                    Some((_, b'=')) => {
+                        self.iter.next();
+                        Some(NixToken {
+                            token_type: NixTokenType::NotEquals,
+                        })
+                    }
+                    _ => Some(NixToken {
+                        token_type: NixTokenType::ExclamationMark,
+                    })
+                }
                 Some((offset, b'/')) => match self.iter.peek() {
                     Some((_, b'/')) => {
                         self.iter.next();

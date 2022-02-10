@@ -887,7 +887,15 @@ pub fn parse_expr_function<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debu
                 // not a function, probably an attrset
                 return parse_expr_if(lexer);
             }
-            expect(lexer, NixTokenType::Colon);
+            match lexer.next() {
+                Some(NixToken { token_type: NixTokenType::Colon }) => {
+
+                }
+                Some(NixToken { token_type: NixTokenType::AtSign }) => {
+                    let ident = expect(lexer, NixTokenType::Identifier(b""));
+                }
+                _ => todo!(),
+            }
             parse_expr_function(lexer)
         }
         Some(NixTokenType::Identifier(ident)) => {
@@ -972,6 +980,12 @@ fn test_operators() {
         .finish();
 
     tracing::subscriber::set_global_default(subscriber).unwrap();
+
+    can_parse(r#"{}@a: 1"#);
+
+    can_parse(r#"a@{}: 1"#);
+
+    can_parse(r#"1 != 1"#);
 
     can_parse(r#"a: 1"#);
 
