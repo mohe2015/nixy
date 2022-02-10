@@ -1,4 +1,4 @@
-use itertools::multipeek;
+use itertools::{multipeek, Itertools};
 use std::{fs, io::Result};
 use tracing::Level;
 use tracing_subscriber::fmt::format::FmtSpan;
@@ -17,7 +17,7 @@ pub mod parser;
 fn main() -> Result<()> {
     let subscriber = tracing_subscriber::fmt()
         .with_span_events(FmtSpan::ACTIVE)
-        .with_max_level(Level::ERROR)
+        .with_max_level(Level::TRACE)
         .finish();
 
     tracing::subscriber::set_global_default(subscriber).unwrap();
@@ -30,6 +30,8 @@ fn main() -> Result<()> {
         let f_name = entry.file_name().to_string_lossy();
         let path = entry.path();
         match std::panic::catch_unwind(|| {
+            if !path.to_string_lossy().contains("nixpkgs/doc/default.nix") { return; }
+
             if f_name.ends_with(".nix") {
                 println!("{}", path.display());
 
