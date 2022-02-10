@@ -50,9 +50,11 @@ pub struct SourceLocation {
     pub end_location: SourcePosition,
 }
 
+#[derive(PartialEq)]
 pub enum NixTokenType<'a> {
     Identifier(&'a [u8]),
     Integer(i64),
+    Float(f64),
     // Float,
     PathStart,
     PathSegment(&'a [u8]),
@@ -118,6 +120,7 @@ impl<'a> fmt::Debug for NixTokenType<'a> {
                 .field(&std::str::from_utf8(arg0).unwrap().to_owned())
                 .finish(),
             Self::Integer(arg0) => f.debug_tuple("Integer").field(arg0).finish(),
+            Self::Float(arg0) => f.debug_tuple("Float").field(arg0).finish(),
             Self::PathStart => write!(f, "PathStart"),
             Self::PathSegment(arg0) => f
                 .debug_tuple("PathSegment")
@@ -193,13 +196,13 @@ impl<'a> fmt::Debug for NixTokenType<'a> {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct NixToken<'a> {
     pub token_type: NixTokenType<'a>,
     //pub location: SourceLocation,
 }
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Clone, Debug)]
 enum NixLexerState {
     Default,
     String,
@@ -209,6 +212,7 @@ enum NixLexerState {
     HomePath,
 }
 
+#[derive(Clone, Debug)]
 pub struct NixLexer<'a> {
     pub data: &'a [u8],
     pub iter: Peekable<Enumerate<Iter<'a, u8>>>,
@@ -264,9 +268,17 @@ impl<'a> Iterator for NixLexer<'a> {
                 Some((_offset, b':')) => Some(NixToken {
                     token_type: NixTokenType::Colon,
                 }),
-                Some((_offset, b'=')) => Some(NixToken {
-                    token_type: NixTokenType::Assign,
-                }),
+                Some((_, b'=')) => match self.iter.peek() {
+                    Some((_, b'=')) => {
+                        self.iter.next();
+                        Some(NixToken {
+                            token_type: NixTokenType::Equals,
+                        })
+                    }
+                    _ => Some(NixToken {
+                        token_type: NixTokenType::Assign,
+                    }),
+                },
                 Some((_offset, b';')) => Some(NixToken {
                     token_type: NixTokenType::Semicolon,
                 }),
@@ -276,9 +288,17 @@ impl<'a> Iterator for NixLexer<'a> {
                 Some((_offset, b'@')) => Some(NixToken {
                     token_type: NixTokenType::AtSign,
                 }),
-                Some((_offset, b'!')) => Some(NixToken {
-                    token_type: NixTokenType::ExclamationMark,
-                }),
+                Some((offset, b'!')) => match self.iter.peek() {
+                    Some((_, b'=')) => {
+                        self.iter.next();
+                        Some(NixToken {
+                            token_type: NixTokenType::NotEquals,
+                        })
+                    }
+                    _ => Some(NixToken {
+                        token_type: NixTokenType::ExclamationMark,
+                    }),
+                },
                 Some((offset, b'/')) => match self.iter.peek() {
                     Some((_, b'/')) => {
                         self.iter.next();
@@ -323,10 +343,13 @@ impl<'a> Iterator for NixLexer<'a> {
                     }),
                     _ => todo!(),
                 },
-                Some((_offset, b'-')) => match self.iter.next() {
-                    Some((_, b'>')) => Some(NixToken {
-                        token_type: NixTokenType::Implies,
-                    }),
+                Some((_offset, b'-')) => match self.iter.peek() {
+                    Some((_, b'>')) => {
+                        self.iter.next();
+                        Some(NixToken {
+                            token_type: NixTokenType::Implies,
+                        })
+                    }
                     _ => Some(NixToken {
                         token_type: NixTokenType::Subtraction,
                     }),
@@ -367,9 +390,12 @@ impl<'a> Iterator for NixLexer<'a> {
                     _ => todo!(),
                 },
                 Some((_offset, b'>')) => match self.iter.peek() {
-                    Some((_, b'=')) => Some(NixToken {
-                        token_type: NixTokenType::GreaterThanOrEqual,
-                    }),
+                    Some((_, b'=')) => {
+                        self.iter.next();
+                        Some(NixToken {
+                            token_type: NixTokenType::GreaterThanOrEqual,
+                        })
+                    }
                     _ => Some(NixToken {
                         token_type: NixTokenType::GreaterThan,
                     }),
@@ -483,22 +509,45 @@ impl<'a> Iterator for NixLexer<'a> {
                         self.iter.next();
                     }
                     let identifier = &self.data[offset..self.iter.peek().unwrap().0];
-                    //println!("{:?}", std::str::from_utf8(identifier));
                     Some(NixToken {
-                        token_type: NixTokenType::Identifier(identifier),
+                        token_type: (match identifier {
+                            b"if" => NixTokenType::If,
+                            b"then" => NixTokenType::Then,
+                            b"else" => NixTokenType::Else,
+                            b"assert" => NixTokenType::Assert,
+                            b"with" => NixTokenType::With,
+                            b"let" => NixTokenType::Let,
+                            b"in" => NixTokenType::In,
+                            b"rec" => NixTokenType::Rec,
+                            b"inherit" => NixTokenType::Inherit,
+                            _ => NixTokenType::Identifier(identifier),
+                        }),
                     })
+                    //println!("{:?}", std::str::from_utf8(identifier));
                 }
                 Some((offset, b'0'..=b'9')) => {
+                    let mut last = offset;
                     while let Some((_, b'0'..=b'9')) = self.iter.peek() {
-                        self.iter.next();
+                        last = self.iter.next().unwrap().0;
                     }
-                    let integer =
-                        std::str::from_utf8(&self.data[offset..self.iter.peek().unwrap().0])
-                            .unwrap();
-                    //println!("{:?}", integer);
-                    Some(NixToken {
-                        token_type: NixTokenType::Integer(integer.parse().unwrap()),
-                    })
+                    if let Some((_, b'.')) = self.iter.peek() {
+                        // float
+                        self.iter.next();
+                        while let Some((_, b'0'..=b'9')) = self.iter.peek() {
+                            last = self.iter.next().unwrap().0;
+                        }
+                        let float = std::str::from_utf8(&self.data[offset..=last]).unwrap();
+                        //println!("{:?}", integer);
+                        Some(NixToken {
+                            token_type: NixTokenType::Float(float.parse().unwrap()),
+                        })
+                    } else {
+                        let integer = std::str::from_utf8(&self.data[offset..=last]).unwrap();
+                        //println!("{:?}", integer);
+                        Some(NixToken {
+                            token_type: NixTokenType::Integer(integer.parse().unwrap()),
+                        })
+                    }
                 }
                 Some((_offset, b'~')) => {
                     // I think this is used by exactly one file?

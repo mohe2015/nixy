@@ -1,15 +1,27 @@
-use std::panic;
+#![feature(exit_status_error)]
+use itertools::{multipeek, Itertools};
 use std::{fs, io::Result};
+use tracing::Level;
+use tracing_subscriber::fmt::format::FmtSpan;
 use walkdir::WalkDir;
 
-use crate::lexer::NixLexer;
+use crate::{
+    lexer::{NixLexer, NixTokenType},
+    parser::parse,
+};
 
 pub mod lexer;
+pub mod parser;
 
-// cargo run |& sort | uniq -c | sort -n
+// cargo run --release |& sort | uniq -c | sort -n
 
 fn main() -> Result<()> {
-    println!("Hello, world!");
+    let subscriber = tracing_subscriber::fmt()
+        .with_span_events(FmtSpan::ACTIVE)
+        .with_max_level(Level::ERROR)
+        .finish();
+
+    tracing::subscriber::set_global_default(subscriber).unwrap();
 
     let mut success = 0;
     let mut failure = 0;
@@ -18,18 +30,27 @@ fn main() -> Result<()> {
         let entry = entry.unwrap();
         let f_name = entry.file_name().to_string_lossy();
         let path = entry.path();
-        match panic::catch_unwind(|| {
+        match std::panic::catch_unwind(|| {
+            //if !path.to_string_lossy().contains("nixpkgs/doc/default.nix") { return; }
+
             if f_name.ends_with(".nix") {
                 //println!("{}", path.display());
 
                 // check whether this here is cache-wise better or if reading in chunks is better
                 let file = fs::read(path).unwrap();
 
-                let lexer = NixLexer::new(&file);
+                let lexer = NixLexer::new(&file).filter(|t| match t.token_type {
+                    NixTokenType::Whitespace(_)
+                    | NixTokenType::SingleLineComment(_)
+                    | NixTokenType::MultiLineComment(_) => false,
+                    _ => true,
+                });
 
-                for _token in lexer {
+                for token in lexer.clone() {
                     //println!("{:?}", token.token_type);
                 }
+
+                parse(&mut multipeek(lexer));
             };
         }) {
             Ok(_) => success += 1,
@@ -40,7 +61,7 @@ fn main() -> Result<()> {
         }
     }
 
-    // 51886/51886
+    // 51975/51975
     println!("{}/{}", success, success + failure);
 
     Ok(())
