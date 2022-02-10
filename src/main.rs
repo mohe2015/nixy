@@ -1,3 +1,4 @@
+#![feature(exit_status_error)]
 use itertools::{multipeek, Itertools};
 use std::{fs, io::Result};
 use tracing::Level;
