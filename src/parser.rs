@@ -928,11 +928,11 @@ fn test_operators() {
 
     tracing::subscriber::set_global_default(subscriber).unwrap();
 
+    can_parse("{ }");
+
     can_parse(r#"{ a = "b"; }"#);
 
     can_parse("{ ... }: 1");
-
-    //can_parse("{ pkgs ? (import ./.. { }), nixpkgs ? { }}: 1");
 
     can_parse("{
         members = [];
