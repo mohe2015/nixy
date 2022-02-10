@@ -147,7 +147,21 @@ pub fn parse_attrpath<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
             Some(NixToken {
                 token_type: NixTokenType::InterpolateStart,
             }) => {
-                todo!()
+                expect(lexer, NixTokenType::InterpolateStart);
+                let expr = parse_expr(lexer).unwrap();
+                expect(lexer, NixTokenType::CurlyClose);
+                match result {
+                    Some(a) => {
+                        result = Some(AST::Call(
+                            Box::new(AST::Call(
+                                Box::new(AST::Identifier(BUILTIN_SELECT)),
+                                Box::new(a),
+                            )),
+                            Box::new(expr),
+                        ));
+                    }
+                    None => result = Some(expr),
+                }
             }
             _ => {
                 lexer.reset_peek();
@@ -952,7 +966,11 @@ pub fn parse_expr_function<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debu
             }
         }
         Some(NixTokenType::Assert) => {
-            todo!();
+            expect(lexer, NixTokenType::Assert);
+            let assert_expr = parse_expr(lexer);
+            expect(lexer, NixTokenType::Semicolon);
+            let body = parse_expr(lexer);
+            body // TODO FIXME
         }
         Some(NixTokenType::With) => {
             expect(lexer, NixTokenType::With);
