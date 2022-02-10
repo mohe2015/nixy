@@ -78,7 +78,7 @@ pub fn expect<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
 #[instrument(name = "attrpath", skip_all, ret)]
 pub fn parse_attrpath<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
     lexer: &mut MultiPeek<I>,
-) -> AST<'a> {
+) -> Option<AST<'a>> {
     let mut result: Option<AST<'a>> = None;
     loop {
         match lexer.peek() {
@@ -150,7 +150,7 @@ pub fn parse_attrpath<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
             }
         }
     }
-    result.unwrap()
+    result
 }
 
 #[instrument(name = "bind", skip_all, ret)]
@@ -207,7 +207,7 @@ pub fn parse_bind<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
             let expr = parse_expr(lexer).expect("expected expression in binding at");
             expect(lexer, NixTokenType::Semicolon);
 
-            (Box::new(attrpath), Box::new(expr))
+            (Box::new(attrpath.unwrap()), Box::new(expr))
         }
     }
 }
@@ -479,10 +479,20 @@ pub fn parse_expr_simple<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>
 #[instrument(name = "", skip_all, ret)]
 pub fn parse_expr_infix<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
     lexer: &mut MultiPeek<I>,
-    fun: fn(&mut MultiPeek<I>) -> Option<AST<'a>>,
+    f: fn(&mut MultiPeek<I>) -> Option<AST<'a>>,
     operators: &[NixTokenType],
 ) -> Option<AST<'a>> {
-    let mut result = fun(lexer)?;
+    parse_expr_infix_split(lexer, f,f, operators)
+}
+
+#[instrument(name = "", skip_all, ret)]
+pub fn parse_expr_infix_split<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
+    lexer: &mut MultiPeek<I>,
+    flhs: fn(&mut MultiPeek<I>) -> Option<AST<'a>>,
+    frhs: fn(&mut MultiPeek<I>) -> Option<AST<'a>>,
+    operators: &[NixTokenType],
+) -> Option<AST<'a>> {
+    let mut result = flhs(lexer)?;
     loop {
         let next_token = lexer.peek();
         if next_token.is_none() {
@@ -491,7 +501,7 @@ pub fn parse_expr_infix<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
         }
         if operators.contains(&next_token.unwrap().token_type) {
             let token = lexer.next().unwrap();
-            let rhs = fun(lexer).expect(&format!(
+            let rhs = frhs(lexer).expect(&format!(
                 "expected right hand side after {:?} but got nothing",
                 token.token_type
             ));
@@ -531,7 +541,7 @@ pub fn parse_expr_select<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>
                 Box::new(AST::Identifier(BUILTIN_SELECT)),
                 Box::new(expr),
             )),
-            Box::new(attrpath),
+            Box::new(attrpath.unwrap()),
         );
         if let Some(NixToken {
             token_type: NixTokenType::Identifier(b"or"),
@@ -613,9 +623,11 @@ pub fn parse_expr_arithmetic_negation<'a, I: Iterator<Item = NixToken<'a>> + std
 pub fn parse_expr_has_attribute<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
     lexer: &mut MultiPeek<I>,
 ) -> Option<AST<'a>> {
-    parse_expr_infix(
+    // TODO FIXME RHS needs to be attrpath
+    parse_expr_infix_split(
         lexer,
         parse_expr_arithmetic_negation,
+        parse_attrpath,
         &[NixTokenType::QuestionMark],
     )
 }
@@ -1054,6 +1066,10 @@ fn test_operators() {
         .finish();
 
     tracing::subscriber::set_global_default(subscriber).unwrap();
+
+    can_parse(r##"{k}:
+    (i: i ? ${k})
+    "##);
 
     can_parse(r##"
     {param}:
