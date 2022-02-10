@@ -1,10 +1,12 @@
 use crate::lexer::{NixToken, NixTokenType};
 use core::fmt;
-use itertools::{MultiPeek, Itertools};
-use std::{fmt::Debug, mem::discriminant, any::Any};
+use itertools::MultiPeek;
+use std::{fmt::Debug, mem::discriminant};
 use tracing::instrument;
 
 // TODO FIXME call lexer.reset_peek(); everywhere
+
+// TODO FIXME right-associativity and no associativity
 
 // TODO https://matklad.github.io/2020/04/13/simple-but-powerful-pratt-parsing.html
 // TODO https://matklad.github.io/2020/04/15/from-pratt-to-dijkstra.html
@@ -634,7 +636,12 @@ pub fn parse_expr_function<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debu
             todo!();
         }
         Some(NixTokenType::With) => {
-            todo!();
+            expect(lexer, NixTokenType::With);
+            let with_expr = parse_expr(lexer);
+            expect(lexer, NixTokenType::Semicolon);
+            let body = parse_expr(lexer);
+
+            body // TODO FIXME
         }
         _ => {
             lexer.reset_peek();
