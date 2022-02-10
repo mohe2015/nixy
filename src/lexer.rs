@@ -266,9 +266,19 @@ impl<'a> Iterator for NixLexer<'a> {
                 Some((_offset, b':')) => Some(NixToken {
                     token_type: NixTokenType::Colon,
                 }),
-                Some((_offset, b'=')) => Some(NixToken {
-                    token_type: NixTokenType::Assign,
-                }),
+                Some((_, b'=')) => match self.iter.peek() {
+                    Some((_, b'=')) => {
+                        self.iter.next();
+                        Some(NixToken {
+                            token_type: NixTokenType::Equals,
+                        })
+                    }
+                    _ => {
+                        Some(NixToken {
+                            token_type: NixTokenType::Assign,
+                        })
+                    }
+                }
                 Some((_offset, b';')) => Some(NixToken {
                     token_type: NixTokenType::Semicolon,
                 }),
