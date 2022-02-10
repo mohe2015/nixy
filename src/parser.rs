@@ -583,6 +583,34 @@ pub fn parse_expr_if<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
     }
 }
 
+
+#[instrument(name = "args", skip_all, ret)]
+pub fn parse_formals<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
+    lexer: &mut MultiPeek<I>,
+) -> Option<AST<'a>> {
+    let formals: Vec<AST<'a>> = Vec::new();
+    loop {
+        match lexer.next() {
+            Some(NixToken { token_type: NixTokenType::Identifier(a) }) => {
+                if let Some(NixToken { token_type: NixTokenType::QuestionMark }) = lexer.peek() {
+                    lexer.next();
+                    parse_expr(lexer);
+                } else {
+                    lexer.reset_peek();
+                }
+            }
+            Some(NixToken { token_type: NixTokenType::Comma }) => {
+            }
+            Some(NixToken { token_type: NixTokenType::Ellipsis }) => {
+            }
+            Some(NixToken { token_type: NixTokenType::CurlyClose }) => {
+                return None; // TODO FIXME
+            }
+            _ => todo!()
+        }
+    }
+}
+
 #[instrument(name = "fn", skip_all, ret)]
 pub fn parse_expr_function<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
     lexer: &mut MultiPeek<I>,
@@ -592,6 +620,21 @@ pub fn parse_expr_function<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debu
         Some(NixTokenType::Let) => {
             lexer.reset_peek();
             parse_let(lexer)
+        }
+        Some(NixTokenType::CurlyOpen) => {
+            lexer.next();
+            let formals = parse_formals(lexer);
+            expect(lexer, NixTokenType::Colon);
+            parse_expr_function(lexer)
+        }
+        /*Some(NixTokenType::Identifier(_)) => {
+            todo!(); // for this we need two lookahead because otherwise this is parse_expr_if
+        }*/
+        Some(NixTokenType::Assert) => {
+            todo!();
+        }
+        Some(NixTokenType::With) => {
+            todo!();
         }
         _ => {
             lexer.reset_peek();

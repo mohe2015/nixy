@@ -17,7 +17,7 @@ pub mod parser;
 fn main() -> Result<()> {
     let subscriber = tracing_subscriber::fmt()
         .with_span_events(FmtSpan::ACTIVE)
-        .with_max_level(Level::WARN)
+        .with_max_level(Level::TRACE)
         .finish();
 
     tracing::subscriber::set_global_default(subscriber).unwrap();
@@ -53,7 +53,7 @@ fn main() -> Result<()> {
             Ok(_) => success += 1,
             Err(_) => {
                 failure += 1;
-                //panic!("{}", path.display());
+                panic!("{}", path.display());
             }
         }
     }
