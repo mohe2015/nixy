@@ -366,7 +366,23 @@ pub fn parse_expr_simple<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>
         Some(NixToken {
             token_type: NixTokenType::BracketOpen,
         }) => {
-            todo!()
+            expect(lexer, NixTokenType::BracketOpen);
+            let mut array = Vec::new();
+            loop {
+                match lexer.peek() {
+                    Some(NixToken {
+                        token_type: NixTokenType::BracketClose,
+                    }) => {
+                        lexer.next();
+                        break;
+                    }
+                    token => {
+                        lexer.reset_peek();
+                        array.push(parse_expr_simple(lexer).unwrap());
+                    }
+                }
+            }
+            return Some(AST::Identifier(b"TODO ARRAY"));
         }
         Some(NixToken {
             token_type: NixTokenType::Let,
