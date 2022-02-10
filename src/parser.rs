@@ -1067,31 +1067,7 @@ fn test_operators() {
     can_parse("1");
 
     can_parse(
-        r##"
-{param}:
-with param; {
-  realGrub = if cfg.version == 1 then grubPkgs.grub
-    else if cfg.zfsSupport then grubPkgs.grub2.override { zfsSupport = true; }
-    else if cfg.trustedBoot.enable
-         then if cfg.trustedBoot.isHPLaptop
-              then grubPkgs.trustedGrub-for-HP
-              else grubPkgs.trustedGrub
-         else grubPkgs.grub2;
-
-  grub =
-    # Don't include GRUB if we're only generating a GRUB menu (e.g.,
-    # in EC2 instances).
-    if cfg.devices == ["nodev"]
-    then null
-    else realGrub;
-
-  grubEfi =
-    # EFI version of Grub v2
-    if cfg.efiSupport && (cfg.version == 2)
-    then realGrub.override { efiSupport = cfg.efiSupport; }
-    else null;
-}
-        "##,
+        r##"-1"##,
     );
 
     can_parse(
