@@ -188,7 +188,7 @@ pub fn parse_bind<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
             lexer.reset_peek();
             let attrpath = parse_attrpath(lexer);
             expect(lexer, NixTokenType::Assign);
-            let expr = parse_expr(lexer).unwrap();
+            let expr = parse_expr(lexer).expect("expected expression in binding at");
             expect(lexer, NixTokenType::Semicolon);
 
             (Box::new(attrpath), Box::new(expr))
@@ -926,6 +926,8 @@ fn test_operators() {
     can_parse("{
         members = [];
     }");
+
+    can_parse(r#"{ }: rec { a = "b"; }"#);
 
     let r = parse_expr_op(&mut itertools::multipeek(
         [
