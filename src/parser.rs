@@ -751,6 +751,7 @@ pub fn parse_formals<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
     lexer: &mut MultiPeek<I>,
 ) -> Option<AST<'a>> {
     // we need quite some peekahead here do differentiate between attrsets
+    // this is probably the most complicated function in here
     let formals: Vec<AST<'a>> = Vec::new();
     let mut parsed_first = false;
     if let Some(NixToken {
@@ -830,8 +831,19 @@ pub fn parse_formals<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
                     token_type: NixTokenType::CurlyClose,
                 }) => {
                     if !parsed_first {
-                        expect(lexer, NixTokenType::CurlyOpen);
-                        parsed_first = true;
+                        if let Some(NixToken {
+                            token_type: NixTokenType::Colon,
+                        }) = lexer.peek() {
+                            // empty function
+                            expect(lexer, NixTokenType::CurlyOpen);
+                            expect(lexer, NixTokenType::CurlyClose);
+                            lexer.reset_peek();
+                            return Some(AST::Identifier(b"TODO formals")); // TODO FIXME
+                        } else {
+                            // potentially empty attrset
+                            lexer.reset_peek();
+                            return None;
+                        }
                     }
                     expect(lexer, NixTokenType::CurlyClose);
                     return Some(AST::Identifier(b"TODO formals")); // TODO FIXME
@@ -928,6 +940,8 @@ fn test_operators() {
 
     tracing::subscriber::set_global_default(subscriber).unwrap();
 
+    // another lookahead issue
+    can_parse("{ }: 1");
     can_parse("{ }");
 
     can_parse(r#"{ a = "b"; }"#);
