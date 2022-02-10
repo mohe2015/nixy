@@ -941,11 +941,8 @@ fn test_operators() {
     tracing::subscriber::set_global_default(subscriber).unwrap();
 
     can_parse(r#"
-    { a }:
-
-a rec {
-  src = a {
-  };
+{
+  src = 1 + 1;
 }
 "#);
 
