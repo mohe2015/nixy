@@ -940,6 +940,15 @@ fn test_operators() {
 
     tracing::subscriber::set_global_default(subscriber).unwrap();
 
+    can_parse(r#"
+    { a }:
+
+a rec {
+  src = a {
+  };
+}
+"#);
+
     // another lookahead issue
     can_parse("{ }: 1");
     can_parse("{ }");
