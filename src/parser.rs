@@ -320,9 +320,10 @@ pub fn parse_expr_infix<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
             return Some(result);
         }
         if operators.contains(&next_token.unwrap().token_type) {
-            lexer.next();
+            let token = lexer.next().unwrap();
             let rhs = fun(lexer).unwrap();
-            result = AST::Call(Box::new(AST::Call(Box::new(AST::Identifier(b"__")), Box::new(result))), Box::new(rhs));
+            // TODO FIXME replace leaking by match to function name
+            result = AST::Call(Box::new(AST::Call(Box::new(AST::Identifier(Vec::leak(format!("{:?}", token.token_type).into_bytes()))), Box::new(result))), Box::new(rhs));
         } else {
             lexer.reset_peek();
             return Some(result);
