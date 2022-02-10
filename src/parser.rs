@@ -184,11 +184,14 @@ pub fn parse_bind<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
             (Box::new(AST::Identifier(b"TODO inherit")), Box::new(AST::Identifier(b"TODO inherit")))
         }
         other => {
-            //println!("TEST {:?}", other);
             lexer.reset_peek();
             let attrpath = parse_attrpath(lexer);
             expect(lexer, NixTokenType::Assign);
-            let expr = parse_expr(lexer).expect("expected expression in binding at");
+
+            println!("TEST {:?}", lexer.peek());
+            lexer.reset_peek();
+            
+            let expr = parse_expr_simple(lexer).expect("expected expression in binding at");
             expect(lexer, NixTokenType::Semicolon);
 
             (Box::new(attrpath), Box::new(expr))
@@ -919,6 +922,8 @@ fn test_operators() {
 
     tracing::subscriber::set_global_default(subscriber).unwrap();
 
+    can_parse(r#"{ a = "b"; }"#);
+
     can_parse("{ ... }: 1");
 
     //can_parse("{ pkgs ? (import ./.. { }), nixpkgs ? { }}: 1");
@@ -926,8 +931,6 @@ fn test_operators() {
     can_parse("{
         members = [];
     }");
-
-    can_parse(r#"{ }: rec { a = "b"; }"#);
 
     let r = parse_expr_op(&mut itertools::multipeek(
         [
