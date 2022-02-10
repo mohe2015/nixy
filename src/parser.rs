@@ -898,16 +898,14 @@ pub fn parse_formals<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
                     expect(lexer, NixTokenType::CurlyClose);
                     return Some(AST::Identifier(b"TODO formals")); // TODO FIXME
                 }
-                /*Some(NixToken {
+                Some(NixToken {
                     token_type: NixTokenType::StringStart,
                 }) => {
-                    expect(lexer, NixTokenType::StringStart);
-                    let res =
-                    parse_some_string(lexer, NixTokenType::StringStart, NixTokenType::StringEnd)
-                        .unwrap();
-                        // TODO fixme what the hell is this?
-                }*/
-                tok => panic!("{:?}", tok),
+                    // that's not how formals look like
+                    lexer.reset_peek();
+                    return None
+                }
+                _ => todo!(),
             }
         }
     } else {
@@ -1039,8 +1037,8 @@ fn test_operators() {
     tracing::subscriber::set_global_default(subscriber).unwrap();
 
     can_parse(r#"{
-        "2.100" = "1g5f5f9gzamkq3kqyf7vbzvl4rdj3wmjf6chdrbxksrm3rnb926z";
-      }."${"2.100"}""#);
+        "str" = 1;
+      }"#);
 
     can_parse(r#"{}@a: 1"#);
 
