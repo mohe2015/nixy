@@ -306,30 +306,30 @@ pub fn parse_attrset<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
 ) -> Option<AST<'a>> {
     expect(lexer, NixTokenType::CurlyOpen);
 
-            let mut binds: Vec<(Box<AST<'a>>, Box<AST<'a>>)> = Vec::new();
-            loop {
-                match lexer.peek() {
-                    Some(NixToken {
-                        token_type: NixTokenType::CurlyClose,
-                    }) => {
-                        expect(lexer, NixTokenType::CurlyClose);
+    let mut binds: Vec<(Box<AST<'a>>, Box<AST<'a>>)> = Vec::new();
+    loop {
+        match lexer.peek() {
+            Some(NixToken {
+                token_type: NixTokenType::CurlyClose,
+            }) => {
+                expect(lexer, NixTokenType::CurlyClose);
 
-                        break Some(
-                            binds
-                                .into_iter()
-                                .fold(AST::Identifier(b"TODO attrset"), |accum, item| {
-                                    AST::Let(item.0, item.1, Box::new(accum))
-                                }),
-                        );
-                    }
-                    _ => {
-                        lexer.reset_peek();
-                        let bind = parse_bind(lexer);
-
-                        binds.push(bind);
-                    }
-                }
+                break Some(
+                    binds
+                        .into_iter()
+                        .fold(AST::Identifier(b"TODO attrset"), |accum, item| {
+                            AST::Let(item.0, item.1, Box::new(accum))
+                        }),
+                );
             }
+            _ => {
+                lexer.reset_peek();
+                let bind = parse_bind(lexer);
+
+                binds.push(bind);
+            }
+        }
+    }
 }
 
 #[instrument(name = "simple", skip_all, ret)]
@@ -366,9 +366,7 @@ pub fn parse_expr_simple<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>
         }
         Some(NixToken {
             token_type: NixTokenType::CurlyOpen,
-        }) => {
-            parse_attrset(lexer)
-        }
+        }) => parse_attrset(lexer),
         Some(NixToken {
             token_type: NixTokenType::BracketOpen,
         }) => {
@@ -388,9 +386,13 @@ pub fn parse_expr_simple<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>
                     }
                 }
             }
-            return Some(array.into_iter().fold(AST::Identifier(b"cons"), |accum, item| {
-                AST::Call(Box::new(accum), Box::new(item))
-            }));
+            return Some(
+                array
+                    .into_iter()
+                    .fold(AST::Identifier(b"cons"), |accum, item| {
+                        AST::Call(Box::new(accum), Box::new(item))
+                    }),
+            );
         }
         Some(NixToken {
             token_type: NixTokenType::Let,
@@ -812,7 +814,7 @@ pub fn parse_expr_function<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debu
             let formals = parse_formals(lexer);
             if let None = formals {
                 // not a function, probably an attrset
-                return parse_expr_if(lexer)
+                return parse_expr_if(lexer);
             }
             expect(lexer, NixTokenType::Colon);
             parse_expr_function(lexer)
@@ -859,9 +861,9 @@ pub fn parse<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
 #[test]
 fn test_operators() {
     let subscriber = tracing_subscriber::fmt()
-    .with_span_events(tracing_subscriber::fmt::format::FmtSpan::ACTIVE)
-    .with_max_level(tracing::Level::TRACE)
-    .finish();
+        .with_span_events(tracing_subscriber::fmt::format::FmtSpan::ACTIVE)
+        .with_max_level(tracing::Level::TRACE)
+        .finish();
 
     tracing::subscriber::set_global_default(subscriber).unwrap();
 
@@ -895,7 +897,7 @@ fn test_operators() {
         members = [];
     }";
 
-      let lexer = crate::lexer::NixLexer::new(text.as_bytes()).filter(|t| match t.token_type {
+    let lexer = crate::lexer::NixLexer::new(text.as_bytes()).filter(|t| match t.token_type {
         NixTokenType::Whitespace(_)
         | NixTokenType::SingleLineComment(_)
         | NixTokenType::MultiLineComment(_) => false,
