@@ -154,10 +154,10 @@ pub fn parse_bind<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
             lexer.next();
             todo!();
         }
-        _ => {
+        other => {
+            println!("TEST {:?}", other);
             lexer.reset_peek();
             let attrpath = parse_attrpath(lexer);
-            println!("{:?}", attrpath);
             expect(lexer, NixTokenType::Assign);
             let expr = parse_expr(lexer).unwrap();
             expect(lexer, NixTokenType::Semicolon);
@@ -382,7 +382,9 @@ pub fn parse_expr_simple<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>
                     }
                 }
             }
-            return Some(AST::Identifier(b"TODO ARRAY"));
+            return Some(array.into_iter().fold(AST::Identifier(b"cons"), |accum, item| {
+                AST::Call(Box::new(accum), Box::new(item))
+            }));
         }
         Some(NixToken {
             token_type: NixTokenType::Let,
@@ -443,7 +445,6 @@ pub fn parse_expr_select<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>
 ) -> Option<AST<'a>> {
     let expr = parse_expr_simple(lexer)?;
     let peeked = lexer.peek();
-    println!("test {:?} {:?}", expr, peeked);
     if let Some(NixToken {
         token_type: NixTokenType::Select,
     }) = peeked
@@ -451,7 +452,6 @@ pub fn parse_expr_select<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>
         expect(lexer, NixTokenType::Select);
         // TODO FIXME we probably need to fix that method (use a custom one because of function application order)
         let attrpath = parse_attrpath(lexer);
-        println!("attrpath {:?}", attrpath);
         // we need to parse it specially because evaluation needs to abort if the attrpath does not exist and there is no or
         let value = AST::Call(
             Box::new(AST::Call(
@@ -740,7 +740,6 @@ pub fn parse_formals<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
                         expect(lexer, NixTokenType::CurlyClose);
                         return Some(AST::Identifier(b"TODO formals")); // TODO FIXME
                     } else {
-                        println!("THISISWRONG {:?}", token);
                         // probably an attrset
                         lexer.reset_peek();
                         return None;
@@ -871,11 +870,25 @@ fn test_operators() {
     assert_eq!(
         AST::Call(
             Box::new(AST::Call(
-                Box::new(AST::Identifier(b"add")),
+                Box::new(AST::Identifier(b"Addition")),
                 Box::new(AST::Integer(1))
             )),
-            Box::new(AST::Integer(1))
+            Box::new(AST::Integer(41))
         ),
         r
     );
+
+    let text = "{
+        members = [];
+    }";
+
+      let lexer = crate::lexer::NixLexer::new(text.as_bytes()).filter(|t| match t.token_type {
+        NixTokenType::Whitespace(_)
+        | NixTokenType::SingleLineComment(_)
+        | NixTokenType::MultiLineComment(_) => false,
+        _ => true,
+    });
+
+    let result = parse(&mut multipeek(lexer));
+    assert_eq!(result, None);
 }
