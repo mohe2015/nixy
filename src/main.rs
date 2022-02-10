@@ -56,12 +56,12 @@ fn main() -> Result<()> {
             Ok(_) => success += 1,
             Err(_) => {
                 failure += 1;
-                panic!("{}", path.display());
+                //panic!("{}", path.display());
             }
         }
     }
 
-    // 51850/51963
+    // 51890/51963
     println!("{}/{}", success, success + failure);
 
     Ok(())

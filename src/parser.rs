@@ -12,38 +12,15 @@ use tracing::instrument;
 
 // TODO FIXME right-associativity and no associativity
 
-// TODO https://matklad.github.io/2020/04/13/simple-but-powerful-pratt-parsing.html
-// TODO https://matklad.github.io/2020/04/15/from-pratt-to-dijkstra.html
 // https://matklad.github.io/2020/03/22/fast-simple-rust-interner.html
-// https://eli.thegreenplace.net/2009/03/14/some-problems-of-recursive-descent-parsers/
-// https://eli.thegreenplace.net/2012/08/02/parsing-expressions-by-precedence-climbing
-
-/*
-expr_op hard
-
-3+4*5
-
-addition = (multiplication {+ multiplication})
-multiplication = (number {* number})
-
-addition = multiplication {+ multiplication}
-addition = number {* number } {+ multiplication}
-addition = number + multiplication
-addition = number + number * number
-
-3+4*5+3
-addition = multiplication {+ multiplication}
-addition = number {+ multiplication}
-addition = number + multiplication {+ multiplication}
-addition = number + (number * number) {+ multiplication}
-
-*/
 
 const BUILTIN_UNARY_NOT: &[u8] = b"__builtin_unary_not";
 const BUILTIN_PATH_CONCATENATE: &[u8] = b"__builtin_path_concatenate";
 const BUILTIN_SELECT: &[u8] = b"__builtin_select";
 const BUILTIN_IF: &[u8] = b"__builtin_if";
 const BUILTIN_STRING_CONCATENATE: &[u8] = b"__builtin_string_concatenate";
+
+const BUILTIN_UNARY_MINUS: &[u8] = b"__builtin_unary_minus";
 
 #[derive(PartialEq)]
 pub enum AST<'a> {
@@ -614,8 +591,22 @@ pub fn parse_expr_app<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
 pub fn parse_expr_arithmetic_negation<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
     lexer: &mut MultiPeek<I>,
 ) -> Option<AST<'a>> {
-    // TODO FIXME
-    parse_expr_app(lexer)
+    if let Some(NixToken {
+        token_type: NixTokenType::Subtraction,
+    }) = lexer.peek()
+    {
+        expect(lexer, NixTokenType::Subtraction);
+        Some(AST::Call(
+            Box::new(AST::Identifier(BUILTIN_UNARY_MINUS)),
+            Box::new(
+                parse_expr_app(lexer)
+                    .expect("failed to parse arithmetic minus expression"),
+            ),
+        ))
+    } else {
+        lexer.reset_peek();
+        parse_expr_app(lexer)
+    }
 }
 
 #[instrument(name = "?", skip_all, ret)]
