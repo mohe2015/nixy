@@ -309,11 +309,25 @@ pub fn parse_expr_simple<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>
     }
 }
 
-#[instrument(name = "sel", skip_all, ret)]
+#[instrument(name = "", skip_all, ret)]
 pub fn parse_expr_infix<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
     lexer: &mut MultiPeek<I>, fun: fn(&mut MultiPeek<I>) -> Option<AST<'a>>, operators: &[NixTokenType]
 ) -> Option<AST<'a>> {
-    
+    let mut result = fun(lexer)?;
+    loop {
+        let next_token = lexer.peek();
+        if next_token.is_none() {
+            return Some(result);
+        }
+        if operators.contains(&next_token.unwrap().token_type) {
+            lexer.next();
+            let rhs = fun(lexer).unwrap();
+            result = AST::Call(Box::new(AST::Call(Box::new(AST::Identifier(b"__")), Box::new(result))), Box::new(rhs));
+        } else {
+            lexer.reset_peek();
+            return Some(result);
+        }
+    }
 }
 
 #[instrument(name = "sel", skip_all, ret)]
@@ -348,25 +362,6 @@ pub fn parse_expr_app<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
     }
     result
 }
-
-/*
- match lexer.peek() {
-        Some(NixToken {
-            token_type: NixTokenType::ExclamationMark,
-        }) => {
-            expect(lexer, NixTokenType::ExclamationMark);
-            let expr = parse_expr(lexer).expect("failed to parse negated expression");
-            Some(AST::Call(
-                Box::new(AST::Identifier(BUILTIN_UNARY_NOT)),
-                Box::new(expr),
-            ))
-        }
-        _ => {
-            lexer.reset_peek();
-            parse_expr_app(lexer)
-        }
-    }
-*/
 
 #[instrument(name = "-", skip_all, ret)]
 pub fn parse_expr_arithmetic_negation<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
@@ -408,7 +403,16 @@ pub fn parse_expr_arithmetic_or_concatenate<'a, I: Iterator<Item = NixToken<'a>>
 pub fn parse_expr_not<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
     lexer: &mut MultiPeek<I>,
 ) -> Option<AST<'a>> {
-   parse_expr_arithmetic_or_concatenate(lexer)
+    if let Some(NixToken { token_type: NixTokenType::ExclamationMark }) = lexer.peek() {
+        expect(lexer, NixTokenType::ExclamationMark);
+        Some(AST::Call(
+            Box::new(AST::Identifier(BUILTIN_UNARY_NOT)),
+            Box::new(parse_expr_arithmetic_or_concatenate(lexer).expect("failed to parse negated expression")),
+        ))
+    } else {
+        lexer.reset_peek();
+        parse_expr_arithmetic_or_concatenate(lexer)
+    }
 }
 
 #[instrument(name = "//", skip_all, ret)]
@@ -443,7 +447,7 @@ pub fn parse_expr_logical_and<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::D
 pub fn parse_expr_logical_or<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
     lexer: &mut MultiPeek<I>,
 ) -> Option<AST<'a>> {
-   parse_expr_logical_and(lexer)
+    parse_expr_infix(lexer, parse_expr_logical_and, &[NixTokenType::Or])
 }
 
 #[instrument(name = "->", skip_all, ret)]
