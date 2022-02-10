@@ -17,7 +17,7 @@ pub mod parser;
 fn main() -> Result<()> {
     let subscriber = tracing_subscriber::fmt()
         .with_span_events(FmtSpan::ACTIVE)
-        //.with_max_level(Level::ERROR)
+        .with_max_level(Level::ERROR)
         .finish();
 
     tracing::subscriber::set_global_default(subscriber).unwrap();
@@ -30,7 +30,7 @@ fn main() -> Result<()> {
         let f_name = entry.file_name().to_string_lossy();
         let path = entry.path();
         match std::panic::catch_unwind(|| {
-            if !path.to_string_lossy().contains("nixpkgs/doc/default.nix") { return; }
+            //if !path.to_string_lossy().contains("nixpkgs/doc/default.nix") { return; }
 
             if f_name.ends_with(".nix") {
                 println!("{}", path.display());
@@ -46,7 +46,7 @@ fn main() -> Result<()> {
                 });
 
                 for token in lexer.clone() {
-                    println!("{:?}", token.token_type);
+                    //println!("{:?}", token.token_type);
                 }
 
                 parse(&mut multipeek(lexer));
@@ -60,7 +60,7 @@ fn main() -> Result<()> {
         }
     }
 
-    // 27693/51963
+    // 27727/51963
     println!("{}/{}", success, success + failure);
 
     Ok(())

@@ -151,8 +151,37 @@ pub fn parse_bind<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
         Some(NixToken {
             token_type: NixTokenType::Inherit,
         }) => {
-            lexer.next();
-            todo!();
+            expect(lexer, NixTokenType::Inherit);
+            match lexer.peek() {
+                Some(NixToken {
+                    token_type: NixTokenType::ParenOpen,
+                }) => {
+                    expect(lexer, NixTokenType::ParenOpen);
+                    let expr = parse_expr(lexer);
+                    expect(lexer, NixTokenType::ParenClose);
+                }
+                _ => {
+                    lexer.reset_peek();
+                }
+            }
+            let mut attrs = Vec::new();
+            loop {
+                match lexer.peek() {
+                    Some(NixToken {
+                        token_type: NixTokenType::Identifier(attr),
+                    }) => {
+                        attrs.push(AST::Identifier(attr));
+                        lexer.next();
+                    }
+                    _ => {
+                        // TODO string attrs missing
+                        lexer.reset_peek();
+                        break;
+                    }
+                }
+            }
+            expect(lexer, NixTokenType::Semicolon);
+            (Box::new(AST::Identifier(b"TODO inherit")), Box::new(AST::Identifier(b"TODO inherit")))
         }
         other => {
             //println!("TEST {:?}", other);
@@ -824,7 +853,6 @@ pub fn parse_expr_function<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debu
                 // not a function, probably an attrset
                 return parse_expr_if(lexer);
             }
-            expect(lexer, NixTokenType::CurlyClose);
             expect(lexer, NixTokenType::Colon);
             parse_expr_function(lexer)
         }
@@ -867,6 +895,18 @@ pub fn parse<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
     result
 }
 
+fn can_parse(code: &str) {
+    let lexer = crate::lexer::NixLexer::new(code.as_bytes()).filter(|t| match t.token_type {
+        NixTokenType::Whitespace(_)
+        | NixTokenType::SingleLineComment(_)
+        | NixTokenType::MultiLineComment(_) => false,
+        _ => true,
+    });
+
+    let result = parse(&mut itertools::multipeek(lexer));
+    assert!(result.is_some());
+}
+
 #[test]
 fn test_operators() {
     let subscriber = tracing_subscriber::fmt()
@@ -902,17 +942,11 @@ fn test_operators() {
         r
     );
 
-    let text = "{
+    can_parse("{
         members = [];
-    }";
+    }");
 
-    let lexer = crate::lexer::NixLexer::new(text.as_bytes()).filter(|t| match t.token_type {
-        NixTokenType::Whitespace(_)
-        | NixTokenType::SingleLineComment(_)
-        | NixTokenType::MultiLineComment(_) => false,
-        _ => true,
-    });
+    can_parse("{ pkgs ? (import ./.. { }), ... }: 1");
 
-    let result = parse(&mut itertools::multipeek(lexer));
-    assert_eq!(result, None);
+    can_parse("{ pkgs ? (import ./.. { }), nixpkgs ? { }}: 1");
 }
