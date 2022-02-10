@@ -335,7 +335,26 @@ pub fn parse_expr_infix<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
 pub fn parse_expr_select<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
     lexer: &mut MultiPeek<I>,
 ) -> Option<AST<'a>> {
-    parse_expr_simple(lexer)
+    let expr = parse_expr_simple(lexer)?;
+    if let Some(NixToken { token_type: NixTokenType::Select }) = lexer.peek() {
+        lexer.next();
+        // TODO FIXME we probably need to fix that method (use a custom one because of function application order)
+        let attrpath = parse_attrpath(lexer);
+        // we need to parse it specially because evaluation needs to abort if the attrpath does not exist and there is no or
+        let value = AST::Call(Box::new(AST::Call(Box::new(AST::Identifier(BUILTIN_SELECT)), Box::new(expr))), Box::new(attrpath));
+        if let Some(NixToken { token_type: NixTokenType::Identifier(b"or") }) = lexer.peek() {
+            lexer.next();
+            let default = parse_expr_simple(lexer).unwrap();
+            Some(AST::Call(Box::new(AST::Call(Box::new(AST::Identifier(b"__value_or_default")), Box::new(value))), Box::new(default)))
+        } else {
+            // also add abort call
+            // TODO FIXME replace all inner calls in parse_attrpath for early abort (also mentions more accurate location then)
+            Some(AST::Call(Box::new(AST::Identifier(b"__abort_invalid_attrpath")), Box::new(value)))
+        }
+    } else {
+        lexer.reset_peek();
+        Some(expr)
+    }
 }
 
 #[instrument(name = "app", skip_all, ret)]
