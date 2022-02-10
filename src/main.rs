@@ -17,7 +17,7 @@ pub mod parser;
 fn main() -> Result<()> {
     let subscriber = tracing_subscriber::fmt()
         .with_span_events(FmtSpan::ACTIVE)
-        .with_max_level(Level::TRACE)
+        //.with_max_level(Level::ERROR)
         .finish();
 
     tracing::subscriber::set_global_default(subscriber).unwrap();
@@ -46,7 +46,7 @@ fn main() -> Result<()> {
                 });
 
                 for token in lexer.clone() {
-                    //println!("{:?}", token.token_type);
+                    println!("{:?}", token.token_type);
                 }
 
                 parse(&mut multipeek(lexer));
@@ -60,7 +60,7 @@ fn main() -> Result<()> {
         }
     }
 
-    // 27679/51963
+    // 27693/51963
     println!("{}/{}", success, success + failure);
 
     Ok(())

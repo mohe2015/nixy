@@ -1,4 +1,4 @@
-use crate::lexer::{NixToken, NixTokenType};
+use crate::lexer::{NixToken, NixTokenType, NixLexer};
 use core::fmt;
 use itertools::MultiPeek;
 use std::{fmt::Debug, mem::discriminant};
@@ -149,7 +149,7 @@ pub fn parse_bind<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
 ) -> (Box<AST<'a>>, Box<AST<'a>>) {
     match lexer.peek() {
         Some(NixToken {
-            token_type: NixTokenType::Identifier(b"inherit"),
+            token_type: NixTokenType::Inherit,
         }) => {
             lexer.next();
             todo!();
@@ -363,6 +363,14 @@ pub fn parse_expr_simple<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>
         }) => {
             lexer.reset_peek();
             parse_indented_string(lexer)
+        }
+        Some(NixToken {
+            token_type: NixTokenType::ParenOpen,
+        }) => {
+            expect(lexer, NixTokenType::ParenOpen);
+            let expr = parse_expr(lexer);
+            expect(lexer, NixTokenType::ParenClose);
+            expr
         }
         Some(NixToken {
             token_type: NixTokenType::CurlyOpen,
@@ -816,6 +824,7 @@ pub fn parse_expr_function<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debu
                 // not a function, probably an attrset
                 return parse_expr_if(lexer);
             }
+            expect(lexer, NixTokenType::CurlyClose);
             expect(lexer, NixTokenType::Colon);
             parse_expr_function(lexer)
         }
