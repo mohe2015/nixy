@@ -56,7 +56,7 @@ fn main() -> Result<()> {
             Ok(_) => success += 1,
             Err(_) => {
                 failure += 1;
-                //panic!("{}", path.display());
+                println!("{}", path.display());
             }
         }
     }

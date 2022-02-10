@@ -1067,6 +1067,26 @@ fn test_operators() {
 
     tracing::subscriber::set_global_default(subscriber).unwrap();
 
+    can_parse(r##"
+    {a}: with a;
+    let
+   
+    fontcursormisc_hidpi = pkgs.xorg.fontxfree86type1.overrideAttrs (old:
+      let
+       
+        size = 2.39583 * config.services.xserver.dpi;
+        sizeString = builtins.head (builtins.split "\\." (toString size));
+      in
+      {
+        postInstall = ''
+          alias='cursor -xfree86-cursor-medium-r-normal--0-${sizeString}-0-0-p-0-adobe-fontspecific'
+          echo "$alias" > $out/lib/X11/fonts/Type1/fonts.alias
+        '';
+      });
+  
+  in 1
+    "##);
+
     can_parse(r##"{k}:
     (i: i ? ${k})
     "##);
