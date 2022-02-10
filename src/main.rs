@@ -30,25 +30,25 @@ fn main() -> Result<()> {
         let f_name = entry.file_name().to_string_lossy();
         let path = entry.path();
         match std::panic::catch_unwind(|| {
-        if f_name.ends_with(".nix") {
-            println!("{}", path.display());
+            if f_name.ends_with(".nix") {
+                println!("{}", path.display());
 
-            // check whether this here is cache-wise better or if reading in chunks is better
-            let file = fs::read(path).unwrap();
+                // check whether this here is cache-wise better or if reading in chunks is better
+                let file = fs::read(path).unwrap();
 
-            let lexer = NixLexer::new(&file).filter(|t| match t.token_type {
-                NixTokenType::Whitespace(_)
-                | NixTokenType::SingleLineComment(_)
-                | NixTokenType::MultiLineComment(_) => false,
-                _ => true,
-            });
+                let lexer = NixLexer::new(&file).filter(|t| match t.token_type {
+                    NixTokenType::Whitespace(_)
+                    | NixTokenType::SingleLineComment(_)
+                    | NixTokenType::MultiLineComment(_) => false,
+                    _ => true,
+                });
 
-            for token in lexer.clone() {
-                //println!("{:?}", token.token_type);
-            }
+                for token in lexer.clone() {
+                    //println!("{:?}", token.token_type);
+                }
 
-            parse(&mut multipeek(lexer));
-        };
+                parse(&mut multipeek(lexer));
+            };
         }) {
             Ok(_) => success += 1,
             Err(_) => {

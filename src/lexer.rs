@@ -273,12 +273,10 @@ impl<'a> Iterator for NixLexer<'a> {
                             token_type: NixTokenType::Equals,
                         })
                     }
-                    _ => {
-                        Some(NixToken {
-                            token_type: NixTokenType::Assign,
-                        })
-                    }
-                }
+                    _ => Some(NixToken {
+                        token_type: NixTokenType::Assign,
+                    }),
+                },
                 Some((_offset, b';')) => Some(NixToken {
                     token_type: NixTokenType::Semicolon,
                 }),
