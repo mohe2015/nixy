@@ -17,19 +17,19 @@ pub mod parser;
 fn main() -> Result<()> {
     let subscriber = tracing_subscriber::fmt()
         .with_span_events(FmtSpan::ACTIVE)
-        .with_max_level(Level::TRACE)
+        .with_max_level(Level::WARN)
         .finish();
 
     tracing::subscriber::set_global_default(subscriber).unwrap();
 
-    //let mut success = 0;
-    //let mut failure = 0;
+    let mut success = 0;
+    let mut failure = 0;
 
     for entry in WalkDir::new("/etc/nixos/nixpkgs") {
         let entry = entry.unwrap();
         let f_name = entry.file_name().to_string_lossy();
         let path = entry.path();
-        //match panic::catch_unwind(|| {
+        match std::panic::catch_unwind(|| {
         if f_name.ends_with(".nix") {
             println!("{}", path.display());
 
@@ -44,24 +44,22 @@ fn main() -> Result<()> {
             });
 
             for token in lexer.clone() {
-                println!("{:?}", token.token_type);
+                //println!("{:?}", token.token_type);
             }
-
-            println!("parsing");
 
             parse(&mut multipeek(lexer));
         };
-        /* }) {
+        }) {
             Ok(_) => success += 1,
             Err(_) => {
                 failure += 1;
-                panic!("{}", path.display());
+                //panic!("{}", path.display());
             }
-        }*/
+        }
     }
 
-    // 51886/51886
-    //println!("{}/{}", success, success + failure);
+    // 27530/51963
+    println!("{}/{}", success, success + failure);
 
     Ok(())
 }
