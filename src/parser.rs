@@ -4,7 +4,7 @@ use itertools::MultiPeek;
 use std::{
     fmt::Debug,
     mem::discriminant,
-    process::{Command, Stdio, ExitStatus},
+    process::{Command, ExitStatus, Stdio},
 };
 use tracing::instrument;
 
@@ -1025,16 +1025,21 @@ fn can_parse(code: &str) {
 
     let mut cmd = Command::new("nix");
 
-    cmd
-    .arg("eval")
-    .arg("-f")
-    .arg("/tmp/foo");
+    cmd.arg("eval").arg("-f").arg("/tmp/foo");
 
     let output = cmd.output().unwrap();
 
-    println!("exited with {} {} {}", output.status, String::from_utf8(output.stderr).unwrap(), String::from_utf8(output.stdout).unwrap());
+    println!(
+        "exited with {} {} {}",
+        output.status,
+        String::from_utf8(output.stderr).unwrap(),
+        String::from_utf8(output.stdout).unwrap()
+    );
 
-    output.status.exit_ok().expect("invalid expr (according to the official nix evaluator)");
+    output
+        .status
+        .exit_ok()
+        .expect("invalid expr (according to the official nix evaluator)");
 
     let lexer = crate::lexer::NixLexer::new(code.as_bytes()).filter(|t| match t.token_type {
         NixTokenType::Whitespace(_)
