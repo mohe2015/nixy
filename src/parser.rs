@@ -491,7 +491,7 @@ pub fn parse_expr_infix<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
     f: fn(&mut MultiPeek<I>) -> Option<AST<'a>>,
     operators: &[NixTokenType],
 ) -> Option<AST<'a>> {
-    parse_expr_infix_split(lexer, f,f, operators)
+    parse_expr_infix_split(lexer, f, f, operators)
 }
 
 #[instrument(name = "", skip_all, ret)]
@@ -617,10 +617,7 @@ pub fn parse_expr_arithmetic_negation<'a, I: Iterator<Item = NixToken<'a>> + std
         expect(lexer, NixTokenType::Subtraction);
         Some(AST::Call(
             Box::new(AST::Identifier(BUILTIN_UNARY_MINUS)),
-            Box::new(
-                parse_expr_app(lexer)
-                    .expect("failed to parse arithmetic minus expression"),
-            ),
+            Box::new(parse_expr_app(lexer).expect("failed to parse arithmetic minus expression")),
         ))
     } else {
         lexer.reset_peek();
@@ -1076,25 +1073,30 @@ fn test_operators() {
 
     tracing::subscriber::set_global_default(subscriber).unwrap();
 
+    // will get desugared so don't care
+    //can_parse(r##"let { body = 1; }"##);
+
     can_parse(r##"2.39583"##);
 
-    can_parse(r##"{k}:
+    can_parse(
+        r##"{k}:
     (i: i ? ${k})
-    "##);
+    "##,
+    );
 
-    can_parse(r##"
+    can_parse(
+        r##"
     {param}:
     with param;
       !pkgs.stdenv.hostPlatform.isAarch64 || cfg.version >= 3
 
     
-    "##);
+    "##,
+    );
 
     can_parse("1");
 
-    can_parse(
-        r##"-1"##,
-    );
+    can_parse(r##"-1"##);
 
     can_parse(
         r#"{

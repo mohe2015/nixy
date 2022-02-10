@@ -349,7 +349,7 @@ impl<'a> Iterator for NixLexer<'a> {
                         Some(NixToken {
                             token_type: NixTokenType::Implies,
                         })
-                    },
+                    }
                     _ => Some(NixToken {
                         token_type: NixTokenType::Subtraction,
                     }),
@@ -395,7 +395,7 @@ impl<'a> Iterator for NixLexer<'a> {
                         Some(NixToken {
                             token_type: NixTokenType::GreaterThanOrEqual,
                         })
-                    },
+                    }
                     _ => Some(NixToken {
                         token_type: NixTokenType::GreaterThan,
                     }),
