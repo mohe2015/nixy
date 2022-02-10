@@ -191,7 +191,7 @@ pub fn parse_bind<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
             //println!("TEST {:?}", lexer.peek());
             //lexer.reset_peek();
             
-            let expr = parse_expr_simple(lexer).expect("expected expression in binding at");
+            let expr = parse_expr(lexer).expect("expected expression in binding at");
             expect(lexer, NixTokenType::Semicolon);
 
             (Box::new(attrpath), Box::new(expr))
