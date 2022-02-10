@@ -344,7 +344,6 @@ pub fn parse_expr_simple<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>
                         token_type: NixTokenType::CurlyClose,
                     }) => {
                         expect(lexer, NixTokenType::CurlyClose);
-                        expect(lexer, NixTokenType::Semicolon);
 
                         break Some(
                             binds
@@ -850,9 +849,14 @@ pub fn parse<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
 
 #[test]
 fn test_operators() {
-    use itertools::multipeek;
+    let subscriber = tracing_subscriber::fmt()
+    .with_span_events(tracing_subscriber::fmt::format::FmtSpan::ACTIVE)
+    .with_max_level(tracing::Level::TRACE)
+    .finish();
 
-    let r = parse_expr_op(&mut multipeek(
+    tracing::subscriber::set_global_default(subscriber).unwrap();
+
+    let r = parse_expr_op(&mut itertools::multipeek(
         [
             NixToken {
                 token_type: NixTokenType::Integer(1),
@@ -889,6 +893,6 @@ fn test_operators() {
         _ => true,
     });
 
-    let result = parse(&mut multipeek(lexer));
+    let result = parse(&mut itertools::multipeek(lexer));
     assert_eq!(result, None);
 }
