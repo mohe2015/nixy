@@ -428,7 +428,7 @@ pub fn parse_expr_simple<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>
                     }
                     token => {
                         lexer.reset_peek();
-                        array.push(parse_expr_simple(lexer).unwrap());
+                        array.push(parse_expr_select(lexer).unwrap());
                     }
                 }
             }
@@ -939,6 +939,12 @@ fn test_operators() {
         .finish();
 
     tracing::subscriber::set_global_default(subscriber).unwrap();
+
+    can_parse(r#"
+          [
+            attrpath.withdot
+          ]
+        "#);
 
     can_parse(r#"
 {
