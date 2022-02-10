@@ -188,8 +188,8 @@ pub fn parse_bind<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
             let attrpath = parse_attrpath(lexer);
             expect(lexer, NixTokenType::Assign);
 
-            println!("TEST {:?}", lexer.peek());
-            lexer.reset_peek();
+            //println!("TEST {:?}", lexer.peek());
+            //lexer.reset_peek();
             
             let expr = parse_expr_simple(lexer).expect("expected expression in binding at");
             expect(lexer, NixTokenType::Semicolon);
@@ -281,11 +281,11 @@ pub fn parse_path<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
     }
 }
 
-#[instrument(name = "ind_str", skip_all, ret)]
-pub fn parse_indented_string<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
-    lexer: &mut MultiPeek<I>,
+#[instrument(name = "str", skip_all, ret)]
+pub fn parse_some_string<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
+    lexer: &mut MultiPeek<I>, start: NixTokenType<'a>, end: NixTokenType<'a>
 ) -> Option<AST<'a>> {
-    expect(lexer, NixTokenType::IndentedStringStart);
+    expect(lexer, start);
     let mut accum = AST::String(b"");
     loop {
         match lexer.next() {
@@ -325,7 +325,7 @@ pub fn parse_indented_string<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::De
                 )
             }
             Some(NixToken {
-                token_type: NixTokenType::IndentedStringEnd,
+                token_type: end,
             }) => break Some(accum),
             v => panic!("unexpected {:?}", v),
         }
@@ -394,7 +394,13 @@ pub fn parse_expr_simple<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>
             token_type: NixTokenType::IndentedStringStart,
         }) => {
             lexer.reset_peek();
-            parse_indented_string(lexer)
+            parse_some_string(lexer, NixTokenType::IndentedStringStart, NixTokenType::IndentedStringEnd)
+        }
+        Some(NixToken {
+            token_type: NixTokenType::StringStart,
+        }) => {
+            lexer.reset_peek();
+            parse_some_string(lexer, NixTokenType::StringStart, NixTokenType::StringEnd)
         }
         Some(NixToken {
             token_type: NixTokenType::ParenOpen,
