@@ -890,9 +890,29 @@ pub fn parse_expr_function<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debu
             expect(lexer, NixTokenType::Colon);
             parse_expr_function(lexer)
         }
-        /*Some(NixTokenType::Identifier(_)) => {
-            todo!(); // for this we need two lookahead because otherwise this is parse_expr_if
-        }*/
+        Some(NixTokenType::Identifier(ident)) => {
+            match lexer.peek() {
+                Some(NixToken { token_type: NixTokenType::Colon }) => {
+                    // function call
+                    // TODO parameter
+                    let ident = lexer.next();
+                    expect(lexer, NixTokenType::Colon);
+                    parse_expr_function(lexer)
+                }
+                Some(NixToken { token_type: NixTokenType::AtSign }) => {
+                    // function call
+                    let ident = lexer.next();
+                    expect(lexer, NixTokenType::AtSign);
+                    let formals = parse_formals(lexer).unwrap();
+                    expect(lexer, NixTokenType::Colon);
+                    parse_expr_function(lexer)
+                }
+                _ => {
+                    lexer.reset_peek();
+                    parse_expr_if(lexer)
+                }
+            }
+        }
         Some(NixTokenType::Assert) => {
             todo!();
         }
