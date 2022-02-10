@@ -120,6 +120,11 @@ pub fn parse_attrpath<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
                 lexer.next();
             }
             Some(NixToken {
+                token_type: NixTokenType::Select,
+            }) => {
+                expect(lexer, NixTokenType::Select);
+            }
+            Some(NixToken {
                 token_type: NixTokenType::StringStart,
             }) => {
                 todo!()
@@ -421,13 +426,16 @@ pub fn parse_expr_select<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>
     lexer: &mut MultiPeek<I>,
 ) -> Option<AST<'a>> {
     let expr = parse_expr_simple(lexer)?;
+    let peeked = lexer.peek();
+    println!("test {:?} {:?}", expr, peeked);
     if let Some(NixToken {
         token_type: NixTokenType::Select,
-    }) = lexer.peek()
+    }) = peeked
     {
-        lexer.next();
+        expect(lexer, NixTokenType::Select);
         // TODO FIXME we probably need to fix that method (use a custom one because of function application order)
         let attrpath = parse_attrpath(lexer);
+        println!("attrpath {:?}", attrpath);
         // we need to parse it specially because evaluation needs to abort if the attrpath does not exist and there is no or
         let value = AST::Call(
             Box::new(AST::Call(
@@ -665,6 +673,7 @@ pub fn parse_expr_if<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
     }
 }
 
+// this returns none for some reason
 #[instrument(name = "args", skip_all, ret)]
 pub fn parse_formals<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
     lexer: &mut MultiPeek<I>,
@@ -715,6 +724,7 @@ pub fn parse_formals<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
                         expect(lexer, NixTokenType::CurlyClose);
                         return Some(AST::Identifier(b"TODO formals")); // TODO FIXME
                     } else {
+                        println!("THISISWRONG {:?}", token);
                         // probably an attrset
                         lexer.reset_peek();
                         return None;
@@ -776,7 +786,11 @@ pub fn parse_expr_function<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debu
         }
         Some(NixTokenType::CurlyOpen) => {
             lexer.reset_peek();
-            let formals = parse_formals(lexer)?;
+            let formals = parse_formals(lexer);
+            if let None = formals {
+                // not a function, probably an attrset
+                return parse_expr_if(lexer)
+            }
             expect(lexer, NixTokenType::Colon);
             parse_expr_function(lexer)
         }
