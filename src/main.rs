@@ -33,7 +33,7 @@ fn main() -> Result<()> {
             //if !path.to_string_lossy().contains("nixpkgs/doc/default.nix") { return; }
 
             if f_name.ends_with(".nix") {
-                println!("{}", path.display());
+                //println!("{}", path.display());
 
                 // check whether this here is cache-wise better or if reading in chunks is better
                 let file = fs::read(path).unwrap();
@@ -55,7 +55,7 @@ fn main() -> Result<()> {
             Ok(_) => success += 1,
             Err(_) => {
                 failure += 1;
-                //panic!("{}", path.display());
+                panic!("{}", path.display());
             }
         }
     }

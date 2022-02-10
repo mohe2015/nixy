@@ -900,12 +900,14 @@ pub fn parse_formals<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
                 }
                 Some(NixToken {
                     token_type: NixTokenType::StringStart,
+                }) | Some(NixToken {
+                    token_type: NixTokenType::InterpolateStart,
                 }) => {
                     // that's not how formals look like
                     lexer.reset_peek();
                     return None
                 }
-                _ => todo!(),
+                token => panic!("{:?}", token),
             }
         }
     } else {
