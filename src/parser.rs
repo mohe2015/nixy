@@ -590,26 +590,58 @@ pub fn parse_expr_if<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
 pub fn parse_formals<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
     lexer: &mut MultiPeek<I>,
 ) -> Option<AST<'a>> {
+    // we need quite some peekahead here do differentiate between attrsets
     let formals: Vec<AST<'a>> = Vec::new();
-    loop {
-        match lexer.next() {
-            Some(NixToken { token_type: NixTokenType::Identifier(a) }) => {
-                if let Some(NixToken { token_type: NixTokenType::QuestionMark }) = lexer.peek() {
-                    lexer.next();
-                    parse_expr(lexer);
-                } else {
-                    lexer.reset_peek();
+    let mut parsed_first = false;
+    if let Some(NixToken { token_type: NixTokenType::CurlyOpen }) = lexer.peek() {
+        loop {
+            match lexer.peek() {
+                Some(NixToken { token_type: NixTokenType::Identifier(a) }) => {
+                    let token = lexer.peek();
+                    if let Some(NixToken { token_type: NixTokenType::QuestionMark }) = token {
+                        if !parsed_first { expect(lexer, NixTokenType::CurlyOpen); parsed_first = true; }
+                        expect(lexer, NixTokenType::Identifier(b""));
+                        expect(lexer, NixTokenType::QuestionMark);
+                        parse_expr(lexer);
+                    } else if let Some(NixToken { token_type: NixTokenType::Comma }) = token {
+                        if !parsed_first { expect(lexer, NixTokenType::CurlyOpen); parsed_first = true; }
+                        expect(lexer, NixTokenType::Identifier(b""));
+                        expect(lexer, NixTokenType::Comma);
+                    } else if let Some(NixToken { token_type: NixTokenType::CurlyClose }) = token {
+                        if !parsed_first { expect(lexer, NixTokenType::CurlyOpen); parsed_first = true; }
+                        expect(lexer, NixTokenType::Identifier(b""));
+                        expect(lexer, NixTokenType::CurlyClose);
+                        return Some(AST::Identifier(b"TODO formals")); // TODO FIXME
+                    } else {
+                        // probably an attrset
+                        lexer.reset_peek();
+                        return None;
+                    }
                 }
+                Some(NixToken { token_type: NixTokenType::Inherit }) => {
+                    // attrset
+                    lexer.reset_peek();
+                    return None;
+                }
+                Some(NixToken { token_type: NixTokenType::Comma }) => {
+                    if !parsed_first { expect(lexer, NixTokenType::CurlyOpen); parsed_first = true; }
+                    expect(lexer, NixTokenType::Comma);
+                }
+                Some(NixToken { token_type: NixTokenType::Ellipsis }) => {
+                    if !parsed_first { expect(lexer, NixTokenType::CurlyOpen); parsed_first = true; }
+                    expect(lexer, NixTokenType::Ellipsis);
+                }
+                Some(NixToken { token_type: NixTokenType::CurlyClose }) => {
+                    if !parsed_first { expect(lexer, NixTokenType::CurlyOpen); parsed_first = true; }
+                    expect(lexer, NixTokenType::CurlyClose);
+                    return Some(AST::Identifier(b"TODO formals")); // TODO FIXME
+                }
+                _ => todo!()
             }
-            Some(NixToken { token_type: NixTokenType::Comma }) => {
-            }
-            Some(NixToken { token_type: NixTokenType::Ellipsis }) => {
-            }
-            Some(NixToken { token_type: NixTokenType::CurlyClose }) => {
-                return None; // TODO FIXME
-            }
-            _ => todo!()
         }
+    } else {
+        lexer.reset_peek();
+        None
     }
 }
 
@@ -624,8 +656,8 @@ pub fn parse_expr_function<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debu
             parse_let(lexer)
         }
         Some(NixTokenType::CurlyOpen) => {
-            lexer.next();
-            let formals = parse_formals(lexer);
+            lexer.reset_peek();
+            let formals = parse_formals(lexer)?;
             expect(lexer, NixTokenType::Colon);
             parse_expr_function(lexer)
         }
