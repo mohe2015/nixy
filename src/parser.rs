@@ -310,6 +310,13 @@ pub fn parse_expr_simple<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>
 }
 
 #[instrument(name = "sel", skip_all, ret)]
+pub fn parse_expr_infix<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
+    lexer: &mut MultiPeek<I>, fun: fn(&mut MultiPeek<I>) -> Option<AST<'a>>, operators: &[NixTokenType]
+) -> Option<AST<'a>> {
+    
+}
+
+#[instrument(name = "sel", skip_all, ret)]
 pub fn parse_expr_select<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
     lexer: &mut MultiPeek<I>,
 ) -> Option<AST<'a>> {
@@ -361,7 +368,7 @@ pub fn parse_expr_app<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
     }
 */
 
-#[instrument(name = "op", skip_all, ret)]
+#[instrument(name = "-", skip_all, ret)]
 pub fn parse_expr_arithmetic_negation<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
     lexer: &mut MultiPeek<I>,
 ) -> Option<AST<'a>> {
@@ -369,77 +376,77 @@ pub fn parse_expr_arithmetic_negation<'a, I: Iterator<Item = NixToken<'a>> + std
 }
 
 
-#[instrument(name = "op", skip_all, ret)]
+#[instrument(name = "?", skip_all, ret)]
 pub fn parse_expr_has_attribute<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
     lexer: &mut MultiPeek<I>,
 ) -> Option<AST<'a>> {
-   parse_expr_arithmetic_negation(lexer)
+    parse_expr_infix(lexer, parse_expr_arithmetic_negation, &[NixTokenType::QuestionMark])
 }
 
-#[instrument(name = "op", skip_all, ret)]
+#[instrument(name = "++", skip_all, ret)]
 pub fn parse_expr_list_concatenation<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
     lexer: &mut MultiPeek<I>,
 ) -> Option<AST<'a>> {
    parse_expr_has_attribute(lexer)
 }
 
-#[instrument(name = "op", skip_all, ret)]
+#[instrument(name = "*/", skip_all, ret)]
 pub fn parse_expr_arithmetic_mul_div<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
     lexer: &mut MultiPeek<I>,
 ) -> Option<AST<'a>> {
    parse_expr_list_concatenation(lexer)
 }
 
-#[instrument(name = "op", skip_all, ret)]
+#[instrument(name = "+-", skip_all, ret)]
 pub fn parse_expr_arithmetic_or_concatenate<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
     lexer: &mut MultiPeek<I>,
 ) -> Option<AST<'a>> {
    parse_expr_arithmetic_mul_div(lexer)
 }
 
-#[instrument(name = "op", skip_all, ret)]
+#[instrument(name = "!", skip_all, ret)]
 pub fn parse_expr_not<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
     lexer: &mut MultiPeek<I>,
 ) -> Option<AST<'a>> {
    parse_expr_arithmetic_or_concatenate(lexer)
 }
 
-#[instrument(name = "op", skip_all, ret)]
+#[instrument(name = "//", skip_all, ret)]
 pub fn parse_expr_update<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
     lexer: &mut MultiPeek<I>,
 ) -> Option<AST<'a>> {
    parse_expr_not(lexer)
 }
 
-#[instrument(name = "op", skip_all, ret)]
+#[instrument(name = "<=>", skip_all, ret)]
 pub fn parse_expr_comparison<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
     lexer: &mut MultiPeek<I>,
 ) -> Option<AST<'a>> {
    parse_expr_update(lexer)
 }
 
-#[instrument(name = "op", skip_all, ret)]
+#[instrument(name = "=!=", skip_all, ret)]
 pub fn parse_expr_inequality_or_equality<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
     lexer: &mut MultiPeek<I>,
 ) -> Option<AST<'a>> {
    parse_expr_comparison(lexer)
 }
 
-#[instrument(name = "op", skip_all, ret)]
+#[instrument(name = "&&", skip_all, ret)]
 pub fn parse_expr_logical_and<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
     lexer: &mut MultiPeek<I>,
 ) -> Option<AST<'a>> {
    parse_expr_inequality_or_equality(lexer)
 }
 
-#[instrument(name = "op", skip_all, ret)]
+#[instrument(name = "||", skip_all, ret)]
 pub fn parse_expr_logical_or<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
     lexer: &mut MultiPeek<I>,
 ) -> Option<AST<'a>> {
    parse_expr_logical_and(lexer)
 }
 
-#[instrument(name = "op", skip_all, ret)]
+#[instrument(name = "->", skip_all, ret)]
 pub fn parse_expr_logical_implication<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
     lexer: &mut MultiPeek<I>,
 ) -> Option<AST<'a>> {
