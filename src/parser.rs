@@ -54,13 +54,17 @@ pub enum AST<'a> {
 
 impl<'a> Debug for AST<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            AST::Identifier(v) => write!(f, "{}", std::str::from_utf8(v).unwrap()),
-            AST::PathSegment(v) => write!(f, "`{}`", std::str::from_utf8(v).unwrap()),
-            AST::String(v) => write!(f, "\"{}\"", std::str::from_utf8(v).unwrap()),
-            AST::Integer(v) => write!(f, "{}", v),
-            AST::Let(a, b, c) => write!(f, "{:?} {:?} {:?}", a, b, c),
-            AST::Call(a, b) => write!(f, "({:?} {:?})", a, b),
+        if !f.alternate() { // ugly hack for tracing macros
+            write!(f, "{:#?}", self)
+        } else {
+            match self {
+                Self::Identifier(arg0) => f.debug_tuple("Identifier").field(&std::str::from_utf8(arg0).unwrap()).finish(),
+                Self::String(arg0) => f.debug_tuple("String").field(&std::str::from_utf8(arg0).unwrap()).finish(),
+                Self::PathSegment(arg0) => f.debug_tuple("PathSegment").field(&std::str::from_utf8(arg0).unwrap()).finish(),
+                Self::Integer(arg0) => f.debug_tuple("Integer").field(arg0).finish(),
+                Self::Let(arg0, arg1, arg2) => f.debug_tuple("Let").field(arg0).field(arg1).field(arg2).finish(),
+                Self::Call(arg0, arg1) => f.debug_tuple("Call").field(arg0).field(arg1).finish(),
+            }
         }
     }
 }
