@@ -127,7 +127,20 @@ pub fn parse_attrpath<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
             Some(NixToken {
                 token_type: NixTokenType::StringStart,
             }) => {
-                todo!()
+                lexer.reset_peek();
+                let res =parse_some_string(lexer, NixTokenType::StringStart, NixTokenType::StringEnd).unwrap();
+                match result {
+                    Some(a) => {
+                        result = Some(AST::Call(
+                            Box::new(AST::Call(
+                                Box::new(AST::Identifier(BUILTIN_SELECT)),
+                                Box::new(a),
+                            )),
+                            Box::new(res),
+                        ));
+                    }
+                    None => result = Some(res),
+                }
             }
             Some(NixToken {
                 token_type: NixTokenType::InterpolateStart,
@@ -939,6 +952,8 @@ fn test_operators() {
         .finish();
 
     tracing::subscriber::set_global_default(subscriber).unwrap();
+
+    can_parse(r#"a: 1"#);
 
     can_parse(r#"
           [
