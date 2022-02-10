@@ -295,8 +295,8 @@ impl<'a> Iterator for NixLexer<'a> {
                     }
                     _ => Some(NixToken {
                         token_type: NixTokenType::ExclamationMark,
-                    })
-                }
+                    }),
+                },
                 Some((offset, b'/')) => match self.iter.peek() {
                     Some((_, b'/')) => {
                         self.iter.next();
@@ -522,9 +522,7 @@ impl<'a> Iterator for NixLexer<'a> {
                     while let Some((_, b'0'..=b'9')) = self.iter.peek() {
                         last = self.iter.next().unwrap().0;
                     }
-                    let integer =
-                        std::str::from_utf8(&self.data[offset..=last])
-                            .unwrap();
+                    let integer = std::str::from_utf8(&self.data[offset..=last]).unwrap();
                     //println!("{:?}", integer);
                     Some(NixToken {
                         token_type: NixTokenType::Integer(integer.parse().unwrap()),

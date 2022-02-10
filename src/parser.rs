@@ -1,4 +1,4 @@
-use crate::lexer::{NixToken, NixTokenType, NixLexer};
+use crate::lexer::{NixLexer, NixToken, NixTokenType};
 use core::fmt;
 use itertools::MultiPeek;
 use std::{fmt::Debug, mem::discriminant};
@@ -128,7 +128,9 @@ pub fn parse_attrpath<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
                 token_type: NixTokenType::StringStart,
             }) => {
                 lexer.reset_peek();
-                let res =parse_some_string(lexer, NixTokenType::StringStart, NixTokenType::StringEnd).unwrap();
+                let res =
+                    parse_some_string(lexer, NixTokenType::StringStart, NixTokenType::StringEnd)
+                        .unwrap();
                 match result {
                     Some(a) => {
                         result = Some(AST::Call(
@@ -194,7 +196,10 @@ pub fn parse_bind<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
                 }
             }
             expect(lexer, NixTokenType::Semicolon);
-            (Box::new(AST::Identifier(b"TODO inherit")), Box::new(AST::Identifier(b"TODO inherit")))
+            (
+                Box::new(AST::Identifier(b"TODO inherit")),
+                Box::new(AST::Identifier(b"TODO inherit")),
+            )
         }
         other => {
             lexer.reset_peek();
@@ -203,7 +208,7 @@ pub fn parse_bind<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
 
             //println!("TEST {:?}", lexer.peek());
             //lexer.reset_peek();
-            
+
             let expr = parse_expr(lexer).expect("expected expression in binding at");
             expect(lexer, NixTokenType::Semicolon);
 
@@ -296,7 +301,9 @@ pub fn parse_path<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
 
 #[instrument(name = "str", skip_all, ret)]
 pub fn parse_some_string<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
-    lexer: &mut MultiPeek<I>, start: NixTokenType<'a>, end: NixTokenType<'a>
+    lexer: &mut MultiPeek<I>,
+    start: NixTokenType<'a>,
+    end: NixTokenType<'a>,
 ) -> Option<AST<'a>> {
     expect(lexer, start);
     let mut accum = AST::String(b"");
@@ -337,9 +344,7 @@ pub fn parse_some_string<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>
                     Box::new(expr),
                 )
             }
-            Some(NixToken {
-                token_type: end,
-            }) => break Some(accum),
+            Some(NixToken { token_type: end }) => break Some(accum),
             v => panic!("unexpected {:?}", v),
         }
     }
@@ -407,7 +412,11 @@ pub fn parse_expr_simple<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>
             token_type: NixTokenType::IndentedStringStart,
         }) => {
             lexer.reset_peek();
-            parse_some_string(lexer, NixTokenType::IndentedStringStart, NixTokenType::IndentedStringEnd)
+            parse_some_string(
+                lexer,
+                NixTokenType::IndentedStringStart,
+                NixTokenType::IndentedStringEnd,
+            )
         }
         Some(NixToken {
             token_type: NixTokenType::StringStart,
@@ -844,18 +853,32 @@ pub fn parse_formals<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
                     token_type: NixTokenType::CurlyClose,
                 }) => {
                     if !parsed_first {
-                        if let Some(NixToken {
-                            token_type: NixTokenType::Colon,
-                        }) = lexer.peek() {
-                            // empty function
-                            expect(lexer, NixTokenType::CurlyOpen);
-                            expect(lexer, NixTokenType::CurlyClose);
-                            lexer.reset_peek();
-                            return Some(AST::Identifier(b"TODO formals")); // TODO FIXME
-                        } else {
-                            // potentially empty attrset
-                            lexer.reset_peek();
-                            return None;
+                        match lexer.peek() {
+                            Some(NixToken {
+                                token_type: NixTokenType::Colon,
+                            }) => {
+                                // empty function
+                                expect(lexer, NixTokenType::CurlyOpen);
+                                expect(lexer, NixTokenType::CurlyClose);
+                                lexer.reset_peek();
+                                return Some(AST::Identifier(b"TODO formals")); // TODO FIXME
+                            }
+                            Some(NixToken {
+                                token_type: NixTokenType::AtSign,
+                            }) => {
+                                // empty function in stupid
+                                expect(lexer, NixTokenType::CurlyOpen);
+                                expect(lexer, NixTokenType::CurlyClose);
+                                expect(lexer, NixTokenType::AtSign);
+                                expect(lexer, NixTokenType::Identifier(b""));
+                                lexer.reset_peek();
+                                return Some(AST::Identifier(b"TODO formals")); // TODO FIXME
+                            }
+                            _ => {
+                                // potentially empty attrset
+                                lexer.reset_peek();
+                                return None;
+                            }
                         }
                     }
                     expect(lexer, NixTokenType::CurlyClose);
@@ -888,11 +911,14 @@ pub fn parse_expr_function<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debu
                 return parse_expr_if(lexer);
             }
             match lexer.next() {
-                Some(NixToken { token_type: NixTokenType::Colon }) => {
-
-                }
-                Some(NixToken { token_type: NixTokenType::AtSign }) => {
+                Some(NixToken {
+                    token_type: NixTokenType::Colon,
+                }) => {}
+                Some(NixToken {
+                    token_type: NixTokenType::AtSign,
+                }) => {
                     let ident = expect(lexer, NixTokenType::Identifier(b""));
+                    expect(lexer, NixTokenType::Colon);
                 }
                 _ => todo!(),
             }
@@ -900,14 +926,18 @@ pub fn parse_expr_function<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debu
         }
         Some(NixTokenType::Identifier(ident)) => {
             match lexer.peek() {
-                Some(NixToken { token_type: NixTokenType::Colon }) => {
+                Some(NixToken {
+                    token_type: NixTokenType::Colon,
+                }) => {
                     // function call
                     // TODO parameter
                     let ident = lexer.next();
                     expect(lexer, NixTokenType::Colon);
                     parse_expr_function(lexer)
                 }
-                Some(NixToken { token_type: NixTokenType::AtSign }) => {
+                Some(NixToken {
+                    token_type: NixTokenType::AtSign,
+                }) => {
                     // function call
                     let ident = lexer.next();
                     expect(lexer, NixTokenType::AtSign);
@@ -989,17 +1019,21 @@ fn test_operators() {
 
     can_parse(r#"a: 1"#);
 
-    can_parse(r#"
+    can_parse(
+        r#"
           [
             attrpath.withdot
           ]
-        "#);
+        "#,
+    );
 
-    can_parse(r#"
+    can_parse(
+        r#"
 {
   src = 1 + 1;
 }
-"#);
+"#,
+    );
 
     // another lookahead issue
     can_parse("{ }: 1");
@@ -1009,9 +1043,11 @@ fn test_operators() {
 
     can_parse("{ ... }: 1");
 
-    can_parse("{
+    can_parse(
+        "{
         members = [];
-    }");
+    }",
+    );
 
     let r = parse_expr_op(&mut itertools::multipeek(
         [
