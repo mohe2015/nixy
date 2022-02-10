@@ -155,7 +155,7 @@ pub fn parse_bind<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
             todo!();
         }
         other => {
-            println!("TEST {:?}", other);
+            //println!("TEST {:?}", other);
             lexer.reset_peek();
             let attrpath = parse_attrpath(lexer);
             expect(lexer, NixTokenType::Assign);
@@ -300,6 +300,38 @@ pub fn parse_indented_string<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::De
     }
 }
 
+#[instrument(name = "attrs", skip_all, ret)]
+pub fn parse_attrset<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
+    lexer: &mut MultiPeek<I>,
+) -> Option<AST<'a>> {
+    expect(lexer, NixTokenType::CurlyOpen);
+
+            let mut binds: Vec<(Box<AST<'a>>, Box<AST<'a>>)> = Vec::new();
+            loop {
+                match lexer.peek() {
+                    Some(NixToken {
+                        token_type: NixTokenType::CurlyClose,
+                    }) => {
+                        expect(lexer, NixTokenType::CurlyClose);
+
+                        break Some(
+                            binds
+                                .into_iter()
+                                .fold(AST::Identifier(b"TODO attrset"), |accum, item| {
+                                    AST::Let(item.0, item.1, Box::new(accum))
+                                }),
+                        );
+                    }
+                    _ => {
+                        lexer.reset_peek();
+                        let bind = parse_bind(lexer);
+
+                        binds.push(bind);
+                    }
+                }
+            }
+}
+
 #[instrument(name = "simple", skip_all, ret)]
 pub fn parse_expr_simple<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
     lexer: &mut MultiPeek<I>,
@@ -335,32 +367,7 @@ pub fn parse_expr_simple<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>
         Some(NixToken {
             token_type: NixTokenType::CurlyOpen,
         }) => {
-            expect(lexer, NixTokenType::CurlyOpen);
-
-            let mut binds: Vec<(Box<AST<'a>>, Box<AST<'a>>)> = Vec::new();
-            loop {
-                match lexer.peek() {
-                    Some(NixToken {
-                        token_type: NixTokenType::CurlyClose,
-                    }) => {
-                        expect(lexer, NixTokenType::CurlyClose);
-
-                        break Some(
-                            binds
-                                .into_iter()
-                                .fold(AST::Identifier(b"TODO attrset"), |accum, item| {
-                                    AST::Let(item.0, item.1, Box::new(accum))
-                                }),
-                        );
-                    }
-                    _ => {
-                        lexer.reset_peek();
-                        let bind = parse_bind(lexer);
-
-                        binds.push(bind);
-                    }
-                }
-            }
+            parse_attrset(lexer)
         }
         Some(NixToken {
             token_type: NixTokenType::BracketOpen,
@@ -388,12 +395,14 @@ pub fn parse_expr_simple<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>
         Some(NixToken {
             token_type: NixTokenType::Let,
         }) => {
-            todo!()
+            expect(lexer, NixTokenType::Let);
+            parse_attrset(lexer)
         }
         Some(NixToken {
             token_type: NixTokenType::Rec,
         }) => {
-            todo!()
+            expect(lexer, NixTokenType::Rec);
+            parse_attrset(lexer)
         }
         _ => {
             lexer.reset_peek();

@@ -12,7 +12,7 @@ use crate::{
 pub mod lexer;
 pub mod parser;
 
-// cargo run |& sort | uniq -c | sort -n
+// cargo run --release |& sort | uniq -c | sort -n
 
 fn main() -> Result<()> {
     let subscriber = tracing_subscriber::fmt()
@@ -58,7 +58,7 @@ fn main() -> Result<()> {
         }
     }
 
-    // 27673/51963
+    // 27679/51963
     println!("{}/{}", success, success + failure);
 
     Ok(())
