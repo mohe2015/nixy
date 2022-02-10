@@ -1055,6 +1055,14 @@ fn test_operators() {
 
     tracing::subscriber::set_global_default(subscriber).unwrap();
 
+    can_parse(r##"
+    {param}:
+    with param;
+      !pkgs.stdenv.hostPlatform.isAarch64 || cfg.version >= 3
+
+    
+    "##);
+
     can_parse("1");
 
     can_parse(
