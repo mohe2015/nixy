@@ -510,11 +510,12 @@ impl<'a> Iterator for NixLexer<'a> {
                     //println!("{:?}", std::str::from_utf8(identifier));
                 }
                 Some((offset, b'0'..=b'9')) => {
+                    let mut last = offset;
                     while let Some((_, b'0'..=b'9')) = self.iter.peek() {
-                        self.iter.next();
+                        last = self.iter.next().unwrap().0;
                     }
                     let integer =
-                        std::str::from_utf8(&self.data[offset..self.iter.peek().unwrap().0])
+                        std::str::from_utf8(&self.data[offset..=last])
                             .unwrap();
                     //println!("{:?}", integer);
                     Some(NixToken {

@@ -903,8 +903,11 @@ fn can_parse(code: &str) {
         _ => true,
     });
 
+    for token in lexer.clone() {
+        println!("{:?}", token.token_type);
+    }
+
     let result = parse(&mut itertools::multipeek(lexer));
-    assert!(result.is_some());
 }
 
 #[test]
@@ -915,6 +918,14 @@ fn test_operators() {
         .finish();
 
     tracing::subscriber::set_global_default(subscriber).unwrap();
+
+    can_parse("{ ... }: 1");
+
+    //can_parse("{ pkgs ? (import ./.. { }), nixpkgs ? { }}: 1");
+
+    can_parse("{
+        members = [];
+    }");
 
     let r = parse_expr_op(&mut itertools::multipeek(
         [
@@ -941,12 +952,4 @@ fn test_operators() {
         ),
         r
     );
-
-    can_parse("{
-        members = [];
-    }");
-
-    can_parse("{ pkgs ? (import ./.. { }), ... }: 1");
-
-    can_parse("{ pkgs ? (import ./.. { }), nixpkgs ? { }}: 1");
 }
