@@ -7,9 +7,9 @@ use crate::{
 };
 
 pub trait ASTVisitor<'a, R: std::fmt::Debug> {
-    fn visit_file_start() {}
+    fn visit_file_start(&mut self) {}
 
-    fn visit_file_end() {}
+    fn visit_file_end(&mut self) {}
 
     fn visit_identifier(&mut self, id: &'a [u8]) -> R;
 
@@ -54,20 +54,23 @@ pub struct ASTJavaTranspiler<'a, W: Write> {
 }
 
 impl<'a, W: Write> ASTVisitor<'a, ()> for ASTJavaTranspiler<'a, W> {
-    fn visit_file_start() {
-
+    fn visit_file_start(&mut self) {
+        write!(self.writer, "
+        test
+        
+        ").unwrap();
     }
 
-    fn visit_file_end() {
+    fn visit_file_end(&mut self) {
         
     }
     
     fn visit_identifier(&mut self, id: &'a [u8]) -> () {
-        todo!()
+        write!(self.writer, "{}", std::str::from_utf8(id).unwrap()).unwrap();
     }
 
     fn visit_integer(&mut self, integer: i64) -> () {
-        write!(self.writer, "{}", integer);
+        write!(self.writer, "(new NixInteger({}))", integer).unwrap();
     }
 
     fn visit_float(&mut self, float: f64) -> () {
@@ -85,14 +88,14 @@ impl<'a, W: Write> ASTVisitor<'a, ()> for ASTJavaTranspiler<'a, W> {
     fn visit_infix_lhs(&mut self, operator: NixTokenType<'a>, left: &()) {
         match operator {
             NixTokenType::Addition => {
-                write!(self.writer, "+");
+                write!(self.writer, ".add(").unwrap();
             }
             _ => todo!()
         }
     }
 
     fn visit_infix_operation(&mut self, left: (), right: (), operator: NixTokenType<'a>) -> () {
-        
+        write!(self.writer, ")").unwrap();
     }
 
     fn visit_prefix_operation(&mut self, operator: NixTokenType<'a>, expr: ()) -> () {
@@ -173,6 +176,7 @@ fn test_java_transpiler_code(code: &[u8]) {
 pub fn test_java_transpiler() {
     test_java_transpiler_code(b"1");
     test_java_transpiler_code(b"1 + 1");
+    test_java_transpiler_code(b"a: a + 1");
 }
 
 pub struct ASTBuilder;

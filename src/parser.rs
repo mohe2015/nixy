@@ -939,8 +939,10 @@ impl<
 
     #[cfg_attr(debug_assertions, instrument(name = "p", skip_all, ret))]
     pub fn parse(&mut self) -> Option<R> {
+        self.visitor.visit_file_start();
         let result = self.parse_expr();
         assert_eq!(None, self.lexer.next());
+        self.visitor.visit_file_end();
         result
     }
 }
