@@ -1,4 +1,4 @@
-use crate::{parser::{AST, BUILTIN_IF}, lexer::NixTokenType};
+use crate::{parser::{AST, BUILTIN_IF, BUILTIN_PATH_CONCATENATE}, lexer::NixTokenType};
 
 pub trait ASTVisitor<'a, R: std::fmt::Debug> {
 
@@ -17,6 +17,10 @@ pub trait ASTVisitor<'a, R: std::fmt::Debug> {
     fn visit_if(self, condition: R, true_case: R, false_case: R) -> R;
 
     fn visit_attrpath_part(self, begin: R, last: R) -> R;
+
+    fn visit_path_concatenate(self, begin: R, last: R) -> R;
+
+    fn visit_path_segment(self, segment: &'a [u8]) -> R;
 }
 
 
@@ -130,12 +134,26 @@ impl<'a> ASTVisitor<'a, AST<'a>> for ASTBuilder {
     }
 
     fn visit_attrpath_part(self, begin: AST<'a>, last: AST<'a>) -> AST<'a> {
-        Some(AST::Call(
+        AST::Call(
             Box::new(AST::Call(
                 Box::new(AST::Identifier(BUILTIN_SELECT)),
-                Box::new(a),
+                Box::new(begin),
             )),
-            Box::new(AST::Identifier(id)),
-        ));
+            Box::new(last),
+        )
+    }
+
+    fn visit_path_concatenate(self, begin: AST<'a>, last: AST<'a>) -> AST<'a> {
+        AST::Call(
+            Box::new(AST::Call(
+                Box::new(AST::Identifier(BUILTIN_PATH_CONCATENATE)),
+                Box::new(begin),
+            )),
+            Box::new(last),
+        )
+    }
+
+    fn visit_path_segment(self, segment: &'a [u8]) -> AST<'a> {
+        AST::PathSegment(segment)
     }
 }

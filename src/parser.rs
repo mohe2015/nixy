@@ -201,6 +201,8 @@ impl<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug, R: std::fmt::Debug,
     #[cfg_attr(debug_assertions, instrument(name = "let", skip_all, ret))]
     pub fn parse_let(&mut self) -> Option<AST<'a>> {
         self.expect(NixTokenType::Let);
+
+        // maybe do this like the method after? so the let has a third parameter which is the body and which we can then concatenate afterwards
         let mut binds: Vec<(Box<AST<'a>>, Box<AST<'a>>)> = Vec::new();
         loop {
             match self.lexer.peek() {
@@ -227,9 +229,9 @@ impl<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug, R: std::fmt::Debug,
     }
 
     #[cfg_attr(debug_assertions, instrument(name = "path", skip_all, ret))]
-    pub fn parse_path(&mut self) -> Option<AST<'a>> {
+    pub fn parse_path(&mut self) -> Option<R> {
         self.expect(NixTokenType::PathStart);
-        let mut result: Option<AST<'a>> = None;
+        let mut result: Option<R> = None;
         loop {
             let val = self.lexer.next();
             match val {
@@ -245,13 +247,7 @@ impl<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug, R: std::fmt::Debug,
                     self.expect(NixTokenType::CurlyClose);
                     match result {
                         Some(a) => {
-                            result = Some(AST::Call(
-                                Box::new(AST::Call(
-                                    Box::new(AST::Identifier(BUILTIN_PATH_CONCATENATE)),
-                                    Box::new(a),
-                                )),
-                                Box::new(expr),
-                            ))
+                            result = Some(self.visitor.visit_path_concatenate(a, expr));
                         }
                         None => result = Some(expr),
                     }
@@ -260,15 +256,9 @@ impl<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug, R: std::fmt::Debug,
                     token_type: NixTokenType::PathSegment(segment),
                 }) => match result {
                     Some(a) => {
-                        result = Some(AST::Call(
-                            Box::new(AST::Call(
-                                Box::new(AST::Identifier(BUILTIN_PATH_CONCATENATE)),
-                                Box::new(a),
-                            )),
-                            Box::new(AST::PathSegment(segment)),
-                        ))
+                        result = Some(self.visitor.visit_path_concatenate(a, self.visitor.visit_path_segment(segment)));
                     }
-                    None => result = Some(AST::PathSegment(segment)),
+                    None => result = Some(self.visitor.visit_path_segment(segment)),
                 },
                 _ => {
                     todo!();
