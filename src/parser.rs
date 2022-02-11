@@ -67,13 +67,13 @@ impl<'a> Debug for AST<'a> {
     }
 }
 
-pub struct Parser<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug, R, A: ASTVisitor<R>> {
+pub struct Parser<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug, R, A: ASTVisitor<'a, R>> {
     pub lexer: MultiPeek<I>,
     pub visitor: A,
     pub phantom: PhantomData<R> // https://github.com/rust-lang/rust/issues/23246
 }
 
-impl<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug, R, A: ASTVisitor<R>> Parser<'a, I, R, A> {
+impl<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug, R, A: ASTVisitor<'a, R>> Parser<'a, I, R, A> {
     #[cfg_attr(debug_assertions, instrument(name = "expect", skip_all, ret))]
     pub fn expect(&mut self, t: NixTokenType<'a>) {
         let token = self.lexer.next();
@@ -377,27 +377,27 @@ impl<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug, R, A: ASTVisitor<R>
     }
 
     #[cfg_attr(debug_assertions, instrument(name = "simple", skip_all, ret))]
-    pub fn parse_expr_simple(&mut self) -> Option<AST<'a>> {
+    pub fn parse_expr_simple(&mut self) -> Option<R> {
         let val = self.lexer.peek();
         match val {
             Some(NixToken {
                 token_type: NixTokenType::Identifier(id),
             }) => {
-                let ret = Some(AST::Identifier(id));
+                let ret = Some(self.visitor.visit_identifier(id));
                 self.lexer.next();
                 ret
             }
             Some(NixToken {
                 token_type: NixTokenType::Integer(integer),
             }) => {
-                let ret = Some(AST::Integer(*integer));
+                let ret = Some(self.visitor.visit_integer(integer));
                 self.lexer.next();
                 ret
             }
             Some(NixToken {
                 token_type: NixTokenType::Float(float),
             }) => {
-                let ret = Some(AST::Float(*float));
+                let ret = Some(self.visitor.visit_float(float));
                 self.lexer.next();
                 ret
             }
@@ -414,13 +414,15 @@ impl<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug, R, A: ASTVisitor<R>
                 self.parse_some_string(
                     NixTokenType::IndentedStringStart,
                     NixTokenType::IndentedStringEnd,
-                )
+                );
+                self.visitor.visit_todo()
             }
             Some(NixToken {
                 token_type: NixTokenType::StringStart,
             }) => {
                 self.lexer.reset_peek();
-                self.parse_some_string(NixTokenType::StringStart, NixTokenType::StringEnd)
+                self.parse_some_string(NixTokenType::StringStart, NixTokenType::StringEnd);
+                self.visitor.visit_todo()
             }
             Some(NixToken {
                 token_type: NixTokenType::ParenOpen,
@@ -428,11 +430,15 @@ impl<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug, R, A: ASTVisitor<R>
                 self.expect(NixTokenType::ParenOpen);
                 let expr = self.parse_expr();
                 self.expect(NixTokenType::ParenClose);
-                expr
+                expr;
+                self.visitor.visit_todo()
             }
             Some(NixToken {
                 token_type: NixTokenType::CurlyOpen,
-            }) => self.parse_attrset(),
+            }) => {
+                self.parse_attrset();
+                self.visitor.visit_todo()
+            },
             Some(NixToken {
                 token_type: NixTokenType::BracketOpen,
             }) => {
@@ -452,25 +458,28 @@ impl<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug, R, A: ASTVisitor<R>
                         }
                     }
                 }
-                return Some(
+                Some(
                     array
                         .into_iter()
                         .fold(AST::Identifier(b"cons"), |accum, item| {
                             AST::Call(Box::new(accum), Box::new(item))
                         }),
                 );
+                self.visitor.visit_todo()
             }
             Some(NixToken {
                 token_type: NixTokenType::Let,
             }) => {
                 self.expect(NixTokenType::Let);
-                self.parse_attrset()
+                self.parse_attrset();
+                self.visitor.visit_todo()
             }
             Some(NixToken {
                 token_type: NixTokenType::Rec,
             }) => {
                 self.expect(NixTokenType::Rec);
-                self.parse_attrset()
+                self.parse_attrset();
+                self.visitor.visit_todo()
             }
             _ => {
                 self.lexer.reset_peek();
