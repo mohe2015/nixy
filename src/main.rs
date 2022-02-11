@@ -57,7 +57,7 @@ fn main() -> Result<()> {
             //println!("{:?}", token.token_type);
             //}
 
-            let parser = Parser {
+            let mut parser = Parser {
                 lexer: multipeek(lexer),
             };
 
