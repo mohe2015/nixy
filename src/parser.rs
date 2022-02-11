@@ -142,7 +142,7 @@ impl<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug, R: std::fmt::Debug,
     }
 
     #[cfg_attr(debug_assertions, instrument(name = "bind", skip_all, ret))]
-    pub fn parse_bind(&mut self) -> (Box<AST<'a>>, Box<AST<'a>>) {
+    pub fn parse_bind(&mut self) -> R {
         match self.lexer.peek() {
             Some(NixToken {
                 token_type: NixTokenType::Inherit,
@@ -177,10 +177,7 @@ impl<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug, R: std::fmt::Debug,
                     }
                 }
                 self.expect(NixTokenType::Semicolon);
-                (
-                    Box::new(AST::Identifier(b"TODO inherit")),
-                    Box::new(AST::Identifier(b"TODO inherit")),
-                )
+                self.visitor.visit_todo()
             }
             other => {
                 self.lexer.reset_peek();
@@ -193,7 +190,8 @@ impl<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug, R: std::fmt::Debug,
                 let expr = self.parse_expr().expect("expected expression in binding at");
                 self.expect(NixTokenType::Semicolon);
 
-                (Box::new(attrpath.unwrap()), Box::new(expr))
+                //(Box::new(attrpath.unwrap()), Box::new(expr))
+                self.visitor.visit_todo()
             }
         }
     }
@@ -203,7 +201,7 @@ impl<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug, R: std::fmt::Debug,
         self.expect(NixTokenType::Let);
 
         // maybe do this like the method after? so the let has a third parameter which is the body and which we can then concatenate afterwards
-        let mut binds: Vec<(Box<AST<'a>>, Box<AST<'a>>)> = Vec::new();
+        let mut binds: Option<R> = None;
         loop {
             match self.lexer.peek() {
                 Some(NixToken {
@@ -214,15 +212,15 @@ impl<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug, R: std::fmt::Debug,
                     let body =
                         self.parse_expr_function().expect("failed to parse body of let binding");
 
-                    break Some(binds.into_iter().fold(body, |accum, item| {
+                    break Some(self.visitor.visit_todo()); /*Some(binds.into_iter().fold(body, |accum, item| {
                         AST::Let(item.0, item.1, Box::new(accum))
-                    }));
+                    }));*/
                 }
                 _ => {
                     self.lexer.reset_peek();
                     let bind = self.parse_bind();
 
-                    binds.push(bind);
+                    //binds.push(bind);
                 }
             }
         }
@@ -324,10 +322,7 @@ impl<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug, R: std::fmt::Debug,
     pub fn parse_attrset(&mut self) -> Option<R> {
         self.expect(NixTokenType::CurlyOpen);
 
-        // I think we need to do it in this way because otherwise the order would be wrong
-        // the complicated way would be to modify inner
-
-        let mut binds: Vec<(Box<AST<'a>>, Box<AST<'a>>)> = Vec::new();
+        let mut binds: Option<R> = None;
         loop {
             match self.lexer.peek() {
                 Some(NixToken {
@@ -335,19 +330,13 @@ impl<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug, R: std::fmt::Debug,
                 }) => {
                     self.expect(NixTokenType::CurlyClose);
 
-                    break Some(
-                        binds
-                            .into_iter()
-                            .fold(AST::Identifier(b"TODO attrset"), |accum, item| {
-                                AST::Let(item.0, item.1, Box::new(accum))
-                            }),
-                    );
+                    break binds;
                 }
                 _ => {
                     self.lexer.reset_peek();
                     let bind = self.parse_bind();
 
-                    binds.push(bind);
+                    binds = Some(self.visitor.visit_attrset_bind_push(binds, bind));
                 }
             }
         }
@@ -516,12 +505,12 @@ impl<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug, R: std::fmt::Debug,
                 self.lexer.next();
                 let default = self.parse_expr_simple().unwrap();
 
-                let value = self.visitor.visit_select(expr, attrpath, Some(default));
+                Some(self.visitor.visit_select(expr, attrpath, Some(default)))
             } else {
                 self.lexer.reset_peek();
                 // also add abort call
                 // TODO FIXME replace all inner calls in parse_attrpath for early abort (also mentions more accurate location then)
-                let value = self.visitor.visit_select(expr, attrpath, None);
+                Some(self.visitor.visit_select(expr, attrpath, None))
             }
         } else {
             self.lexer.reset_peek();

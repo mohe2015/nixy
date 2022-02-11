@@ -34,6 +34,8 @@ pub trait ASTVisitor<'a, R: std::fmt::Debug> {
     fn visit_array_end(self, array: R) -> R;
 
     fn visit_call(self, function: R, parameter: R) -> R;
+
+    fn visit_attrset_bind_push(self, begin: Option<R>, last: R) -> R;
 }
 
 
@@ -208,5 +210,10 @@ impl<'a> ASTVisitor<'a, AST<'a>> for ASTBuilder {
                 expr
             ),
         )
+    }
+
+    fn visit_attrset_bind_push(self, begin: Option<AST<'a>>, last: AST<'a>) -> AST<'a> {
+        //AST::Let(item.0, item.1, Box::new(accum))
+        todo!()
     }
 }
