@@ -15,12 +15,11 @@ use tracing::instrument;
 
 // https://matklad.github.io/2020/03/22/fast-simple-rust-interner.html
 
-const BUILTIN_UNARY_NOT: &[u8] = b"__builtin_unary_not";
-const BUILTIN_PATH_CONCATENATE: &[u8] = b"__builtin_path_concatenate";
-const BUILTIN_IF: &[u8] = b"__builtin_if";
-const BUILTIN_STRING_CONCATENATE: &[u8] = b"__builtin_string_concatenate";
-
-const BUILTIN_UNARY_MINUS: &[u8] = b"__builtin_unary_minus";
+pub const BUILTIN_UNARY_NOT: &[u8] = b"__builtin_unary_not";
+pub const BUILTIN_PATH_CONCATENATE: &[u8] = b"__builtin_path_concatenate";
+pub const BUILTIN_IF: &[u8] = b"__builtin_if";
+pub const BUILTIN_STRING_CONCATENATE: &[u8] = b"__builtin_string_concatenate";
+pub const BUILTIN_UNARY_MINUS: &[u8] = b"__builtin_unary_minus";
 
 #[derive(PartialEq)]
 pub enum AST<'a> {
@@ -717,16 +716,7 @@ impl<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug, R: std::fmt::Debug,
                 let true_case = self.parse_expr().expect("failed to parse if true case");
                 self.expect( NixTokenType::Else);
                 let false_case = self.parse_expr().expect("failed to parse if false case");
-                Some(AST::Call(
-                    Box::new(AST::Call(
-                        Box::new(AST::Call(
-                            Box::new(AST::Identifier(BUILTIN_IF)),
-                            Box::new(condition),
-                        )),
-                        Box::new(true_case),
-                    )),
-                    Box::new(false_case),
-                ))
+                self.visitor.visit_if()
             }
             _ => {
                 self.lexer.reset_peek();

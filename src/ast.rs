@@ -1,4 +1,4 @@
-use crate::{parser::AST, lexer::NixTokenType};
+use crate::{parser::{AST, BUILTIN_IF}, lexer::NixTokenType};
 
 pub trait ASTVisitor<'a, R: std::fmt::Debug> {
 
@@ -13,6 +13,8 @@ pub trait ASTVisitor<'a, R: std::fmt::Debug> {
     fn visit_select(self, expr: R, attrpath: R, default: Option<R>) -> R;
 
     fn visit_infix_operation(self, left: R, right: R, operator: NixTokenType<'a>) -> R;
+
+    fn visit_if(self, condition: R, true_case: R, false_case: R) -> R;
 }
 
 
@@ -70,7 +72,7 @@ impl<'a> ASTVisitor<'a, AST<'a>> for ASTBuilder {
     fn visit_infix_operation(self, left: AST<'a>, right: AST<'a>, operator: NixTokenType<'a>) -> AST<'a> {
         AST::Call(
             Box::new(AST::Call(
-                Box::new(AST::Identifier(match token.token_type {
+                Box::new(AST::Identifier(match operator {
                     NixTokenType::If => b"if",
                     NixTokenType::Then => b"then",
                     NixTokenType::Else => b"else",
@@ -106,9 +108,22 @@ impl<'a> ASTVisitor<'a, AST<'a>> for ASTBuilder {
                     NixTokenType::Division => b"division",
                     _ => todo!(),
                 })),
-                Box::new(result),
+                Box::new(left),
             )),
-            Box::new(rhs),
-        );
+            Box::new(right),
+        )
+    }
+
+    fn visit_if(self, condition: AST<'a>, true_case: AST<'a>, false_case: AST<'a>) -> AST<'a> {
+        AST::Call(
+            Box::new(AST::Call(
+                Box::new(AST::Call(
+                    Box::new(AST::Identifier(BUILTIN_IF)),
+                    Box::new(condition),
+                )),
+                Box::new(true_case),
+            )),
+            Box::new(false_case),
+        )
     }
 }
