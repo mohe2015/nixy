@@ -67,997 +67,941 @@ impl<'a> Debug for AST<'a> {
     }
 }
 
-#[cfg_attr(debug_assertions, instrument(name = "expect", skip_all, ret))]
-pub fn expect<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
-    lexer: &mut MultiPeek<I>,
-    t: NixTokenType<'a>,
-) {
-    let token = lexer.next();
-    if discriminant(&token.as_ref().unwrap().token_type) != discriminant(&t) {
-        panic!("expected {:?} but got {:?}", t, &token)
-    }
+struct Parser<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug> {
+    lexer: MultiPeek<I>,
 }
 
-#[cfg_attr(debug_assertions, instrument(name = "attrpath", skip_all, ret))]
-pub fn parse_attrpath<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
-    lexer: &mut MultiPeek<I>,
-) -> Option<AST<'a>> {
-    let mut result: Option<AST<'a>> = None;
-    loop {
-        match lexer.peek() {
-            Some(NixToken {
-                token_type: NixTokenType::Identifier(id),
-            }) => {
-                match result {
-                    Some(a) => {
-                        result = Some(AST::Call(
-                            Box::new(AST::Call(
-                                Box::new(AST::Identifier(BUILTIN_SELECT)),
-                                Box::new(a),
-                            )),
-                            Box::new(AST::Identifier(id)),
-                        ));
-                    }
-                    None => result = Some(AST::Identifier(id)),
-                }
-
-                lexer.next();
-            }
-            Some(NixToken {
-                token_type: NixTokenType::Select,
-            }) => {
-                expect(lexer, NixTokenType::Select);
-            }
-            Some(NixToken {
-                token_type: NixTokenType::StringStart,
-            }) => {
-                lexer.reset_peek();
-                let res =
-                    parse_some_string(lexer, NixTokenType::StringStart, NixTokenType::StringEnd)
-                        .unwrap();
-                match result {
-                    Some(a) => {
-                        result = Some(AST::Call(
-                            Box::new(AST::Call(
-                                Box::new(AST::Identifier(BUILTIN_SELECT)),
-                                Box::new(a),
-                            )),
-                            Box::new(res),
-                        ));
-                    }
-                    None => result = Some(res),
-                }
-            }
-            Some(NixToken {
-                token_type: NixTokenType::InterpolateStart,
-            }) => {
-                expect(lexer, NixTokenType::InterpolateStart);
-                let expr = parse_expr(lexer).unwrap();
-                expect(lexer, NixTokenType::CurlyClose);
-                match result {
-                    Some(a) => {
-                        result = Some(AST::Call(
-                            Box::new(AST::Call(
-                                Box::new(AST::Identifier(BUILTIN_SELECT)),
-                                Box::new(a),
-                            )),
-                            Box::new(expr),
-                        ));
-                    }
-                    None => result = Some(expr),
-                }
-            }
-            _ => {
-                lexer.reset_peek();
-                break;
-            }
+impl<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug> Parser<'a, I> {
+    #[cfg_attr(debug_assertions, instrument(name = "expect", skip_all, ret))]
+    pub fn expect(mut self, t: NixTokenType<'a>) {
+        let token = self.lexer.next();
+        if discriminant(&token.as_ref().unwrap().token_type) != discriminant(&t) {
+            panic!("expected {:?} but got {:?}", t, &token)
         }
     }
-    result
-}
 
-#[cfg_attr(debug_assertions, instrument(name = "bind", skip_all, ret))]
-pub fn parse_bind<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
-    lexer: &mut MultiPeek<I>,
-) -> (Box<AST<'a>>, Box<AST<'a>>) {
-    match lexer.peek() {
-        Some(NixToken {
-            token_type: NixTokenType::Inherit,
-        }) => {
-            expect(lexer, NixTokenType::Inherit);
-            match lexer.peek() {
+    #[cfg_attr(debug_assertions, instrument(name = "attrpath", skip_all, ret))]
+    pub fn parse_attrpath(mut self) -> Option<AST<'a>> {
+        let mut result: Option<AST<'a>> = None;
+        loop {
+            match self.lexer.peek() {
                 Some(NixToken {
-                    token_type: NixTokenType::ParenOpen,
+                    token_type: NixTokenType::Identifier(id),
                 }) => {
-                    expect(lexer, NixTokenType::ParenOpen);
-                    let expr = parse_expr(lexer);
-                    expect(lexer, NixTokenType::ParenClose);
+                    match result {
+                        Some(a) => {
+                            result = Some(AST::Call(
+                                Box::new(AST::Call(
+                                    Box::new(AST::Identifier(BUILTIN_SELECT)),
+                                    Box::new(a),
+                                )),
+                                Box::new(AST::Identifier(id)),
+                            ));
+                        }
+                        None => result = Some(AST::Identifier(id)),
+                    }
+
+                    self.lexer.next();
+                }
+                Some(NixToken {
+                    token_type: NixTokenType::Select,
+                }) => {
+                    self.expect(NixTokenType::Select);
+                }
+                Some(NixToken {
+                    token_type: NixTokenType::StringStart,
+                }) => {
+                    self.lexer.reset_peek();
+                    let res = self.parse_some_string(
+                        NixTokenType::StringStart,
+                        NixTokenType::StringEnd,
+                    )
+                    .unwrap();
+                    match result {
+                        Some(a) => {
+                            result = Some(AST::Call(
+                                Box::new(AST::Call(
+                                    Box::new(AST::Identifier(BUILTIN_SELECT)),
+                                    Box::new(a),
+                                )),
+                                Box::new(res),
+                            ));
+                        }
+                        None => result = Some(res),
+                    }
+                }
+                Some(NixToken {
+                    token_type: NixTokenType::InterpolateStart,
+                }) => {
+                    self.expect(NixTokenType::InterpolateStart);
+                    let expr = self.parse_expr().unwrap();
+                    self.expect(NixTokenType::CurlyClose);
+                    match result {
+                        Some(a) => {
+                            result = Some(AST::Call(
+                                Box::new(AST::Call(
+                                    Box::new(AST::Identifier(BUILTIN_SELECT)),
+                                    Box::new(a),
+                                )),
+                                Box::new(expr),
+                            ));
+                        }
+                        None => result = Some(expr),
+                    }
                 }
                 _ => {
-                    lexer.reset_peek();
+                    self.lexer.reset_peek();
+                    break;
                 }
             }
-            let mut attrs = Vec::new();
-            loop {
-                match lexer.peek() {
+        }
+        result
+    }
+
+    #[cfg_attr(debug_assertions, instrument(name = "bind", skip_all, ret))]
+    pub fn parse_bind(mut self) -> (Box<AST<'a>>, Box<AST<'a>>) {
+        match self.lexer.peek() {
+            Some(NixToken {
+                token_type: NixTokenType::Inherit,
+            }) => {
+                self.expect(NixTokenType::Inherit);
+                match self.lexer.peek() {
                     Some(NixToken {
-                        token_type: NixTokenType::Identifier(attr),
+                        token_type: NixTokenType::ParenOpen,
                     }) => {
-                        attrs.push(AST::Identifier(attr));
-                        lexer.next();
+                        self.expect(NixTokenType::ParenOpen);
+                        let expr = self.parse_expr();
+                        self.expect(NixTokenType::ParenClose);
                     }
                     _ => {
-                        // TODO string attrs missing
-                        lexer.reset_peek();
-                        break;
+                        self.lexer.reset_peek();
                     }
                 }
+                let mut attrs = Vec::new();
+                loop {
+                    match self.lexer.peek() {
+                        Some(NixToken {
+                            token_type: NixTokenType::Identifier(attr),
+                        }) => {
+                            attrs.push(AST::Identifier(attr));
+                            self.lexer.next();
+                        }
+                        _ => {
+                            // TODO string attrs missing
+                            self.lexer.reset_peek();
+                            break;
+                        }
+                    }
+                }
+                self.expect(NixTokenType::Semicolon);
+                (
+                    Box::new(AST::Identifier(b"TODO inherit")),
+                    Box::new(AST::Identifier(b"TODO inherit")),
+                )
             }
-            expect(lexer, NixTokenType::Semicolon);
-            (
-                Box::new(AST::Identifier(b"TODO inherit")),
-                Box::new(AST::Identifier(b"TODO inherit")),
-            )
-        }
-        other => {
-            lexer.reset_peek();
-            let attrpath = parse_attrpath(lexer);
-            expect(lexer, NixTokenType::Assign);
+            other => {
+                self.lexer.reset_peek();
+                let attrpath = self.parse_attrpath();
+                self.expect(NixTokenType::Assign);
 
-            //println!("TEST {:?}", lexer.peek());
-            //lexer.reset_peek();
+                //println!("TEST {:?}", lexer.peek());
+                //lexer.reset_peek();
 
-            let expr = parse_expr(lexer).expect("expected expression in binding at");
-            expect(lexer, NixTokenType::Semicolon);
+                let expr = self.parse_expr().expect("expected expression in binding at");
+                self.expect(NixTokenType::Semicolon);
 
-            (Box::new(attrpath.unwrap()), Box::new(expr))
-        }
-    }
-}
-
-#[cfg_attr(debug_assertions, instrument(name = "let", skip_all, ret))]
-pub fn parse_let<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
-    lexer: &mut MultiPeek<I>,
-) -> Option<AST<'a>> {
-    expect(lexer, NixTokenType::Let);
-    let mut binds: Vec<(Box<AST<'a>>, Box<AST<'a>>)> = Vec::new();
-    loop {
-        match lexer.peek() {
-            Some(NixToken {
-                token_type: NixTokenType::In,
-            }) => {
-                lexer.next();
-
-                let body = parse_expr_function(lexer).expect("failed to parse body of let binding");
-
-                break Some(binds.into_iter().fold(body, |accum, item| {
-                    AST::Let(item.0, item.1, Box::new(accum))
-                }));
-            }
-            _ => {
-                lexer.reset_peek();
-                let bind = parse_bind(lexer);
-
-                binds.push(bind);
+                (Box::new(attrpath.unwrap()), Box::new(expr))
             }
         }
     }
-}
 
-#[cfg_attr(debug_assertions, instrument(name = "path", skip_all, ret))]
-pub fn parse_path<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
-    lexer: &mut MultiPeek<I>,
-) -> Option<AST<'a>> {
-    expect(lexer, NixTokenType::PathStart);
-    let mut result: Option<AST<'a>> = None;
-    loop {
-        let val = lexer.next();
-        match val {
-            Some(NixToken {
-                token_type: NixTokenType::PathEnd,
-            }) => {
-                break result;
+    #[cfg_attr(debug_assertions, instrument(name = "let", skip_all, ret))]
+    pub fn parse_let(mut self) -> Option<AST<'a>> {
+        self.expect(NixTokenType::Let);
+        let mut binds: Vec<(Box<AST<'a>>, Box<AST<'a>>)> = Vec::new();
+        loop {
+            match self.lexer.peek() {
+                Some(NixToken {
+                    token_type: NixTokenType::In,
+                }) => {
+                    self.lexer.next();
+
+                    let body =
+                        self.parse_expr_function().expect("failed to parse body of let binding");
+
+                    break Some(binds.into_iter().fold(body, |accum, item| {
+                        AST::Let(item.0, item.1, Box::new(accum))
+                    }));
+                }
+                _ => {
+                    self.lexer.reset_peek();
+                    let bind = self.parse_bind();
+
+                    binds.push(bind);
+                }
             }
-            Some(NixToken {
-                token_type: NixTokenType::InterpolateStart,
-            }) => {
-                let expr = parse_expr(lexer).unwrap();
-                expect(lexer, NixTokenType::CurlyClose);
-                match result {
+        }
+    }
+
+    #[cfg_attr(debug_assertions, instrument(name = "path", skip_all, ret))]
+    pub fn parse_path(mut self) -> Option<AST<'a>> {
+        self.expect(NixTokenType::PathStart);
+        let mut result: Option<AST<'a>> = None;
+        loop {
+            let val = self.lexer.next();
+            match val {
+                Some(NixToken {
+                    token_type: NixTokenType::PathEnd,
+                }) => {
+                    break result;
+                }
+                Some(NixToken {
+                    token_type: NixTokenType::InterpolateStart,
+                }) => {
+                    let expr = self.parse_expr().unwrap();
+                    self.expect(NixTokenType::CurlyClose);
+                    match result {
+                        Some(a) => {
+                            result = Some(AST::Call(
+                                Box::new(AST::Call(
+                                    Box::new(AST::Identifier(BUILTIN_PATH_CONCATENATE)),
+                                    Box::new(a),
+                                )),
+                                Box::new(expr),
+                            ))
+                        }
+                        None => result = Some(expr),
+                    }
+                }
+                Some(NixToken {
+                    token_type: NixTokenType::PathSegment(segment),
+                }) => match result {
                     Some(a) => {
                         result = Some(AST::Call(
                             Box::new(AST::Call(
                                 Box::new(AST::Identifier(BUILTIN_PATH_CONCATENATE)),
                                 Box::new(a),
                             )),
-                            Box::new(expr),
+                            Box::new(AST::PathSegment(segment)),
                         ))
                     }
-                    None => result = Some(expr),
+                    None => result = Some(AST::PathSegment(segment)),
+                },
+                _ => {
+                    todo!();
                 }
             }
-            Some(NixToken {
-                token_type: NixTokenType::PathSegment(segment),
-            }) => match result {
-                Some(a) => {
-                    result = Some(AST::Call(
-                        Box::new(AST::Call(
-                            Box::new(AST::Identifier(BUILTIN_PATH_CONCATENATE)),
-                            Box::new(a),
-                        )),
-                        Box::new(AST::PathSegment(segment)),
-                    ))
-                }
-                None => result = Some(AST::PathSegment(segment)),
-            },
-            _ => {
-                todo!();
-            }
         }
     }
-}
 
-#[cfg_attr(debug_assertions, instrument(name = "str", skip_all, ret))]
-pub fn parse_some_string<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
-    lexer: &mut MultiPeek<I>,
-    start: NixTokenType<'a>,
-    end: NixTokenType<'a>,
-) -> Option<AST<'a>> {
-    expect(lexer, start);
-    let mut accum = AST::String(b"");
-    loop {
-        match lexer.next() {
-            Some(NixToken {
-                token_type: NixTokenType::String(string),
-            }) => {
-                accum = AST::Call(
-                    Box::new(AST::Call(
-                        Box::new(AST::Identifier(BUILTIN_STRING_CONCATENATE)),
-                        Box::new(accum),
-                    )),
-                    Box::new(AST::String(string)),
-                )
-            }
-            Some(NixToken {
-                token_type: NixTokenType::IndentedString(string),
-            }) => {
-                accum = AST::Call(
-                    Box::new(AST::Call(
-                        Box::new(AST::Identifier(BUILTIN_STRING_CONCATENATE)),
-                        Box::new(accum),
-                    )),
-                    Box::new(AST::String(string)),
-                )
-            }
-            Some(NixToken {
-                token_type: NixTokenType::InterpolateStart,
-            }) => {
-                let expr = parse_expr(lexer).unwrap();
-                expect(lexer, NixTokenType::CurlyClose);
-                accum = AST::Call(
-                    Box::new(AST::Call(
-                        Box::new(AST::Identifier(BUILTIN_STRING_CONCATENATE)),
-                        Box::new(accum),
-                    )),
-                    Box::new(expr),
-                )
-            }
-            Some(NixToken { token_type: end }) => break Some(accum),
-            v => panic!("unexpected {:?}", v),
-        }
-    }
-}
-
-#[cfg_attr(debug_assertions, instrument(name = "attrs", skip_all, ret))]
-pub fn parse_attrset<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
-    lexer: &mut MultiPeek<I>,
-) -> Option<AST<'a>> {
-    expect(lexer, NixTokenType::CurlyOpen);
-
-    let mut binds: Vec<(Box<AST<'a>>, Box<AST<'a>>)> = Vec::new();
-    loop {
-        match lexer.peek() {
-            Some(NixToken {
-                token_type: NixTokenType::CurlyClose,
-            }) => {
-                expect(lexer, NixTokenType::CurlyClose);
-
-                break Some(
-                    binds
-                        .into_iter()
-                        .fold(AST::Identifier(b"TODO attrset"), |accum, item| {
-                            AST::Let(item.0, item.1, Box::new(accum))
-                        }),
-                );
-            }
-            _ => {
-                lexer.reset_peek();
-                let bind = parse_bind(lexer);
-
-                binds.push(bind);
-            }
-        }
-    }
-}
-
-#[cfg_attr(debug_assertions, instrument(name = "simple", skip_all, ret))]
-pub fn parse_expr_simple<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
-    lexer: &mut MultiPeek<I>,
-) -> Option<AST<'a>> {
-    let val = lexer.peek();
-    match val {
-        Some(NixToken {
-            token_type: NixTokenType::Identifier(id),
-        }) => {
-            let ret = Some(AST::Identifier(id));
-            lexer.next();
-            ret
-        }
-        Some(NixToken {
-            token_type: NixTokenType::Integer(integer),
-        }) => {
-            let ret = Some(AST::Integer(*integer));
-            lexer.next();
-            ret
-        }
-        Some(NixToken {
-            token_type: NixTokenType::Float(float),
-        }) => {
-            let ret = Some(AST::Float(*float));
-            lexer.next();
-            ret
-        }
-        Some(NixToken {
-            token_type: NixTokenType::PathStart,
-        }) => {
-            lexer.reset_peek();
-            parse_path(lexer)
-        }
-        Some(NixToken {
-            token_type: NixTokenType::IndentedStringStart,
-        }) => {
-            lexer.reset_peek();
-            parse_some_string(
-                lexer,
-                NixTokenType::IndentedStringStart,
-                NixTokenType::IndentedStringEnd,
-            )
-        }
-        Some(NixToken {
-            token_type: NixTokenType::StringStart,
-        }) => {
-            lexer.reset_peek();
-            parse_some_string(lexer, NixTokenType::StringStart, NixTokenType::StringEnd)
-        }
-        Some(NixToken {
-            token_type: NixTokenType::ParenOpen,
-        }) => {
-            expect(lexer, NixTokenType::ParenOpen);
-            let expr = parse_expr(lexer);
-            expect(lexer, NixTokenType::ParenClose);
-            expr
-        }
-        Some(NixToken {
-            token_type: NixTokenType::CurlyOpen,
-        }) => parse_attrset(lexer),
-        Some(NixToken {
-            token_type: NixTokenType::BracketOpen,
-        }) => {
-            expect(lexer, NixTokenType::BracketOpen);
-            let mut array = Vec::new();
-            loop {
-                match lexer.peek() {
-                    Some(NixToken {
-                        token_type: NixTokenType::BracketClose,
-                    }) => {
-                        lexer.next();
-                        break;
-                    }
-                    token => {
-                        lexer.reset_peek();
-                        array.push(parse_expr_select(lexer).unwrap());
-                    }
-                }
-            }
-            return Some(
-                array
-                    .into_iter()
-                    .fold(AST::Identifier(b"cons"), |accum, item| {
-                        AST::Call(Box::new(accum), Box::new(item))
-                    }),
-            );
-        }
-        Some(NixToken {
-            token_type: NixTokenType::Let,
-        }) => {
-            expect(lexer, NixTokenType::Let);
-            parse_attrset(lexer)
-        }
-        Some(NixToken {
-            token_type: NixTokenType::Rec,
-        }) => {
-            expect(lexer, NixTokenType::Rec);
-            parse_attrset(lexer)
-        }
-        _ => {
-            lexer.reset_peek();
-            None
-        }
-    }
-}
-
-#[cfg_attr(debug_assertions, instrument(name = "", skip_all, ret))]
-pub fn parse_expr_infix<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
-    lexer: &mut MultiPeek<I>,
-    f: fn(&mut MultiPeek<I>) -> Option<AST<'a>>,
-    operators: &[NixTokenType],
-) -> Option<AST<'a>> {
-    parse_expr_infix_split(lexer, f, f, operators)
-}
-
-#[cfg_attr(debug_assertions, instrument(name = "", skip_all, ret))]
-pub fn parse_expr_infix_split<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
-    lexer: &mut MultiPeek<I>,
-    flhs: fn(&mut MultiPeek<I>) -> Option<AST<'a>>,
-    frhs: fn(&mut MultiPeek<I>) -> Option<AST<'a>>,
-    operators: &[NixTokenType],
-) -> Option<AST<'a>> {
-    let mut result = flhs(lexer)?;
-    loop {
-        let next_token = lexer.peek();
-        if next_token.is_none() {
-            lexer.reset_peek();
-            return Some(result);
-        }
-        if operators.contains(&next_token.unwrap().token_type) {
-            let token = lexer.next().unwrap();
-            let rhs = frhs(lexer).expect(&format!(
-                "expected right hand side after {:?} but got nothing",
-                token.token_type
-            ));
-            // TODO FIXME replace leaking by match to function name
-            result = AST::Call(
-                Box::new(AST::Call(
-                    Box::new(AST::Identifier(match token.token_type {
-                        NixTokenType::If => b"if",
-                        NixTokenType::Then => b"then",
-                        NixTokenType::Else => b"else",
-                        NixTokenType::Assert => b"assert",
-                        NixTokenType::With => b"with",
-                        NixTokenType::Let => b"let",
-                        NixTokenType::In => b"in",
-                        NixTokenType::Rec => b"rec",
-                        NixTokenType::Inherit => b"inherit",
-                        NixTokenType::Or => b"or",
-                        NixTokenType::Ellipsis => b"ellipsis",
-                        NixTokenType::Equals => b"equals",
-                        NixTokenType::NotEquals => b"notequals",
-                        NixTokenType::LessThanOrEqual => b"lessthanorequal",
-                        NixTokenType::GreaterThanOrEqual => b"greaterthanorequal",
-                        NixTokenType::LessThan => b"lessthan",
-                        NixTokenType::GreaterThan => b"greaterthan",
-                        NixTokenType::And => b"and",
-                        NixTokenType::Implies => b"implies",
-                        NixTokenType::Update => b"update",
-                        NixTokenType::Concatenate => b"concatenate",
-                        NixTokenType::Assign => b"assign",
-                        NixTokenType::Semicolon => b"semicolon",
-                        NixTokenType::Colon => b"colon",
-                        NixTokenType::Select => b"select",
-                        NixTokenType::Comma => b"comman",
-                        NixTokenType::AtSign => b"atsign",
-                        NixTokenType::QuestionMark => b"questionmark",
-                        NixTokenType::ExclamationMark => b"exclamationmark",
-                        NixTokenType::Addition => b"addition",
-                        NixTokenType::Subtraction => b"subtractoin",
-                        NixTokenType::Multiplication => b"multiplication",
-                        NixTokenType::Division => b"division",
-                        _ => todo!()
-                    })),
-                    Box::new(result),
-                )),
-                Box::new(rhs),
-            );
-        } else {
-            lexer.reset_peek();
-            return Some(result);
-        }
-    }
-}
-
-#[cfg_attr(debug_assertions, instrument(name = "sel", skip_all, ret))]
-pub fn parse_expr_select<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
-    lexer: &mut MultiPeek<I>,
-) -> Option<AST<'a>> {
-    let expr = parse_expr_simple(lexer)?;
-    let peeked = lexer.peek();
-    if let Some(NixToken {
-        token_type: NixTokenType::Select,
-    }) = peeked
-    {
-        expect(lexer, NixTokenType::Select);
-        // TODO FIXME we probably need to fix that method (use a custom one because of function application order)
-        let attrpath = parse_attrpath(lexer);
-        // we need to parse it specially because evaluation needs to abort if the attrpath does not exist and there is no or
-        let value = AST::Call(
-            Box::new(AST::Call(
-                Box::new(AST::Identifier(BUILTIN_SELECT)),
-                Box::new(expr),
-            )),
-            Box::new(attrpath.unwrap()),
-        );
-        if let Some(NixToken {
-            token_type: NixTokenType::Identifier(b"or"),
-        }) = lexer.peek()
-        {
-            lexer.next();
-            let default = parse_expr_simple(lexer).unwrap();
-            Some(AST::Call(
-                Box::new(AST::Call(
-                    Box::new(AST::Identifier(b"__value_or_default")),
-                    Box::new(value),
-                )),
-                Box::new(default),
-            ))
-        } else {
-            lexer.reset_peek();
-            // also add abort call
-            // TODO FIXME replace all inner calls in parse_attrpath for early abort (also mentions more accurate location then)
-            Some(AST::Call(
-                Box::new(AST::Identifier(b"__abort_invalid_attrpath")),
-                Box::new(value),
-            ))
-        }
-    } else {
-        lexer.reset_peek();
-        Some(expr)
-    }
-}
-
-#[cfg_attr(debug_assertions, instrument(name = "app", skip_all, ret))]
-pub fn parse_expr_app<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
-    lexer: &mut MultiPeek<I>,
-) -> Option<AST<'a>> {
-    let mut result: Option<AST<'a>> = None;
-    loop {
-        let jo = parse_expr_select(lexer);
-        match jo {
-            Some(expr) => {
-                match result {
-                    Some(a) => {
-                        result = Some(AST::Call(Box::new(a), Box::new(expr)));
-                    }
-                    None => result = Some(expr),
-                }
-
-                //lexer.next();
-            }
-            None => {
-                break;
-            }
-        }
-    }
-    result
-}
-
-#[cfg_attr(debug_assertions, instrument(name = "-", skip_all, ret))]
-pub fn parse_expr_arithmetic_negation<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
-    lexer: &mut MultiPeek<I>,
-) -> Option<AST<'a>> {
-    if let Some(NixToken {
-        token_type: NixTokenType::Subtraction,
-    }) = lexer.peek()
-    {
-        expect(lexer, NixTokenType::Subtraction);
-        Some(AST::Call(
-            Box::new(AST::Identifier(BUILTIN_UNARY_MINUS)),
-            Box::new(parse_expr_app(lexer).expect("failed to parse arithmetic minus expression")),
-        ))
-    } else {
-        lexer.reset_peek();
-        parse_expr_app(lexer)
-    }
-}
-
-#[cfg_attr(debug_assertions, instrument(name = "?", skip_all, ret))]
-pub fn parse_expr_has_attribute<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
-    lexer: &mut MultiPeek<I>,
-) -> Option<AST<'a>> {
-    // TODO FIXME RHS needs to be attrpath
-    parse_expr_infix_split(
-        lexer,
-        parse_expr_arithmetic_negation,
-        parse_attrpath,
-        &[NixTokenType::QuestionMark],
-    )
-}
-
-#[cfg_attr(debug_assertions, instrument(name = "++", skip_all, ret))]
-pub fn parse_expr_list_concatenation<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
-    lexer: &mut MultiPeek<I>,
-) -> Option<AST<'a>> {
-    parse_expr_infix(
-        lexer,
-        parse_expr_has_attribute,
-        &[NixTokenType::Concatenate],
-    )
-}
-
-#[cfg_attr(debug_assertions, instrument(name = "*/", skip_all, ret))]
-pub fn parse_expr_arithmetic_mul_div<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
-    lexer: &mut MultiPeek<I>,
-) -> Option<AST<'a>> {
-    parse_expr_infix(
-        lexer,
-        parse_expr_list_concatenation,
-        &[NixTokenType::Multiplication, NixTokenType::Division],
-    )
-}
-
-#[cfg_attr(debug_assertions, instrument(name = "+-", skip_all, ret))]
-pub fn parse_expr_arithmetic_or_concatenate<
-    'a,
-    I: Iterator<Item = NixToken<'a>> + std::fmt::Debug,
->(
-    lexer: &mut MultiPeek<I>,
-) -> Option<AST<'a>> {
-    parse_expr_infix(
-        lexer,
-        parse_expr_arithmetic_mul_div,
-        &[NixTokenType::Addition, NixTokenType::Subtraction],
-    )
-}
-
-#[cfg_attr(debug_assertions, instrument(name = "!", skip_all, ret))]
-pub fn parse_expr_not<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
-    lexer: &mut MultiPeek<I>,
-) -> Option<AST<'a>> {
-    if let Some(NixToken {
-        token_type: NixTokenType::ExclamationMark,
-    }) = lexer.peek()
-    {
-        expect(lexer, NixTokenType::ExclamationMark);
-        Some(AST::Call(
-            Box::new(AST::Identifier(BUILTIN_UNARY_NOT)),
-            Box::new(
-                parse_expr_arithmetic_or_concatenate(lexer)
-                    .expect("failed to parse negated expression"),
-            ),
-        ))
-    } else {
-        lexer.reset_peek();
-        parse_expr_arithmetic_or_concatenate(lexer)
-    }
-}
-
-#[cfg_attr(debug_assertions, instrument(name = "//", skip_all, ret))]
-pub fn parse_expr_update<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
-    lexer: &mut MultiPeek<I>,
-) -> Option<AST<'a>> {
-    parse_expr_infix(lexer, parse_expr_not, &[NixTokenType::Update])
-}
-
-#[cfg_attr(debug_assertions, instrument(name = "<=>", skip_all, ret))]
-pub fn parse_expr_comparison<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
-    lexer: &mut MultiPeek<I>,
-) -> Option<AST<'a>> {
-    parse_expr_infix(
-        lexer,
-        parse_expr_update,
-        &[
-            NixTokenType::LessThan,
-            NixTokenType::LessThanOrEqual,
-            NixTokenType::GreaterThan,
-            NixTokenType::GreaterThanOrEqual,
-        ],
-    )
-}
-
-#[cfg_attr(debug_assertions, instrument(name = "=!=", skip_all, ret))]
-pub fn parse_expr_inequality_or_equality<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
-    lexer: &mut MultiPeek<I>,
-) -> Option<AST<'a>> {
-    parse_expr_infix(
-        lexer,
-        parse_expr_comparison,
-        &[NixTokenType::Equals, NixTokenType::NotEquals],
-    )
-}
-
-#[cfg_attr(debug_assertions, instrument(name = "&&", skip_all, ret))]
-pub fn parse_expr_logical_and<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
-    lexer: &mut MultiPeek<I>,
-) -> Option<AST<'a>> {
-    parse_expr_infix(
-        lexer,
-        parse_expr_inequality_or_equality,
-        &[NixTokenType::And],
-    )
-}
-
-#[cfg_attr(debug_assertions, instrument(name = "||", skip_all, ret))]
-pub fn parse_expr_logical_or<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
-    lexer: &mut MultiPeek<I>,
-) -> Option<AST<'a>> {
-    parse_expr_infix(lexer, parse_expr_logical_and, &[NixTokenType::Or])
-}
-
-#[cfg_attr(debug_assertions, instrument(name = "->", skip_all, ret))]
-pub fn parse_expr_logical_implication<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
-    lexer: &mut MultiPeek<I>,
-) -> Option<AST<'a>> {
-    parse_expr_infix(lexer, parse_expr_logical_or, &[NixTokenType::Implies])
-}
-
-#[cfg_attr(debug_assertions, instrument(name = "op", skip_all, ret))]
-pub fn parse_expr_op<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
-    lexer: &mut MultiPeek<I>,
-) -> Option<AST<'a>> {
-    parse_expr_logical_implication(lexer)
-}
-
-#[cfg_attr(debug_assertions, instrument(name = "if", skip_all, ret))]
-pub fn parse_expr_if<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
-    lexer: &mut MultiPeek<I>,
-) -> Option<AST<'a>> {
-    match lexer.peek() {
-        Some(NixToken {
-            token_type: NixTokenType::If,
-        }) => {
-            expect(lexer, NixTokenType::If);
-            let condition = parse_expr(lexer).expect("failed to parse if condition");
-            expect(lexer, NixTokenType::Then);
-            let true_case = parse_expr(lexer).expect("failed to parse if true case");
-            expect(lexer, NixTokenType::Else);
-            let false_case = parse_expr(lexer).expect("failed to parse if false case");
-            Some(AST::Call(
-                Box::new(AST::Call(
-                    Box::new(AST::Call(
-                        Box::new(AST::Identifier(BUILTIN_IF)),
-                        Box::new(condition),
-                    )),
-                    Box::new(true_case),
-                )),
-                Box::new(false_case),
-            ))
-        }
-        _ => {
-            lexer.reset_peek();
-            parse_expr_op(lexer)
-        }
-    }
-}
-
-// this returns none for some reason
-#[cfg_attr(debug_assertions, instrument(name = "args", skip_all, ret))]
-pub fn parse_formals<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
-    lexer: &mut MultiPeek<I>,
-) -> Option<AST<'a>> {
-    // we need quite some peekahead here do differentiate between attrsets
-    // this is probably the most complicated function in here
-    let formals: Vec<AST<'a>> = Vec::new();
-    let mut parsed_first = false;
-    if let Some(NixToken {
-        token_type: NixTokenType::CurlyOpen,
-    }) = lexer.peek()
-    {
+    #[cfg_attr(debug_assertions, instrument(name = "str", skip_all, ret))]
+    pub fn parse_some_string(mut self,
+        start: NixTokenType<'a>,
+        end: NixTokenType<'a>,
+    ) -> Option<AST<'a>> {
+        self.expect(start);
+        let mut accum = AST::String(b"");
         loop {
-            match lexer.peek() {
+            match self.lexer.next() {
                 Some(NixToken {
-                    token_type: NixTokenType::Identifier(a),
+                    token_type: NixTokenType::String(string),
                 }) => {
-                    let token = lexer.peek();
-                    if let Some(NixToken {
-                        token_type: NixTokenType::QuestionMark,
-                    }) = token
-                    {
-                        if !parsed_first {
-                            expect(lexer, NixTokenType::CurlyOpen);
-                            parsed_first = true;
-                        }
-                        expect(lexer, NixTokenType::Identifier(b""));
-                        expect(lexer, NixTokenType::QuestionMark);
-                        parse_expr(lexer);
-                    } else if let Some(NixToken {
-                        token_type: NixTokenType::Comma,
-                    }) = token
-                    {
-                        if !parsed_first {
-                            expect(lexer, NixTokenType::CurlyOpen);
-                            parsed_first = true;
-                        }
-                        expect(lexer, NixTokenType::Identifier(b""));
-                        expect(lexer, NixTokenType::Comma);
-                    } else if let Some(NixToken {
-                        token_type: NixTokenType::CurlyClose,
-                    }) = token
-                    {
-                        if !parsed_first {
-                            expect(lexer, NixTokenType::CurlyOpen);
-                            parsed_first = true;
-                        }
-                        expect(lexer, NixTokenType::Identifier(b""));
-                        expect(lexer, NixTokenType::CurlyClose);
-                        return Some(AST::Identifier(b"TODO formals")); // TODO FIXME
-                    } else {
-                        // probably an attrset
-                        lexer.reset_peek();
-                        return None;
-                    }
+                    accum = AST::Call(
+                        Box::new(AST::Call(
+                            Box::new(AST::Identifier(BUILTIN_STRING_CONCATENATE)),
+                            Box::new(accum),
+                        )),
+                        Box::new(AST::String(string)),
+                    )
                 }
                 Some(NixToken {
-                    token_type: NixTokenType::Inherit,
+                    token_type: NixTokenType::IndentedString(string),
                 }) => {
-                    // attrset
-                    lexer.reset_peek();
-                    return None;
+                    accum = AST::Call(
+                        Box::new(AST::Call(
+                            Box::new(AST::Identifier(BUILTIN_STRING_CONCATENATE)),
+                            Box::new(accum),
+                        )),
+                        Box::new(AST::String(string)),
+                    )
                 }
                 Some(NixToken {
-                    token_type: NixTokenType::Comma,
+                    token_type: NixTokenType::InterpolateStart,
                 }) => {
-                    if !parsed_first {
-                        expect(lexer, NixTokenType::CurlyOpen);
-                        parsed_first = true;
-                    }
-                    expect(lexer, NixTokenType::Comma);
+                    let expr = self.parse_expr().unwrap();
+                    self.expect(NixTokenType::CurlyClose);
+                    accum = AST::Call(
+                        Box::new(AST::Call(
+                            Box::new(AST::Identifier(BUILTIN_STRING_CONCATENATE)),
+                            Box::new(accum),
+                        )),
+                        Box::new(expr),
+                    )
                 }
-                Some(NixToken {
-                    token_type: NixTokenType::Ellipsis,
-                }) => {
-                    if !parsed_first {
-                        expect(lexer, NixTokenType::CurlyOpen);
-                        parsed_first = true;
-                    }
-                    expect(lexer, NixTokenType::Ellipsis);
-                }
+                Some(NixToken { token_type: end }) => break Some(accum),
+                v => panic!("unexpected {:?}", v),
+            }
+        }
+    }
+
+    #[cfg_attr(debug_assertions, instrument(name = "attrs", skip_all, ret))]
+    pub fn parse_attrset(mut self) -> Option<AST<'a>> {
+        self.expect(NixTokenType::CurlyOpen);
+
+        let mut binds: Vec<(Box<AST<'a>>, Box<AST<'a>>)> = Vec::new();
+        loop {
+            match self.lexer.peek() {
                 Some(NixToken {
                     token_type: NixTokenType::CurlyClose,
                 }) => {
-                    if !parsed_first {
-                        match lexer.peek() {
-                            Some(NixToken {
-                                token_type: NixTokenType::Colon,
-                            }) => {
-                                // empty function
-                                expect(lexer, NixTokenType::CurlyOpen);
-                                expect(lexer, NixTokenType::CurlyClose);
-                                lexer.reset_peek();
-                                return Some(AST::Identifier(b"TODO formals")); // TODO FIXME
-                            }
-                            Some(NixToken {
-                                token_type: NixTokenType::AtSign,
-                            }) => {
-                                // empty function in stupid
-                                expect(lexer, NixTokenType::CurlyOpen);
-                                expect(lexer, NixTokenType::CurlyClose);
-                                expect(lexer, NixTokenType::AtSign);
-                                expect(lexer, NixTokenType::Identifier(b""));
-                                lexer.reset_peek();
-                                return Some(AST::Identifier(b"TODO formals")); // TODO FIXME
-                            }
-                            _ => {
-                                // potentially empty attrset
-                                lexer.reset_peek();
-                                return None;
-                            }
-                        }
-                    }
-                    expect(lexer, NixTokenType::CurlyClose);
-                    return Some(AST::Identifier(b"TODO formals")); // TODO FIXME
-                }
-                Some(NixToken {
-                    token_type: NixTokenType::StringStart,
-                })
-                | Some(NixToken {
-                    token_type: NixTokenType::InterpolateStart,
-                }) => {
-                    // that's not how formals look like
-                    lexer.reset_peek();
-                    return None;
-                }
-                token => panic!("{:?}", token),
-            }
-        }
-    } else {
-        lexer.reset_peek();
-        None
-    }
-}
+                    self.expect(NixTokenType::CurlyClose);
 
-#[cfg_attr(debug_assertions, instrument(name = "fn", skip_all, ret))]
-pub fn parse_expr_function<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
-    lexer: &mut MultiPeek<I>,
-) -> Option<AST<'a>> {
-    let token = lexer.peek();
-    match token.map(|t| &t.token_type) {
-        Some(NixTokenType::Let) => {
-            lexer.reset_peek();
-            parse_let(lexer)
-        }
-        Some(NixTokenType::CurlyOpen) => {
-            lexer.reset_peek();
-            let formals = parse_formals(lexer);
-            if let None = formals {
-                // not a function, probably an attrset
-                return parse_expr_if(lexer);
-            }
-            match lexer.next() {
-                Some(NixToken {
-                    token_type: NixTokenType::Colon,
-                }) => {}
-                Some(NixToken {
-                    token_type: NixTokenType::AtSign,
-                }) => {
-                    let ident = expect(lexer, NixTokenType::Identifier(b""));
-                    expect(lexer, NixTokenType::Colon);
-                }
-                _ => todo!(),
-            }
-            parse_expr_function(lexer)
-        }
-        Some(NixTokenType::Identifier(ident)) => {
-            match lexer.peek() {
-                Some(NixToken {
-                    token_type: NixTokenType::Colon,
-                }) => {
-                    // function call
-                    // TODO parameter
-                    let ident = lexer.next();
-                    expect(lexer, NixTokenType::Colon);
-                    parse_expr_function(lexer)
-                }
-                Some(NixToken {
-                    token_type: NixTokenType::AtSign,
-                }) => {
-                    // function call
-                    let ident = lexer.next();
-                    expect(lexer, NixTokenType::AtSign);
-                    let formals = parse_formals(lexer).unwrap();
-                    expect(lexer, NixTokenType::Colon);
-                    parse_expr_function(lexer)
+                    break Some(
+                        binds
+                            .into_iter()
+                            .fold(AST::Identifier(b"TODO attrset"), |accum, item| {
+                                AST::Let(item.0, item.1, Box::new(accum))
+                            }),
+                    );
                 }
                 _ => {
-                    lexer.reset_peek();
-                    parse_expr_if(lexer)
+                    self.lexer.reset_peek();
+                    let bind = self.parse_bind();
+
+                    binds.push(bind);
                 }
             }
         }
-        Some(NixTokenType::Assert) => {
-            expect(lexer, NixTokenType::Assert);
-            let assert_expr = parse_expr(lexer);
-            expect(lexer, NixTokenType::Semicolon);
-            let body = parse_expr(lexer);
-            body // TODO FIXME
-        }
-        Some(NixTokenType::With) => {
-            expect(lexer, NixTokenType::With);
-            let with_expr = parse_expr(lexer);
-            expect(lexer, NixTokenType::Semicolon);
-            let body = parse_expr(lexer);
+    }
 
-            body // TODO FIXME
-        }
-        _ => {
-            lexer.reset_peek();
-            parse_expr_if(lexer)
+    #[cfg_attr(debug_assertions, instrument(name = "simple", skip_all, ret))]
+    pub fn parse_expr_simple(mut self) -> Option<AST<'a>> {
+        let val = self.lexer.peek();
+        match val {
+            Some(NixToken {
+                token_type: NixTokenType::Identifier(id),
+            }) => {
+                let ret = Some(AST::Identifier(id));
+                self.lexer.next();
+                ret
+            }
+            Some(NixToken {
+                token_type: NixTokenType::Integer(integer),
+            }) => {
+                let ret = Some(AST::Integer(*integer));
+                self.lexer.next();
+                ret
+            }
+            Some(NixToken {
+                token_type: NixTokenType::Float(float),
+            }) => {
+                let ret = Some(AST::Float(*float));
+                self.lexer.next();
+                ret
+            }
+            Some(NixToken {
+                token_type: NixTokenType::PathStart,
+            }) => {
+                self.lexer.reset_peek();
+                self.parse_path()
+            }
+            Some(NixToken {
+                token_type: NixTokenType::IndentedStringStart,
+            }) => {
+                self.lexer.reset_peek();
+                self.parse_some_string(
+                    NixTokenType::IndentedStringStart,
+                    NixTokenType::IndentedStringEnd,
+                )
+            }
+            Some(NixToken {
+                token_type: NixTokenType::StringStart,
+            }) => {
+                self.lexer.reset_peek();
+                self.parse_some_string(NixTokenType::StringStart, NixTokenType::StringEnd)
+            }
+            Some(NixToken {
+                token_type: NixTokenType::ParenOpen,
+            }) => {
+                self.expect(NixTokenType::ParenOpen);
+                let expr = self.parse_expr();
+                self.expect(NixTokenType::ParenClose);
+                expr
+            }
+            Some(NixToken {
+                token_type: NixTokenType::CurlyOpen,
+            }) => self.parse_attrset(),
+            Some(NixToken {
+                token_type: NixTokenType::BracketOpen,
+            }) => {
+                self.expect( NixTokenType::BracketOpen);
+                let mut array = Vec::new();
+                loop {
+                    match self.lexer.peek() {
+                        Some(NixToken {
+                            token_type: NixTokenType::BracketClose,
+                        }) => {
+                            self.lexer.next();
+                            break;
+                        }
+                        token => {
+                            self.lexer.reset_peek();
+                            array.push(self.parse_expr_select().unwrap());
+                        }
+                    }
+                }
+                return Some(
+                    array
+                        .into_iter()
+                        .fold(AST::Identifier(b"cons"), |accum, item| {
+                            AST::Call(Box::new(accum), Box::new(item))
+                        }),
+                );
+            }
+            Some(NixToken {
+                token_type: NixTokenType::Let,
+            }) => {
+                self.expect(NixTokenType::Let);
+                self.parse_attrset()
+            }
+            Some(NixToken {
+                token_type: NixTokenType::Rec,
+            }) => {
+                self.expect(NixTokenType::Rec);
+                self.parse_attrset()
+            }
+            _ => {
+                self.lexer.reset_peek();
+                None
+            }
         }
     }
-}
 
-#[cfg_attr(debug_assertions, instrument(name = "e", skip_all, ret))]
-pub fn parse_expr<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
-    lexer: &mut MultiPeek<I>,
-) -> Option<AST<'a>> {
-    parse_expr_function(lexer)
-}
+    #[cfg_attr(debug_assertions, instrument(name = "", skip_all, ret))]
+    pub fn parse_expr_infix(mut self,
+        f: fn(&mut MultiPeek<I>) -> Option<AST<'a>>,
+        operators: &[NixTokenType],
+    ) -> Option<AST<'a>> {
+        self.parse_expr_infix_split( f, f, operators)
+    }
 
-#[cfg_attr(debug_assertions, instrument(name = "p", skip_all, ret))]
-pub fn parse<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
-    lexer: &mut MultiPeek<I>,
-) -> Option<AST<'a>> {
-    let result = parse_expr(lexer);
-    assert_eq!(None, lexer.next());
-    result
+    #[cfg_attr(debug_assertions, instrument(name = "", skip_all, ret))]
+    pub fn parse_expr_infix_split(mut self,
+        flhs: fn(&mut MultiPeek<I>) -> Option<AST<'a>>,
+        frhs: fn(&mut MultiPeek<I>) -> Option<AST<'a>>,
+        operators: &[NixTokenType],
+    ) -> Option<AST<'a>> {
+        let mut result = flhs(self.lexer)?;
+        loop {
+            let next_token = self.lexer.peek();
+            if next_token.is_none() {
+                self.lexer.reset_peek();
+                return Some(result);
+            }
+            if operators.contains(&next_token.unwrap().token_type) {
+                let token = self.lexer.next().unwrap();
+                let rhs = frhs(self.lexer).expect(&format!(
+                    "expected right hand side after {:?} but got nothing",
+                    token.token_type
+                ));
+                // TODO FIXME replace leaking by match to function name
+                result = AST::Call(
+                    Box::new(AST::Call(
+                        Box::new(AST::Identifier(match token.token_type {
+                            NixTokenType::If => b"if",
+                            NixTokenType::Then => b"then",
+                            NixTokenType::Else => b"else",
+                            NixTokenType::Assert => b"assert",
+                            NixTokenType::With => b"with",
+                            NixTokenType::Let => b"let",
+                            NixTokenType::In => b"in",
+                            NixTokenType::Rec => b"rec",
+                            NixTokenType::Inherit => b"inherit",
+                            NixTokenType::Or => b"or",
+                            NixTokenType::Ellipsis => b"ellipsis",
+                            NixTokenType::Equals => b"equals",
+                            NixTokenType::NotEquals => b"notequals",
+                            NixTokenType::LessThanOrEqual => b"lessthanorequal",
+                            NixTokenType::GreaterThanOrEqual => b"greaterthanorequal",
+                            NixTokenType::LessThan => b"lessthan",
+                            NixTokenType::GreaterThan => b"greaterthan",
+                            NixTokenType::And => b"and",
+                            NixTokenType::Implies => b"implies",
+                            NixTokenType::Update => b"update",
+                            NixTokenType::Concatenate => b"concatenate",
+                            NixTokenType::Assign => b"assign",
+                            NixTokenType::Semicolon => b"semicolon",
+                            NixTokenType::Colon => b"colon",
+                            NixTokenType::Select => b"select",
+                            NixTokenType::Comma => b"comman",
+                            NixTokenType::AtSign => b"atsign",
+                            NixTokenType::QuestionMark => b"questionmark",
+                            NixTokenType::ExclamationMark => b"exclamationmark",
+                            NixTokenType::Addition => b"addition",
+                            NixTokenType::Subtraction => b"subtractoin",
+                            NixTokenType::Multiplication => b"multiplication",
+                            NixTokenType::Division => b"division",
+                            _ => todo!(),
+                        })),
+                        Box::new(result),
+                    )),
+                    Box::new(rhs),
+                );
+            } else {
+                self.lexer.reset_peek();
+                return Some(result);
+            }
+        }
+    }
+
+    #[cfg_attr(debug_assertions, instrument(name = "sel", skip_all, ret))]
+    pub fn parse_expr_select(mut self) -> Option<AST<'a>> {
+        let expr = self.parse_expr_simple()?;
+        let peeked = self.lexer.peek();
+        if let Some(NixToken {
+            token_type: NixTokenType::Select,
+        }) = peeked
+        {
+            self.expect(NixTokenType::Select);
+            // TODO FIXME we probably need to fix that method (use a custom one because of function application order)
+            let attrpath = self.parse_attrpath();
+            // we need to parse it specially because evaluation needs to abort if the attrpath does not exist and there is no or
+            let value = AST::Call(
+                Box::new(AST::Call(
+                    Box::new(AST::Identifier(BUILTIN_SELECT)),
+                    Box::new(expr),
+                )),
+                Box::new(attrpath.unwrap()),
+            );
+            if let Some(NixToken {
+                token_type: NixTokenType::Identifier(b"or"),
+            }) = self.lexer.peek()
+            {
+                self.lexer.next();
+                let default = self.parse_expr_simple().unwrap();
+                Some(AST::Call(
+                    Box::new(AST::Call(
+                        Box::new(AST::Identifier(b"__value_or_default")),
+                        Box::new(value),
+                    )),
+                    Box::new(default),
+                ))
+            } else {
+                self.lexer.reset_peek();
+                // also add abort call
+                // TODO FIXME replace all inner calls in parse_attrpath for early abort (also mentions more accurate location then)
+                Some(AST::Call(
+                    Box::new(AST::Identifier(b"__abort_invalid_attrpath")),
+                    Box::new(value),
+                ))
+            }
+        } else {
+            self.lexer.reset_peek();
+            Some(expr)
+        }
+    }
+
+    #[cfg_attr(debug_assertions, instrument(name = "app", skip_all, ret))]
+    pub fn parse_expr_app(mut self ) -> Option<AST<'a>> {
+        let mut result: Option<AST<'a>> = None;
+        loop {
+            let jo = self.parse_expr_select();
+            match jo {
+                Some(expr) => {
+                    match result {
+                        Some(a) => {
+                            result = Some(AST::Call(Box::new(a), Box::new(expr)));
+                        }
+                        None => result = Some(expr),
+                    }
+
+                    //lexer.next();
+                }
+                None => {
+                    break;
+                }
+            }
+        }
+        result
+    }
+
+    #[cfg_attr(debug_assertions, instrument(name = "-", skip_all, ret))]
+    pub fn parse_expr_arithmetic_negation(mut self) -> Option<AST<'a>> {
+        if let Some(NixToken {
+            token_type: NixTokenType::Subtraction,
+        }) = self.lexer.peek()
+        {
+            self.expect(NixTokenType::Subtraction);
+            Some(AST::Call(
+                Box::new(AST::Identifier(BUILTIN_UNARY_MINUS)),
+                Box::new(
+                    self.parse_expr_app().expect("failed to parse arithmetic minus expression"),
+                ),
+            ))
+        } else {
+            self.lexer.reset_peek();
+            self.parse_expr_app()
+        }
+    }
+
+    #[cfg_attr(debug_assertions, instrument(name = "?", skip_all, ret))]
+    pub fn parse_expr_has_attribute(mut self) -> Option<AST<'a>> {
+        // TODO FIXME RHS needs to be attrpath
+        self.parse_expr_infix_split(
+            self.parse_expr_arithmetic_negation,
+            self.parse_attrpath,
+            &[NixTokenType::QuestionMark],
+        )
+    }
+
+    #[cfg_attr(debug_assertions, instrument(name = "++", skip_all, ret))]
+    pub fn parse_expr_list_concatenation(mut self) -> Option<AST<'a>> {
+        self.parse_expr_infix(
+            self.parse_expr_has_attribute,
+            &[NixTokenType::Concatenate],
+        )
+    }
+
+    #[cfg_attr(debug_assertions, instrument(name = "*/", skip_all, ret))]
+    pub fn parse_expr_arithmetic_mul_div(mut self) -> Option<AST<'a>> {
+        self.parse_expr_infix(
+            self.parse_expr_list_concatenation,
+            &[NixTokenType::Multiplication, NixTokenType::Division],
+        )
+    }
+
+    #[cfg_attr(debug_assertions, instrument(name = "+-", skip_all, ret))]
+    pub fn parse_expr_arithmetic_or_concatenate(mut self) -> Option<AST<'a>> {
+        self.parse_expr_infix(
+            self.parse_expr_arithmetic_mul_div,
+            &[NixTokenType::Addition, NixTokenType::Subtraction],
+        )
+    }
+
+    #[cfg_attr(debug_assertions, instrument(name = "!", skip_all, ret))]
+    pub fn parse_expr_not(mut self) -> Option<AST<'a>> {
+        if let Some(NixToken {
+            token_type: NixTokenType::ExclamationMark,
+        }) = self.lexer.peek()
+        {
+            self.expect(NixTokenType::ExclamationMark);
+            Some(AST::Call(
+                Box::new(AST::Identifier(BUILTIN_UNARY_NOT)),
+                Box::new(
+                    self.parse_expr_arithmetic_or_concatenate()
+                        .expect("failed to parse negated expression"),
+                ),
+            ))
+        } else {
+            self.lexer.reset_peek();
+            self.parse_expr_arithmetic_or_concatenate()
+        }
+    }
+
+    #[cfg_attr(debug_assertions, instrument(name = "//", skip_all, ret))]
+    pub fn parse_expr_update(mut self ) -> Option<AST<'a>> {
+        self.parse_expr_infix(self.parse_expr_not, &[NixTokenType::Update])
+    }
+
+    #[cfg_attr(debug_assertions, instrument(name = "<=>", skip_all, ret))]
+    pub fn parse_expr_comparison(mut self ) -> Option<AST<'a>> {
+        self.parse_expr_infix(
+            self.parse_expr_update,
+            &[
+                NixTokenType::LessThan,
+                NixTokenType::LessThanOrEqual,
+                NixTokenType::GreaterThan,
+                NixTokenType::GreaterThanOrEqual,
+            ],
+        )
+    }
+
+    #[cfg_attr(debug_assertions, instrument(name = "=!=", skip_all, ret))]
+    pub fn parse_expr_inequality_or_equality(mut self) -> Option<AST<'a>> {
+        self.parse_expr_infix(
+            self.parse_expr_comparison,
+            &[NixTokenType::Equals, NixTokenType::NotEquals],
+        )
+    }
+
+    #[cfg_attr(debug_assertions, instrument(name = "&&", skip_all, ret))]
+    pub fn parse_expr_logical_and(mut self) -> Option<AST<'a>> {
+        self.parse_expr_infix(
+            self.parse_expr_inequality_or_equality,
+            &[NixTokenType::And],
+        )
+    }
+
+    #[cfg_attr(debug_assertions, instrument(name = "||", skip_all, ret))]
+    pub fn parse_expr_logical_or(mut self) -> Option<AST<'a>> {
+        self.parse_expr_infix( parse_expr_logical_and, &[NixTokenType::Or])
+    }
+
+    #[cfg_attr(debug_assertions, instrument(name = "->", skip_all, ret))]
+    pub fn parse_expr_logical_implication(mut self) -> Option<AST<'a>> {
+        self.parse_expr_infix(parse_expr_logical_or, &[NixTokenType::Implies])
+    }
+
+    #[cfg_attr(debug_assertions, instrument(name = "op", skip_all, ret))]
+    pub fn parse_expr_op(mut self ) -> Option<AST<'a>> {
+        self.parse_expr_logical_implication()
+    }
+
+    #[cfg_attr(debug_assertions, instrument(name = "if", skip_all, ret))]
+    pub fn parse_expr_if(mut self ) -> Option<AST<'a>> {
+        match self.lexer.peek() {
+            Some(NixToken {
+                token_type: NixTokenType::If,
+            }) => {
+                self.expect(NixTokenType::If);
+                let condition = self.parse_expr().expect("failed to parse if condition");
+                self.expect(NixTokenType::Then);
+                let true_case = self.parse_expr().expect("failed to parse if true case");
+                self.expect( NixTokenType::Else);
+                let false_case = self.parse_expr().expect("failed to parse if false case");
+                Some(AST::Call(
+                    Box::new(AST::Call(
+                        Box::new(AST::Call(
+                            Box::new(AST::Identifier(BUILTIN_IF)),
+                            Box::new(condition),
+                        )),
+                        Box::new(true_case),
+                    )),
+                    Box::new(false_case),
+                ))
+            }
+            _ => {
+                self.lexer.reset_peek();
+                self.parse_expr_op()
+            }
+        }
+    }
+
+    // this returns none for some reason
+    #[cfg_attr(debug_assertions, instrument(name = "args", skip_all, ret))]
+    pub fn parse_formals(mut self) -> Option<AST<'a>> {
+        // we need quite some peekahead here do differentiate between attrsets
+        // this is probably the most complicated function in here
+        let formals: Vec<AST<'a>> = Vec::new();
+        let mut parsed_first = false;
+        if let Some(NixToken {
+            token_type: NixTokenType::CurlyOpen,
+        }) = self.lexer.peek()
+        {
+            loop {
+                match self.lexer.peek() {
+                    Some(NixToken {
+                        token_type: NixTokenType::Identifier(a),
+                    }) => {
+                        let token = self.lexer.peek();
+                        if let Some(NixToken {
+                            token_type: NixTokenType::QuestionMark,
+                        }) = token
+                        {
+                            if !parsed_first {
+                                self.expect( NixTokenType::CurlyOpen);
+                                parsed_first = true;
+                            }
+                            self.expect( NixTokenType::Identifier(b""));
+                            self.expect( NixTokenType::QuestionMark);
+                            self.parse_expr();
+                        } else if let Some(NixToken {
+                            token_type: NixTokenType::Comma,
+                        }) = token
+                        {
+                            if !parsed_first {
+                                self.expect( NixTokenType::CurlyOpen);
+                                parsed_first = true;
+                            }
+                            self.expect( NixTokenType::Identifier(b""));
+                            self.expect( NixTokenType::Comma);
+                        } else if let Some(NixToken {
+                            token_type: NixTokenType::CurlyClose,
+                        }) = token
+                        {
+                            if !parsed_first {
+                                self.expect(NixTokenType::CurlyOpen);
+                                parsed_first = true;
+                            }
+                            self.expect( NixTokenType::Identifier(b""));
+                            self.expect( NixTokenType::CurlyClose);
+                            return Some(AST::Identifier(b"TODO formals")); // TODO FIXME
+                        } else {
+                            // probably an attrset
+                            self.lexer.reset_peek();
+                            return None;
+                        }
+                    }
+                    Some(NixToken {
+                        token_type: NixTokenType::Inherit,
+                    }) => {
+                        // attrset
+                        self.lexer.reset_peek();
+                        return None;
+                    }
+                    Some(NixToken {
+                        token_type: NixTokenType::Comma,
+                    }) => {
+                        if !parsed_first {
+                            self.expect( NixTokenType::CurlyOpen);
+                            parsed_first = true;
+                        }
+                        self.expect( NixTokenType::Comma);
+                    }
+                    Some(NixToken {
+                        token_type: NixTokenType::Ellipsis,
+                    }) => {
+                        if !parsed_first {
+                            self.expect( NixTokenType::CurlyOpen);
+                            parsed_first = true;
+                        }
+                        self.expect( NixTokenType::Ellipsis);
+                    }
+                    Some(NixToken {
+                        token_type: NixTokenType::CurlyClose,
+                    }) => {
+                        if !parsed_first {
+                            match self.lexer.peek() {
+                                Some(NixToken {
+                                    token_type: NixTokenType::Colon,
+                                }) => {
+                                    // empty function
+                                    self.expect( NixTokenType::CurlyOpen);
+                                    self.expect( NixTokenType::CurlyClose);
+                                    self.lexer.reset_peek();
+                                    return Some(AST::Identifier(b"TODO formals"));
+                                    // TODO FIXME
+                                }
+                                Some(NixToken {
+                                    token_type: NixTokenType::AtSign,
+                                }) => {
+                                    // empty function in stupid
+                                    self.expect( NixTokenType::CurlyOpen);
+                                    self.expect( NixTokenType::CurlyClose);
+                                    self.expect( NixTokenType::AtSign);
+                                    self.expect( NixTokenType::Identifier(b""));
+                                    self.lexer.reset_peek();
+                                    return Some(AST::Identifier(b"TODO formals"));
+                                    // TODO FIXME
+                                }
+                                _ => {
+                                    // potentially empty attrset
+                                    self.lexer.reset_peek();
+                                    return None;
+                                }
+                            }
+                        }
+                        self.expect( NixTokenType::CurlyClose);
+                        return Some(AST::Identifier(b"TODO formals")); // TODO FIXME
+                    }
+                    Some(NixToken {
+                        token_type: NixTokenType::StringStart,
+                    })
+                    | Some(NixToken {
+                        token_type: NixTokenType::InterpolateStart,
+                    }) => {
+                        // that's not how formals look like
+                        self.lexer.reset_peek();
+                        return None;
+                    }
+                    token => panic!("{:?}", token),
+                }
+            }
+        } else {
+            self.lexer.reset_peek();
+            None
+        }
+    }
+
+    #[cfg_attr(debug_assertions, instrument(name = "fn", skip_all, ret))]
+    pub fn parse_expr_function(mut self) -> Option<AST<'a>> {
+        let token = self.lexer.peek();
+        match token.map(|t| &t.token_type) {
+            Some(NixTokenType::Let) => {
+                self.lexer.reset_peek();
+                self.parse_let()
+            }
+            Some(NixTokenType::CurlyOpen) => {
+                self.lexer.reset_peek();
+                let formals = self.parse_formals();
+                if let None = formals {
+                    // not a function, probably an attrset
+                    return self.parse_expr_if();
+                }
+                match self.lexer.next() {
+                    Some(NixToken {
+                        token_type: NixTokenType::Colon,
+                    }) => {}
+                    Some(NixToken {
+                        token_type: NixTokenType::AtSign,
+                    }) => {
+                        let ident = self.expect( NixTokenType::Identifier(b""));
+                        self.expect( NixTokenType::Colon);
+                    }
+                    _ => todo!(),
+                }
+                self.parse_expr_function()
+            }
+            Some(NixTokenType::Identifier(ident)) => {
+                match self.lexer.peek() {
+                    Some(NixToken {
+                        token_type: NixTokenType::Colon,
+                    }) => {
+                        // function call
+                        // TODO parameter
+                        let ident = self.lexer.next();
+                        self.expect( NixTokenType::Colon);
+                        self.parse_expr_function()
+                    }
+                    Some(NixToken {
+                        token_type: NixTokenType::AtSign,
+                    }) => {
+                        // function call
+                        let ident = self.lexer.next();
+                        self.expect( NixTokenType::AtSign);
+                        let formals = self.parse_formals().unwrap();
+                        self.expect( NixTokenType::Colon);
+                        self.parse_expr_function()
+                    }
+                    _ => {
+                        self.lexer.reset_peek();
+                        self.parse_expr_if()
+                    }
+                }
+            }
+            Some(NixTokenType::Assert) => {
+                self.expect( NixTokenType::Assert);
+                let assert_expr = self.parse_expr();
+                self.expect( NixTokenType::Semicolon);
+                let body = self.parse_expr();
+                body // TODO FIXME
+            }
+            Some(NixTokenType::With) => {
+                self.expect( NixTokenType::With);
+                let with_expr = self.parse_expr();
+                self.expect( NixTokenType::Semicolon);
+                let body = self.parse_expr();
+
+                body // TODO FIXME
+            }
+            _ => {
+                self.lexer.reset_peek();
+                self.parse_expr_if()
+            }
+        }
+    }
+
+    #[cfg_attr(debug_assertions, instrument(name = "e", skip_all, ret))]
+    pub fn parse_expr(mut self ) -> Option<AST<'a>> {
+        self.parse_expr_function()
+    }
+
+    #[cfg_attr(debug_assertions, instrument(name = "p", skip_all, ret))]
+    pub fn parse(mut self  ) -> Option<AST<'a>> {
+        let result = self.parse_expr();
+        assert_eq!(None, self.lexer.next());
+        result
+    }
 }
 
 #[cfg(test)]
@@ -1077,10 +1021,8 @@ fn can_parse(code: &str) {
         String::from_utf8(output.stdout).unwrap()
     );
 
-    if !output
-        .status
-        .success() {
-            panic!("invalid expr (according to the official nix evaluator)");
+    if !output.status.success() {
+        panic!("invalid expr (according to the official nix evaluator)");
     }
 
     let lexer = crate::lexer::NixLexer::new(code.as_bytes()).filter(|t| match t.token_type {
@@ -1094,7 +1036,11 @@ fn can_parse(code: &str) {
         println!("{:?}", token.token_type);
     }
 
-    let result = parse(&mut itertools::multipeek(lexer));
+    let parser = Parser {
+        lexer: itertools::multipeek(lexer)
+    };
+
+    let result = parser.parse();
 }
 
 #[test]
@@ -1176,7 +1122,7 @@ fn test_operators() {
     }",
     );
 
-    let r = parse_expr_op(&mut itertools::multipeek(
+    let parser = Parser { lexer: itertools::multipeek(
         [
             NixToken {
                 token_type: NixTokenType::Integer(1),
@@ -1188,8 +1134,8 @@ fn test_operators() {
                 token_type: NixTokenType::Integer(41),
             },
         ]
-        .into_iter(),
-    ))
+        .into_iter()) };
+    let r = parser.parse_expr_op()
     .unwrap();
     assert_eq!(
         AST::Call(
