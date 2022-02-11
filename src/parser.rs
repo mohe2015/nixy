@@ -267,10 +267,11 @@ impl<
                     token_type: NixTokenType::PathSegment(segment),
                 }) => match result {
                     Some(a) => {
+                        let segment = self.visitor.visit_path_segment(segment);
                         result =
                             Some(self.visitor.visit_path_concatenate(
                                 a,
-                                self.visitor.visit_path_segment(segment),
+                                segment
                             ));
                     }
                     None => result = Some(self.visitor.visit_path_segment(segment)),
@@ -296,9 +297,10 @@ impl<
                     token_type: NixTokenType::String(string),
                 }) => match accum {
                     Some(v) => {
+                        let string = self.visitor.visit_string(string);
                         accum = Some(
                             self.visitor
-                                .visit_string_concatenate(v, self.visitor.visit_string(string)),
+                                .visit_string_concatenate(v, string),
                         );
                     }
                     None => {
@@ -309,9 +311,10 @@ impl<
                     token_type: NixTokenType::IndentedString(string),
                 }) => match accum {
                     Some(v) => {
+                        let string = self.visitor.visit_string(string);
                         accum = Some(
                             self.visitor
-                                .visit_string_concatenate(v, self.visitor.visit_string(string)),
+                                .visit_string_concatenate(v, string),
                         );
                     }
                     None => {
@@ -499,7 +502,7 @@ impl<
             }
             if operators.contains(&next_token.unwrap().token_type) {
                 let token = self.lexer.next().unwrap();
-                self.visitor.visit_infix_lhs(token.token_type, result);
+                self.visitor.visit_infix_lhs(token.token_type, &result);
                 let rhs = frhs(self).expect(&format!(
                     "expected right hand side after {:?} but got nothing",
                     token.token_type

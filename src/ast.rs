@@ -11,42 +11,42 @@ pub trait ASTVisitor<'a, R: std::fmt::Debug> {
 
     fn visit_file_end() {}
 
-    fn visit_identifier(&self, id: &'a [u8]) -> R;
+    fn visit_identifier(&mut self, id: &'a [u8]) -> R;
 
     fn visit_integer(&mut self, integer: i64) -> R;
 
-    fn visit_float(&self, float: f64) -> R;
+    fn visit_float(&mut self, float: f64) -> R;
 
-    fn visit_todo(&self) -> R;
+    fn visit_todo(&mut self) -> R;
 
-    fn visit_select(&self, expr: R, attrpath: R, default: Option<R>) -> R;
+    fn visit_select(&mut self, expr: R, attrpath: R, default: Option<R>) -> R;
 
-    fn visit_infix_lhs(&self, operator: NixTokenType<'a>, left: R);
+    fn visit_infix_lhs(&mut self, operator: NixTokenType<'a>, left: &R);
 
-    fn visit_infix_operation(&self, left: R, right: R, operator: NixTokenType<'a>) -> R;
+    fn visit_infix_operation(&mut self, left: R, right: R, operator: NixTokenType<'a>) -> R;
 
-    fn visit_prefix_operation(&self, operator: NixTokenType<'a>, expr: R) -> R;
+    fn visit_prefix_operation(&mut self, operator: NixTokenType<'a>, expr: R) -> R;
 
-    fn visit_if(&self, condition: R, true_case: R, false_case: R) -> R;
+    fn visit_if(&mut self, condition: R, true_case: R, false_case: R) -> R;
 
-    fn visit_attrpath_part(&self, begin: R, last: R) -> R;
+    fn visit_attrpath_part(&mut self, begin: R, last: R) -> R;
 
-    fn visit_path_concatenate(&self, begin: R, last: R) -> R;
+    fn visit_path_concatenate(&mut self, begin: R, last: R) -> R;
 
-    fn visit_path_segment(&self, segment: &'a [u8]) -> R;
+    fn visit_path_segment(&mut self, segment: &'a [u8]) -> R;
 
-    fn visit_string(&self, string: &'a [u8]) -> R;
+    fn visit_string(&mut self, string: &'a [u8]) -> R;
 
-    fn visit_string_concatenate(&self, begin: R, last: R) -> R;
+    fn visit_string_concatenate(&mut self, begin: R, last: R) -> R;
 
-    fn visit_array_push(&self, begin: Option<R>, last: R) -> R;
+    fn visit_array_push(&mut self, begin: Option<R>, last: R) -> R;
 
     /// This is always called after `visit_array_push` and may help some implementations.
-    fn visit_array_end(&self, array: R) -> R;
+    fn visit_array_end(&mut self, array: R) -> R;
 
-    fn visit_call(&self, function: R, parameter: R) -> R;
+    fn visit_call(&mut self, function: R, parameter: R) -> R;
 
-    fn visit_attrset_bind_push(&self, begin: Option<R>, last: R) -> R;
+    fn visit_attrset_bind_push(&mut self, begin: Option<R>, last: R) -> R;
 }
 
 pub struct ASTJavaTranspiler<'a, W: Write> {
@@ -62,7 +62,7 @@ impl<'a, W: Write> ASTVisitor<'a, ()> for ASTJavaTranspiler<'a, W> {
         
     }
     
-    fn visit_identifier(&self, id: &'a [u8]) -> () {
+    fn visit_identifier(&mut self, id: &'a [u8]) -> () {
         todo!()
     }
 
@@ -70,19 +70,19 @@ impl<'a, W: Write> ASTVisitor<'a, ()> for ASTJavaTranspiler<'a, W> {
         write!(self.writer, "{}", integer);
     }
 
-    fn visit_float(&self, float: f64) -> () {
+    fn visit_float(&mut self, float: f64) -> () {
         todo!()
     }
 
-    fn visit_todo(&self) -> () {
+    fn visit_todo(&mut self) -> () {
         todo!()
     }
 
-    fn visit_select(&self, expr: (), attrpath: (), default: Option<()>) -> () {
+    fn visit_select(&mut self, expr: (), attrpath: (), default: Option<()>) -> () {
         todo!()
     }
 
-    fn visit_infix_lhs(&self, operator: NixTokenType<'a>, left: ()) {
+    fn visit_infix_lhs(&mut self, operator: NixTokenType<'a>, left: &()) {
         match operator {
             NixTokenType::Addition => {
                 write!(self.writer, "+");
@@ -91,51 +91,51 @@ impl<'a, W: Write> ASTVisitor<'a, ()> for ASTJavaTranspiler<'a, W> {
         }
     }
 
-    fn visit_infix_operation(&self, left: (), right: (), operator: NixTokenType<'a>) -> () {
+    fn visit_infix_operation(&mut self, left: (), right: (), operator: NixTokenType<'a>) -> () {
         
     }
 
-    fn visit_prefix_operation(&self, operator: NixTokenType<'a>, expr: ()) -> () {
+    fn visit_prefix_operation(&mut self, operator: NixTokenType<'a>, expr: ()) -> () {
         todo!()
     }
 
-    fn visit_if(&self, condition: (), true_case: (), false_case: ()) -> () {
+    fn visit_if(&mut self, condition: (), true_case: (), false_case: ()) -> () {
         todo!()
     }
 
-    fn visit_attrpath_part(&self, begin: (), last: ()) -> () {
+    fn visit_attrpath_part(&mut self, begin: (), last: ()) -> () {
         todo!()
     }
 
-    fn visit_path_concatenate(&self, begin: (), last: ()) -> () {
+    fn visit_path_concatenate(&mut self, begin: (), last: ()) -> () {
         todo!()
     }
 
-    fn visit_path_segment(&self, segment: &'a [u8]) -> () {
+    fn visit_path_segment(&mut self, segment: &'a [u8]) -> () {
         todo!()
     }
 
-    fn visit_string(&self, string: &'a [u8]) -> () {
+    fn visit_string(&mut self, string: &'a [u8]) -> () {
         todo!()
     }
 
-    fn visit_string_concatenate(&self, begin: (), last: ()) -> () {
+    fn visit_string_concatenate(&mut self, begin: (), last: ()) -> () {
         todo!()
     }
 
-    fn visit_array_push(&self, begin: Option<()>, last: ()) -> () {
+    fn visit_array_push(&mut self, begin: Option<()>, last: ()) -> () {
         todo!()
     }
 
-    fn visit_array_end(&self, array: ()) -> () {
+    fn visit_array_end(&mut self, array: ()) -> () {
         todo!()
     }
 
-    fn visit_call(&self, function: (), parameter: ()) -> () {
+    fn visit_call(&mut self, function: (), parameter: ()) -> () {
         todo!()
     }
 
-    fn visit_attrset_bind_push(&self, begin: Option<()>, last: ()) -> () {
+    fn visit_attrset_bind_push(&mut self, begin: Option<()>, last: ()) -> () {
         todo!()
     }
 }
@@ -178,7 +178,7 @@ pub fn test_java_transpiler() {
 pub struct ASTBuilder;
 
 impl<'a> ASTVisitor<'a, AST<'a>> for ASTBuilder {
-    fn visit_identifier(&self, id: &'a [u8]) -> AST<'a> {
+    fn visit_identifier(&mut self, id: &'a [u8]) -> AST<'a> {
         AST::Identifier(id)
     }
 
@@ -186,15 +186,15 @@ impl<'a> ASTVisitor<'a, AST<'a>> for ASTBuilder {
         AST::Integer(integer)
     }
 
-    fn visit_float(&self, float: f64) -> AST<'a> {
+    fn visit_float(&mut self, float: f64) -> AST<'a> {
         AST::Float(float)
     }
 
-    fn visit_todo(&self) -> AST<'a> {
+    fn visit_todo(&mut self) -> AST<'a> {
         todo!()
     }
 
-    fn visit_select(&self, expr: AST<'a>, attrpath: AST<'a>, default: Option<AST<'a>>) -> AST<'a> {
+    fn visit_select(&mut self, expr: AST<'a>, attrpath: AST<'a>, default: Option<AST<'a>>) -> AST<'a> {
         let value = AST::Call(
             Box::new(AST::Call(
                 Box::new(AST::Identifier(BUILTIN_SELECT)),
@@ -218,7 +218,7 @@ impl<'a> ASTVisitor<'a, AST<'a>> for ASTBuilder {
     }
 
     fn visit_infix_operation(
-        &self,
+        &mut self,
         left: AST<'a>,
         right: AST<'a>,
         operator: NixTokenType<'a>,
@@ -267,7 +267,7 @@ impl<'a> ASTVisitor<'a, AST<'a>> for ASTBuilder {
         )
     }
 
-    fn visit_if(&self, condition: AST<'a>, true_case: AST<'a>, false_case: AST<'a>) -> AST<'a> {
+    fn visit_if(&mut self, condition: AST<'a>, true_case: AST<'a>, false_case: AST<'a>) -> AST<'a> {
         AST::Call(
             Box::new(AST::Call(
                 Box::new(AST::Call(
@@ -280,7 +280,7 @@ impl<'a> ASTVisitor<'a, AST<'a>> for ASTBuilder {
         )
     }
 
-    fn visit_attrpath_part(&self, begin: AST<'a>, last: AST<'a>) -> AST<'a> {
+    fn visit_attrpath_part(&mut self, begin: AST<'a>, last: AST<'a>) -> AST<'a> {
         AST::Call(
             Box::new(AST::Call(
                 Box::new(AST::Identifier(BUILTIN_SELECT)),
@@ -290,7 +290,7 @@ impl<'a> ASTVisitor<'a, AST<'a>> for ASTBuilder {
         )
     }
 
-    fn visit_path_concatenate(&self, begin: AST<'a>, last: AST<'a>) -> AST<'a> {
+    fn visit_path_concatenate(&mut self, begin: AST<'a>, last: AST<'a>) -> AST<'a> {
         AST::Call(
             Box::new(AST::Call(
                 Box::new(AST::Identifier(BUILTIN_PATH_CONCATENATE)),
@@ -300,19 +300,19 @@ impl<'a> ASTVisitor<'a, AST<'a>> for ASTBuilder {
         )
     }
 
-    fn visit_path_segment(&self, segment: &'a [u8]) -> AST<'a> {
+    fn visit_path_segment(&mut self, segment: &'a [u8]) -> AST<'a> {
         AST::PathSegment(segment)
     }
 
-    fn visit_string(&self, string: &'a [u8]) -> AST<'a> {
+    fn visit_string(&mut self, string: &'a [u8]) -> AST<'a> {
         AST::String(string)
     }
 
-    fn visit_string_concatenate(&self, _begin: AST<'a>, _last: AST<'a>) -> AST<'a> {
+    fn visit_string_concatenate(&mut self, _begin: AST<'a>, _last: AST<'a>) -> AST<'a> {
         todo!()
     }
 
-    fn visit_array_push(&self, begin: Option<AST<'a>>, last: AST<'a>) -> AST<'a> {
+    fn visit_array_push(&mut self, begin: Option<AST<'a>>, last: AST<'a>) -> AST<'a> {
         match begin {
             Some(begin) => AST::Call(
                 Box::new(AST::Identifier(b"cons")),
@@ -322,15 +322,15 @@ impl<'a> ASTVisitor<'a, AST<'a>> for ASTBuilder {
         }
     }
 
-    fn visit_array_end(&self, array: AST<'a>) -> AST<'a> {
+    fn visit_array_end(&mut self, array: AST<'a>) -> AST<'a> {
         AST::Call(Box::new(array), Box::new(AST::Identifier(b"nil")))
     }
 
-    fn visit_call(&self, function: AST<'a>, parameter: AST<'a>) -> AST<'a> {
+    fn visit_call(&mut self, function: AST<'a>, parameter: AST<'a>) -> AST<'a> {
         AST::Call(Box::new(function), Box::new(parameter))
     }
 
-    fn visit_prefix_operation(&self, operator: NixTokenType<'a>, expr: AST<'a>) -> AST<'a> {
+    fn visit_prefix_operation(&mut self, operator: NixTokenType<'a>, expr: AST<'a>) -> AST<'a> {
         AST::Call(
             Box::new(AST::Identifier(match operator {
                 NixTokenType::Subtraction => BUILTIN_UNARY_MINUS,
@@ -341,12 +341,12 @@ impl<'a> ASTVisitor<'a, AST<'a>> for ASTBuilder {
         )
     }
 
-    fn visit_attrset_bind_push(&self, _begin: Option<AST<'a>>, _last: AST<'a>) -> AST<'a> {
+    fn visit_attrset_bind_push(&mut self, _begin: Option<AST<'a>>, _last: AST<'a>) -> AST<'a> {
         //AST::Let(item.0, item.1, Box::new(accum))
         todo!()
     }
 
-    fn visit_infix_lhs(&self, operator: NixTokenType<'a>, left: AST<'a>) {
+    fn visit_infix_lhs(&mut self, operator: NixTokenType<'a>, left: &AST<'a>) {
         todo!()
     }
 }
