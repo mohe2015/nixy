@@ -1,11 +1,13 @@
-use itertools::{multipeek};
+use itertools::multipeek;
 use std::{fs, io::Result, marker::PhantomData};
 use tracing::Level;
 use tracing_subscriber::fmt::format::FmtSpan;
 use walkdir::WalkDir;
 
 use crate::{
-    lexer::{NixLexer, NixTokenType}, parser::Parser, ast::ASTBuilder,
+    ast::ASTBuilder,
+    lexer::{NixLexer, NixTokenType},
+    parser::Parser,
 };
 
 pub mod ast;

@@ -1,7 +1,9 @@
-use crate::{parser::{AST, BUILTIN_IF, BUILTIN_PATH_CONCATENATE, BUILTIN_UNARY_MINUS, BUILTIN_UNARY_NOT}, lexer::NixTokenType};
+use crate::{
+    lexer::NixTokenType,
+    parser::{AST, BUILTIN_IF, BUILTIN_PATH_CONCATENATE, BUILTIN_UNARY_MINUS, BUILTIN_UNARY_NOT},
+};
 
 pub trait ASTVisitor<'a, R: std::fmt::Debug> {
-
     fn visit_identifier(&self, id: &'a [u8]) -> R;
 
     fn visit_integer(&self, integer: i64) -> R;
@@ -38,19 +40,15 @@ pub trait ASTVisitor<'a, R: std::fmt::Debug> {
     fn visit_attrset_bind_push(&self, begin: Option<R>, last: R) -> R;
 }
 
-
-
-
 pub struct ASTBuilder;
 
 const BUILTIN_SELECT: &[u8] = b"__builtin_select";
 
 impl<'a> ASTVisitor<'a, AST<'a>> for ASTBuilder {
-
     fn visit_identifier(&self, id: &'a [u8]) -> AST<'a> {
         AST::Identifier(id)
     }
-    
+
     fn visit_integer(&self, integer: i64) -> AST<'a> {
         AST::Integer(integer)
     }
@@ -64,7 +62,7 @@ impl<'a> ASTVisitor<'a, AST<'a>> for ASTBuilder {
     }
 
     fn visit_select(&self, expr: AST<'a>, attrpath: AST<'a>, default: Option<AST<'a>>) -> AST<'a> {
-        let value =  AST::Call(
+        let value = AST::Call(
             Box::new(AST::Call(
                 Box::new(AST::Identifier(BUILTIN_SELECT)),
                 Box::new(expr),
@@ -72,25 +70,26 @@ impl<'a> ASTVisitor<'a, AST<'a>> for ASTBuilder {
             Box::new(attrpath),
         );
         match default {
-            Some(default) => {
-                AST::Call(
-                    Box::new(AST::Call(
-                        Box::new(AST::Identifier(b"__value_or_default")),
-                        Box::new(value),
-                    )),
-                    Box::new(default),
-                )
-            }
-            None => {
-                AST::Call(
-                    Box::new(AST::Identifier(b"__abort_invalid_attrpath")),
+            Some(default) => AST::Call(
+                Box::new(AST::Call(
+                    Box::new(AST::Identifier(b"__value_or_default")),
                     Box::new(value),
-                )
-            }
+                )),
+                Box::new(default),
+            ),
+            None => AST::Call(
+                Box::new(AST::Identifier(b"__abort_invalid_attrpath")),
+                Box::new(value),
+            ),
         }
     }
 
-    fn visit_infix_operation(&self, left: AST<'a>, right: AST<'a>, operator: NixTokenType<'a>) -> AST<'a> {
+    fn visit_infix_operation(
+        &self,
+        left: AST<'a>,
+        right: AST<'a>,
+        operator: NixTokenType<'a>,
+    ) -> AST<'a> {
         AST::Call(
             Box::new(AST::Call(
                 Box::new(AST::Identifier(match operator {
@@ -182,12 +181,11 @@ impl<'a> ASTVisitor<'a, AST<'a>> for ASTBuilder {
 
     fn visit_array_push(&self, begin: Option<AST<'a>>, last: AST<'a>) -> AST<'a> {
         match begin {
-            Some(begin) => {
-                AST::Call(Box::new(AST::Identifier(b"cons")), Box::new(AST::Call(Box::new(begin), Box::new(last))))
-            }
-            None => {
-                AST::Call(Box::new(AST::Identifier(b"cons")), Box::new(last))
-            }
+            Some(begin) => AST::Call(
+                Box::new(AST::Identifier(b"cons")),
+                Box::new(AST::Call(Box::new(begin), Box::new(last))),
+            ),
+            None => AST::Call(Box::new(AST::Identifier(b"cons")), Box::new(last)),
         }
     }
 
@@ -204,11 +202,9 @@ impl<'a> ASTVisitor<'a, AST<'a>> for ASTBuilder {
             Box::new(AST::Identifier(match operator {
                 NixTokenType::Subtraction => BUILTIN_UNARY_MINUS,
                 NixTokenType::ExclamationMark => BUILTIN_UNARY_NOT,
-                _ => todo!()
+                _ => todo!(),
             })),
-            Box::new(
-                expr
-            ),
+            Box::new(expr),
         )
     }
 
