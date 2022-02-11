@@ -5,8 +5,7 @@ use tracing_subscriber::fmt::format::FmtSpan;
 use walkdir::WalkDir;
 
 use crate::{
-    lexer::{NixLexer, NixTokenType},
-    parser::parse,
+    lexer::{NixLexer, NixTokenType}, parser::Parser,
 };
 
 pub mod ast;
@@ -58,7 +57,11 @@ fn main() -> Result<()> {
             //println!("{:?}", token.token_type);
             //}
 
-            parse(&mut multipeek(lexer));
+            let parser = Parser {
+                lexer: multipeek(lexer),
+            };
+
+            parser.parse();
         };
         /* }) {
             Ok(_) => success += 1,

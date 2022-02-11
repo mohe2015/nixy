@@ -67,7 +67,7 @@ impl<'a> Debug for AST<'a> {
     }
 }
 
-struct Parser<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug> {
+pub struct Parser<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug> {
     lexer: MultiPeek<I>,
 }
 
@@ -478,20 +478,20 @@ impl<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug> Parser<'a, I> {
     }
 
     #[cfg_attr(debug_assertions, instrument(name = "", skip_all, ret))]
-    pub fn parse_expr_infix(mut self,
-        f: fn(&mut MultiPeek<I>) -> Option<AST<'a>>,
+    pub fn parse_expr_infix<F: FnMut(Self) -> Option<AST<'a>>>(mut self,
+        f: F,
         operators: &[NixTokenType],
     ) -> Option<AST<'a>> {
         self.parse_expr_infix_split( f, f, operators)
     }
 
     #[cfg_attr(debug_assertions, instrument(name = "", skip_all, ret))]
-    pub fn parse_expr_infix_split(mut self,
-        flhs: fn(&mut MultiPeek<I>) -> Option<AST<'a>>,
-        frhs: fn(&mut MultiPeek<I>) -> Option<AST<'a>>,
+    pub fn parse_expr_infix_split<F1: FnMut(Self) -> Option<AST<'a>>, F2: FnMut(Self) -> Option<AST<'a>>>(mut self,
+        flhs: F1,
+        frhs: F2,
         operators: &[NixTokenType],
     ) -> Option<AST<'a>> {
-        let mut result = flhs(self.lexer)?;
+        let mut result = flhs(self)?;
         loop {
             let next_token = self.lexer.peek();
             if next_token.is_none() {
@@ -500,7 +500,7 @@ impl<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug> Parser<'a, I> {
             }
             if operators.contains(&next_token.unwrap().token_type) {
                 let token = self.lexer.next().unwrap();
-                let rhs = frhs(self.lexer).expect(&format!(
+                let rhs = frhs(self).expect(&format!(
                     "expected right hand side after {:?} but got nothing",
                     token.token_type
                 ));
@@ -648,8 +648,8 @@ impl<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug> Parser<'a, I> {
     pub fn parse_expr_has_attribute(mut self) -> Option<AST<'a>> {
         // TODO FIXME RHS needs to be attrpath
         self.parse_expr_infix_split(
-            self.parse_expr_arithmetic_negation,
-            self.parse_attrpath,
+            Parser::parse_expr_arithmetic_negation,
+            Parser::parse_attrpath,
             &[NixTokenType::QuestionMark],
         )
     }
@@ -657,7 +657,7 @@ impl<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug> Parser<'a, I> {
     #[cfg_attr(debug_assertions, instrument(name = "++", skip_all, ret))]
     pub fn parse_expr_list_concatenation(mut self) -> Option<AST<'a>> {
         self.parse_expr_infix(
-            self.parse_expr_has_attribute,
+            Parser::parse_expr_has_attribute,
             &[NixTokenType::Concatenate],
         )
     }
@@ -665,7 +665,7 @@ impl<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug> Parser<'a, I> {
     #[cfg_attr(debug_assertions, instrument(name = "*/", skip_all, ret))]
     pub fn parse_expr_arithmetic_mul_div(mut self) -> Option<AST<'a>> {
         self.parse_expr_infix(
-            self.parse_expr_list_concatenation,
+            Parser::parse_expr_list_concatenation,
             &[NixTokenType::Multiplication, NixTokenType::Division],
         )
     }
@@ -673,7 +673,7 @@ impl<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug> Parser<'a, I> {
     #[cfg_attr(debug_assertions, instrument(name = "+-", skip_all, ret))]
     pub fn parse_expr_arithmetic_or_concatenate(mut self) -> Option<AST<'a>> {
         self.parse_expr_infix(
-            self.parse_expr_arithmetic_mul_div,
+            Parser::parse_expr_arithmetic_mul_div,
             &[NixTokenType::Addition, NixTokenType::Subtraction],
         )
     }
@@ -700,13 +700,13 @@ impl<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug> Parser<'a, I> {
 
     #[cfg_attr(debug_assertions, instrument(name = "//", skip_all, ret))]
     pub fn parse_expr_update(mut self ) -> Option<AST<'a>> {
-        self.parse_expr_infix(self.parse_expr_not, &[NixTokenType::Update])
+        self.parse_expr_infix(Parser::parse_expr_not, &[NixTokenType::Update])
     }
 
     #[cfg_attr(debug_assertions, instrument(name = "<=>", skip_all, ret))]
     pub fn parse_expr_comparison(mut self ) -> Option<AST<'a>> {
         self.parse_expr_infix(
-            self.parse_expr_update,
+            Parser::parse_expr_update,
             &[
                 NixTokenType::LessThan,
                 NixTokenType::LessThanOrEqual,
@@ -719,7 +719,7 @@ impl<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug> Parser<'a, I> {
     #[cfg_attr(debug_assertions, instrument(name = "=!=", skip_all, ret))]
     pub fn parse_expr_inequality_or_equality(mut self) -> Option<AST<'a>> {
         self.parse_expr_infix(
-            self.parse_expr_comparison,
+            Parser::parse_expr_comparison,
             &[NixTokenType::Equals, NixTokenType::NotEquals],
         )
     }
@@ -727,19 +727,19 @@ impl<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug> Parser<'a, I> {
     #[cfg_attr(debug_assertions, instrument(name = "&&", skip_all, ret))]
     pub fn parse_expr_logical_and(mut self) -> Option<AST<'a>> {
         self.parse_expr_infix(
-            self.parse_expr_inequality_or_equality,
+            Parser::parse_expr_inequality_or_equality,
             &[NixTokenType::And],
         )
     }
 
     #[cfg_attr(debug_assertions, instrument(name = "||", skip_all, ret))]
     pub fn parse_expr_logical_or(mut self) -> Option<AST<'a>> {
-        self.parse_expr_infix( parse_expr_logical_and, &[NixTokenType::Or])
+        self.parse_expr_infix( Parser::parse_expr_logical_and, &[NixTokenType::Or])
     }
 
     #[cfg_attr(debug_assertions, instrument(name = "->", skip_all, ret))]
     pub fn parse_expr_logical_implication(mut self) -> Option<AST<'a>> {
-        self.parse_expr_infix(parse_expr_logical_or, &[NixTokenType::Implies])
+        self.parse_expr_infix(Parser::parse_expr_logical_or, &[NixTokenType::Implies])
     }
 
     #[cfg_attr(debug_assertions, instrument(name = "op", skip_all, ret))]
