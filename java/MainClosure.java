@@ -9,5 +9,6 @@ public class MainClosure implements NixObject {
 
 	public static void main(String[] args) {
 		System.out.println(new MainClosure().call(new NixInteger(2)));
+		System.out.println(new MainClosure().call(new NixInteger(2)).call(null));
 	}
 }
