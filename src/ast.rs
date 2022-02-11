@@ -1,4 +1,4 @@
-use crate::parser::AST;
+use crate::{parser::AST, lexer::NixTokenType};
 
 pub trait ASTVisitor<'a, R: std::fmt::Debug> {
 
@@ -11,6 +11,8 @@ pub trait ASTVisitor<'a, R: std::fmt::Debug> {
     fn visit_todo(self) -> R;
 
     fn visit_select(self, expr: R, attrpath: R, default: Option<R>) -> R;
+
+    fn visit_infix_operation(self, left: R, right: R, operator: NixTokenType<'a>) -> R;
 }
 
 
@@ -63,5 +65,50 @@ impl<'a> ASTVisitor<'a, AST<'a>> for ASTBuilder {
                 )
             }
         }
+    }
+
+    fn visit_infix_operation(self, left: AST<'a>, right: AST<'a>, operator: NixTokenType<'a>) -> AST<'a> {
+        AST::Call(
+            Box::new(AST::Call(
+                Box::new(AST::Identifier(match token.token_type {
+                    NixTokenType::If => b"if",
+                    NixTokenType::Then => b"then",
+                    NixTokenType::Else => b"else",
+                    NixTokenType::Assert => b"assert",
+                    NixTokenType::With => b"with",
+                    NixTokenType::Let => b"let",
+                    NixTokenType::In => b"in",
+                    NixTokenType::Rec => b"rec",
+                    NixTokenType::Inherit => b"inherit",
+                    NixTokenType::Or => b"or",
+                    NixTokenType::Ellipsis => b"ellipsis",
+                    NixTokenType::Equals => b"equals",
+                    NixTokenType::NotEquals => b"notequals",
+                    NixTokenType::LessThanOrEqual => b"lessthanorequal",
+                    NixTokenType::GreaterThanOrEqual => b"greaterthanorequal",
+                    NixTokenType::LessThan => b"lessthan",
+                    NixTokenType::GreaterThan => b"greaterthan",
+                    NixTokenType::And => b"and",
+                    NixTokenType::Implies => b"implies",
+                    NixTokenType::Update => b"update",
+                    NixTokenType::Concatenate => b"concatenate",
+                    NixTokenType::Assign => b"assign",
+                    NixTokenType::Semicolon => b"semicolon",
+                    NixTokenType::Colon => b"colon",
+                    NixTokenType::Select => b"select",
+                    NixTokenType::Comma => b"comman",
+                    NixTokenType::AtSign => b"atsign",
+                    NixTokenType::QuestionMark => b"questionmark",
+                    NixTokenType::ExclamationMark => b"exclamationmark",
+                    NixTokenType::Addition => b"addition",
+                    NixTokenType::Subtraction => b"subtractoin",
+                    NixTokenType::Multiplication => b"multiplication",
+                    NixTokenType::Division => b"division",
+                    _ => todo!(),
+                })),
+                Box::new(result),
+            )),
+            Box::new(rhs),
+        );
     }
 }
