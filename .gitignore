@@ -35,3 +35,6 @@
 # Added by cargo
 
 /target
+cachegrind.out.*
+perf.data
+dhat.out.*

@@ -1,4 +1,3 @@
-#![feature(exit_status_error)]
 use itertools::{multipeek, Itertools};
 use std::{fs, io::Result};
 use tracing::Level;
@@ -6,10 +5,10 @@ use tracing_subscriber::fmt::format::FmtSpan;
 use walkdir::WalkDir;
 
 use crate::{
-    lexer::{NixLexer, NixTokenType},
-    parser::parse,
+    lexer::{NixLexer, NixTokenType}, parser::Parser,
 };
 
+pub mod ast;
 pub mod lexer;
 pub mod parser;
 
@@ -30,35 +29,47 @@ fn main() -> Result<()> {
         let entry = entry.unwrap();
         let f_name = entry.file_name().to_string_lossy();
         let path = entry.path();
-        match std::panic::catch_unwind(|| {
-            //if !path.to_string_lossy().contains("nixpkgs/doc/default.nix") { return; }
+        //match std::panic::catch_unwind(|| {
+        //if !path.to_string_lossy().contains("nixpkgs/doc/default.nix") { return; }
 
-            if f_name.ends_with(".nix") {
-                //println!("{}", path.display());
+        if f_name.ends_with(".nix") {
+            //println!("{}", path.display());
 
-                // check whether this here is cache-wise better or if reading in chunks is better
-                let file = fs::read(path).unwrap();
+            // ./target/release/nixy | sort -n
 
-                let lexer = NixLexer::new(&file).filter(|t| match t.token_type {
-                    NixTokenType::Whitespace(_)
-                    | NixTokenType::SingleLineComment(_)
-                    | NixTokenType::MultiLineComment(_) => false,
-                    _ => true,
-                });
+            // check whether this here is cache-wise better or if reading in chunks is better
+            // in chunks should be better, haskell is 11MB
 
-                for token in lexer.clone() {
-                    //println!("{:?}", token.token_type);
-                }
+            // TODO FIXME read block by block
+            let file = fs::read(path).unwrap();
+            println!("{} {}", file.len(), path.display());
 
-                parse(&mut multipeek(lexer));
+            let lexer = NixLexer::new(&file).filter(|t| match t.token_type {
+                NixTokenType::Whitespace(_)
+                | NixTokenType::SingleLineComment(_)
+                | NixTokenType::MultiLineComment(_) => false,
+                _ => true,
+            });
+
+            //success += lexer.count();
+
+            //for token in lexer.clone() {
+            //println!("{:?}", token.token_type);
+            //}
+
+            let mut parser = Parser {
+                lexer: multipeek(lexer),
             };
-        }) {
+
+            parser.parse();
+        };
+        /* }) {
             Ok(_) => success += 1,
             Err(_) => {
                 failure += 1;
                 println!("{}", path.display());
             }
-        }
+        }*/
     }
 
     // 51975/51975
