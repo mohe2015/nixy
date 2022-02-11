@@ -38,6 +38,9 @@ fn main() -> Result<()> {
                 // ./target/release/nixy | sort -n
 
                 // check whether this here is cache-wise better or if reading in chunks is better
+                // in chunks should be better, haskell is 11MB
+
+                // TODO FIXME read block by block
                 let file = fs::read(path).unwrap();
                 println!("{} {}", file.len(), path.display());
 

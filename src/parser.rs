@@ -1077,10 +1077,11 @@ fn can_parse(code: &str) {
         String::from_utf8(output.stdout).unwrap()
     );
 
-    output
+    if !output
         .status
-        .exit_ok()
-        .expect("invalid expr (according to the official nix evaluator)");
+        .success() {
+            panic!("invalid expr (according to the official nix evaluator)");
+    }
 
     let lexer = crate::lexer::NixLexer::new(code.as_bytes()).filter(|t| match t.token_type {
         NixTokenType::Whitespace(_)

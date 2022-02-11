@@ -3,9 +3,9 @@ with import <nixpkgs> {};
 stdenv.mkDerivation {
   name = "rust-env";
   nativeBuildInputs = [
-    rustc cargo
+    rustc.all cargo rust-analyzer
   ];
-  buildInputs = [
+  buildInputs = [ #
   ];
 
   # Set Environment Variables
