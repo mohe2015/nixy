@@ -1,4 +1,4 @@
 interface NixObject {
 
-	public NixObject call(NixObject arg);
+	NixObject call(NixObject arg);
 }
