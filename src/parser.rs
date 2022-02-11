@@ -19,6 +19,8 @@ pub const BUILTIN_PATH_CONCATENATE: &[u8] = b"__builtin_path_concatenate";
 pub const BUILTIN_IF: &[u8] = b"__builtin_if";
 pub const BUILTIN_STRING_CONCATENATE: &[u8] = b"__builtin_string_concatenate";
 pub const BUILTIN_UNARY_MINUS: &[u8] = b"__builtin_unary_minus";
+pub const BUILTIN_SELECT: &[u8] = b"__builtin_select";
+
 
 #[derive(PartialEq)]
 pub enum AST<'a> {
@@ -497,6 +499,7 @@ impl<
             }
             if operators.contains(&next_token.unwrap().token_type) {
                 let token = self.lexer.next().unwrap();
+                self.visitor.visit_infix_lhs(token.token_type, result);
                 let rhs = frhs(self).expect(&format!(
                     "expected right hand side after {:?} but got nothing",
                     token.token_type
@@ -945,7 +948,7 @@ fn can_parse(code: &str) {
 
     std::fs::write("/tmp/foo", code).expect("Unable to write file");
 
-    let mut cmd = Command::new("nix");
+    let mut cmd = std::process::Command::new("nix");
 
     cmd.arg("eval").arg("-f").arg("/tmp/foo");
 
@@ -1076,7 +1079,7 @@ fn test_operators() {
             ]
             .into_iter(),
         ),
-        visitor: ASTBuilder,
+        visitor: crate::ast::ASTBuilder,
         phantom: PhantomData,
     };
     let r = parser.parse_expr_op().unwrap();

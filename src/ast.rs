@@ -1,18 +1,27 @@
+use std::{io::BufWriter, marker::PhantomData};
+use std::io::Write;
+
 use crate::{
     lexer::NixTokenType,
-    parser::{AST, BUILTIN_IF, BUILTIN_PATH_CONCATENATE, BUILTIN_UNARY_MINUS, BUILTIN_UNARY_NOT},
+    parser::{AST, BUILTIN_IF, BUILTIN_PATH_CONCATENATE, BUILTIN_UNARY_MINUS, BUILTIN_UNARY_NOT, BUILTIN_SELECT, Parser},
 };
 
 pub trait ASTVisitor<'a, R: std::fmt::Debug> {
+    fn visit_file_start() {}
+
+    fn visit_file_end() {}
+
     fn visit_identifier(&self, id: &'a [u8]) -> R;
 
-    fn visit_integer(&self, integer: i64) -> R;
+    fn visit_integer(&mut self, integer: i64) -> R;
 
     fn visit_float(&self, float: f64) -> R;
 
     fn visit_todo(&self) -> R;
 
     fn visit_select(&self, expr: R, attrpath: R, default: Option<R>) -> R;
+
+    fn visit_infix_lhs(&self, operator: NixTokenType<'a>, left: R);
 
     fn visit_infix_operation(&self, left: R, right: R, operator: NixTokenType<'a>) -> R;
 
@@ -40,16 +49,140 @@ pub trait ASTVisitor<'a, R: std::fmt::Debug> {
     fn visit_attrset_bind_push(&self, begin: Option<R>, last: R) -> R;
 }
 
-pub struct ASTBuilder;
+pub struct ASTJavaTranspiler<'a, W: Write> {
+    writer: &'a mut W
+}
 
-const BUILTIN_SELECT: &[u8] = b"__builtin_select";
+impl<'a, W: Write> ASTVisitor<'a, ()> for ASTJavaTranspiler<'a, W> {
+    fn visit_file_start() {
+
+    }
+
+    fn visit_file_end() {
+        
+    }
+    
+    fn visit_identifier(&self, id: &'a [u8]) -> () {
+        todo!()
+    }
+
+    fn visit_integer(&mut self, integer: i64) -> () {
+        write!(self.writer, "{}", integer);
+    }
+
+    fn visit_float(&self, float: f64) -> () {
+        todo!()
+    }
+
+    fn visit_todo(&self) -> () {
+        todo!()
+    }
+
+    fn visit_select(&self, expr: (), attrpath: (), default: Option<()>) -> () {
+        todo!()
+    }
+
+    fn visit_infix_lhs(&self, operator: NixTokenType<'a>, left: ()) {
+        match operator {
+            NixTokenType::Addition => {
+                write!(self.writer, "+");
+            }
+            _ => todo!()
+        }
+    }
+
+    fn visit_infix_operation(&self, left: (), right: (), operator: NixTokenType<'a>) -> () {
+        
+    }
+
+    fn visit_prefix_operation(&self, operator: NixTokenType<'a>, expr: ()) -> () {
+        todo!()
+    }
+
+    fn visit_if(&self, condition: (), true_case: (), false_case: ()) -> () {
+        todo!()
+    }
+
+    fn visit_attrpath_part(&self, begin: (), last: ()) -> () {
+        todo!()
+    }
+
+    fn visit_path_concatenate(&self, begin: (), last: ()) -> () {
+        todo!()
+    }
+
+    fn visit_path_segment(&self, segment: &'a [u8]) -> () {
+        todo!()
+    }
+
+    fn visit_string(&self, string: &'a [u8]) -> () {
+        todo!()
+    }
+
+    fn visit_string_concatenate(&self, begin: (), last: ()) -> () {
+        todo!()
+    }
+
+    fn visit_array_push(&self, begin: Option<()>, last: ()) -> () {
+        todo!()
+    }
+
+    fn visit_array_end(&self, array: ()) -> () {
+        todo!()
+    }
+
+    fn visit_call(&self, function: (), parameter: ()) -> () {
+        todo!()
+    }
+
+    fn visit_attrset_bind_push(&self, begin: Option<()>, last: ()) -> () {
+        todo!()
+    }
+}
+
+fn test_java_transpiler_code(code: &[u8]) {
+    let mut data = Vec::new();
+    let transpiler = ASTJavaTranspiler {
+        writer: &mut data
+    };
+
+    let lexer = crate::lexer::NixLexer::new(code).filter(|t| match t.token_type {
+        NixTokenType::Whitespace(_)
+        | NixTokenType::SingleLineComment(_)
+        | NixTokenType::MultiLineComment(_) => false,
+        _ => true,
+    });
+
+    for token in lexer.clone() {
+        println!("{:?}", token.token_type);
+    }
+
+    let mut parser = Parser {
+        lexer: itertools::multipeek(lexer),
+        visitor: transpiler,
+        phantom: PhantomData,
+    };
+
+    parser.parse();
+
+    println!("code: {}", std::str::from_utf8(&data).unwrap());
+}
+
+// cargo test ast::test_java_transpiler -- --nocapture
+#[test]
+pub fn test_java_transpiler() {
+    test_java_transpiler_code(b"1");
+    test_java_transpiler_code(b"1 + 1");
+}
+
+pub struct ASTBuilder;
 
 impl<'a> ASTVisitor<'a, AST<'a>> for ASTBuilder {
     fn visit_identifier(&self, id: &'a [u8]) -> AST<'a> {
         AST::Identifier(id)
     }
 
-    fn visit_integer(&self, integer: i64) -> AST<'a> {
+    fn visit_integer(&mut self, integer: i64) -> AST<'a> {
         AST::Integer(integer)
     }
 
@@ -210,6 +343,10 @@ impl<'a> ASTVisitor<'a, AST<'a>> for ASTBuilder {
 
     fn visit_attrset_bind_push(&self, _begin: Option<AST<'a>>, _last: AST<'a>) -> AST<'a> {
         //AST::Let(item.0, item.1, Box::new(accum))
+        todo!()
+    }
+
+    fn visit_infix_lhs(&self, operator: NixTokenType<'a>, left: AST<'a>) {
         todo!()
     }
 }

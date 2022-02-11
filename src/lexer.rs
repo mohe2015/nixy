@@ -50,7 +50,7 @@ pub struct SourceLocation {
     pub end_location: SourcePosition,
 }
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Copy, Clone)]
 pub enum NixTokenType<'a> {
     Identifier(&'a [u8]),
     Integer(i64),
