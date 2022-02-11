@@ -17,7 +17,6 @@ use tracing::instrument;
 
 const BUILTIN_UNARY_NOT: &[u8] = b"__builtin_unary_not";
 const BUILTIN_PATH_CONCATENATE: &[u8] = b"__builtin_path_concatenate";
-const BUILTIN_SELECT: &[u8] = b"__builtin_select";
 const BUILTIN_IF: &[u8] = b"__builtin_if";
 const BUILTIN_STRING_CONCATENATE: &[u8] = b"__builtin_string_concatenate";
 
@@ -567,7 +566,7 @@ impl<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug, R: std::fmt::Debug,
     }
 
     #[cfg_attr(debug_assertions, instrument(name = "sel", skip_all, ret))]
-    pub fn parse_expr_select(&mut self) -> Option<AST<'a>> {
+    pub fn parse_expr_select(&mut self) -> Option<R> {
         let expr = self.parse_expr_simple()?;
         let peeked = self.lexer.peek();
         if let Some(NixToken {
@@ -576,36 +575,21 @@ impl<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug, R: std::fmt::Debug,
         {
             self.expect(NixTokenType::Select);
             // TODO FIXME we probably need to fix that method (use a custom one because of function application order)
-            let attrpath = self.parse_attrpath();
+            let attrpath = self.parse_attrpath().unwrap();
             // we need to parse it specially because evaluation needs to abort if the attrpath does not exist and there is no or
-            let value = AST::Call(
-                Box::new(AST::Call(
-                    Box::new(AST::Identifier(BUILTIN_SELECT)),
-                    Box::new(expr),
-                )),
-                Box::new(attrpath.unwrap()),
-            );
             if let Some(NixToken {
                 token_type: NixTokenType::Identifier(b"or"),
             }) = self.lexer.peek()
             {
                 self.lexer.next();
                 let default = self.parse_expr_simple().unwrap();
-                Some(AST::Call(
-                    Box::new(AST::Call(
-                        Box::new(AST::Identifier(b"__value_or_default")),
-                        Box::new(value),
-                    )),
-                    Box::new(default),
-                ))
+
+                let value = self.visitor.visit_select(expr, attrpath, Some(default));
             } else {
                 self.lexer.reset_peek();
                 // also add abort call
                 // TODO FIXME replace all inner calls in parse_attrpath for early abort (also mentions more accurate location then)
-                Some(AST::Call(
-                    Box::new(AST::Identifier(b"__abort_invalid_attrpath")),
-                    Box::new(value),
-                ))
+                let value = self.visitor.visit_select(expr, attrpath, None);
             }
         } else {
             self.lexer.reset_peek();
