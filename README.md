@@ -59,9 +59,11 @@ valgrind --tool=callgrind --dump-instr=yes --collect-jumps=yes --simulate-cache=
 kcachegrind callgrind.out.53710
 
 cargo clean && RUSTFLAGS="-C target-cpu=native" cargo build --release
-valgrind --tool=massif ./target/release/nixy
+valgrind --tool=massif --stacks=yes ./target/release/nixy
 nix-shell -p massif-visualizer
 massif-visualizer massif.out.59811
+
+valgrind --tool=dhat ./target/release/nixy
 
 https://github.com/flamegraph-rs/flamegraph
 nix-shell -p linuxPackages_latest.perf
