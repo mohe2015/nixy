@@ -30,7 +30,7 @@ fn main() -> Result<()> {
         let entry = entry.unwrap();
         let f_name = entry.file_name().to_string_lossy();
         let path = entry.path();
-        match std::panic::catch_unwind(|| {
+        //match std::panic::catch_unwind(|| {
             //if !path.to_string_lossy().contains("nixpkgs/doc/default.nix") { return; }
 
             if f_name.ends_with(".nix") {
@@ -52,13 +52,13 @@ fn main() -> Result<()> {
 
                 parse(&mut multipeek(lexer));
             };
-        }) {
+        /* }) {
             Ok(_) => success += 1,
             Err(_) => {
                 failure += 1;
                 println!("{}", path.display());
             }
-        }
+        }*/
     }
 
     // 51975/51975
