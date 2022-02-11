@@ -271,47 +271,50 @@ impl<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug, R: std::fmt::Debug,
     pub fn parse_some_string(&mut self,
         start: NixTokenType<'a>,
         end: NixTokenType<'a>,
-    ) -> Option<AST<'a>> {
+    ) -> Option<R> {
         self.expect(start);
-        let mut accum = AST::String(b"");
+        let mut accum: Option<R> = None;
         loop {
             match self.lexer.next() {
                 Some(NixToken {
                     token_type: NixTokenType::String(string),
                 }) => {
-                    accum = AST::Call(
-                        Box::new(AST::Call(
-                            Box::new(AST::Identifier(BUILTIN_STRING_CONCATENATE)),
-                            Box::new(accum),
-                        )),
-                        Box::new(AST::String(string)),
-                    )
+                    match accum {
+                        Some(v) => {
+                            accum = Some(self.visitor.visit_string_concatenate(v, self.visitor.visit_string(string)));
+                        }
+                        None => {
+                            accum = Some(self.visitor.visit_string(string));
+                        }
+                    }
                 }
                 Some(NixToken {
                     token_type: NixTokenType::IndentedString(string),
                 }) => {
-                    accum = AST::Call(
-                        Box::new(AST::Call(
-                            Box::new(AST::Identifier(BUILTIN_STRING_CONCATENATE)),
-                            Box::new(accum),
-                        )),
-                        Box::new(AST::String(string)),
-                    )
+                    match accum {
+                        Some(v) => {
+                            accum = Some(self.visitor.visit_string_concatenate(v, self.visitor.visit_string(string)));
+                        }
+                        None => {
+                            accum = Some(self.visitor.visit_string(string));
+                        }
+                    }
                 }
                 Some(NixToken {
                     token_type: NixTokenType::InterpolateStart,
                 }) => {
                     let expr = self.parse_expr().unwrap();
                     self.expect(NixTokenType::CurlyClose);
-                    accum = AST::Call(
-                        Box::new(AST::Call(
-                            Box::new(AST::Identifier(BUILTIN_STRING_CONCATENATE)),
-                            Box::new(accum),
-                        )),
-                        Box::new(expr),
-                    )
+                    match accum {
+                        Some(v) => {
+                            accum = Some(self.visitor.visit_string_concatenate(v, expr));
+                        }
+                        None => {
+                            accum = Some(expr);
+                        }
+                    }
                 }
-                Some(NixToken { token_type: end }) => break Some(accum),
+                Some(NixToken { token_type: end }) => break accum,
                 v => panic!("unexpected {:?}", v),
             }
         }

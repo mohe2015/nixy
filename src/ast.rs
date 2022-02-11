@@ -21,6 +21,10 @@ pub trait ASTVisitor<'a, R: std::fmt::Debug> {
     fn visit_path_concatenate(self, begin: R, last: R) -> R;
 
     fn visit_path_segment(self, segment: &'a [u8]) -> R;
+
+    fn visit_string(self, id: &'a [u8]) -> R;
+
+    fn visit_string_concatenate(self, begin: R, last: R) -> R;
 }
 
 
@@ -155,5 +159,13 @@ impl<'a> ASTVisitor<'a, AST<'a>> for ASTBuilder {
 
     fn visit_path_segment(self, segment: &'a [u8]) -> AST<'a> {
         AST::PathSegment(segment)
+    }
+
+    fn visit_string(self, id: &'a [u8]) -> AST<'a> {
+        todo!()
+    }
+
+    fn visit_string_concatenate(self, begin: AST<'a>, last: AST<'a>) -> AST<'a> {
+        todo!()
     }
 }
