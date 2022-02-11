@@ -2,40 +2,40 @@ use crate::{parser::{AST, BUILTIN_IF, BUILTIN_PATH_CONCATENATE, BUILTIN_UNARY_MI
 
 pub trait ASTVisitor<'a, R: std::fmt::Debug> {
 
-    fn visit_identifier(self, id: &'a [u8]) -> R;
+    fn visit_identifier(&self, id: &'a [u8]) -> R;
 
-    fn visit_integer(self, integer: i64) -> R;
+    fn visit_integer(&self, integer: i64) -> R;
 
-    fn visit_float(self, float: f64) -> R;
+    fn visit_float(&self, float: f64) -> R;
 
-    fn visit_todo(self) -> R;
+    fn visit_todo(&self) -> R;
 
-    fn visit_select(self, expr: R, attrpath: R, default: Option<R>) -> R;
+    fn visit_select(&self, expr: R, attrpath: R, default: Option<R>) -> R;
 
-    fn visit_infix_operation(self, left: R, right: R, operator: NixTokenType<'a>) -> R;
+    fn visit_infix_operation(&self, left: R, right: R, operator: NixTokenType<'a>) -> R;
 
-    fn visit_prefix_operation(self, operator: NixTokenType<'a>, expr: R) -> R;
+    fn visit_prefix_operation(&self, operator: NixTokenType<'a>, expr: R) -> R;
 
-    fn visit_if(self, condition: R, true_case: R, false_case: R) -> R;
+    fn visit_if(&self, condition: R, true_case: R, false_case: R) -> R;
 
-    fn visit_attrpath_part(self, begin: R, last: R) -> R;
+    fn visit_attrpath_part(&self, begin: R, last: R) -> R;
 
-    fn visit_path_concatenate(self, begin: R, last: R) -> R;
+    fn visit_path_concatenate(&self, begin: R, last: R) -> R;
 
-    fn visit_path_segment(self, segment: &'a [u8]) -> R;
+    fn visit_path_segment(&self, segment: &'a [u8]) -> R;
 
-    fn visit_string(self, string: &'a [u8]) -> R;
+    fn visit_string(&self, string: &'a [u8]) -> R;
 
-    fn visit_string_concatenate(self, begin: R, last: R) -> R;
+    fn visit_string_concatenate(&self, begin: R, last: R) -> R;
 
-    fn visit_array_push(self, begin: Option<R>, last: R) -> R;
+    fn visit_array_push(&self, begin: Option<R>, last: R) -> R;
 
     /// This is always called after `visit_array_push` and may help some implementations.
-    fn visit_array_end(self, array: R) -> R;
+    fn visit_array_end(&self, array: R) -> R;
 
-    fn visit_call(self, function: R, parameter: R) -> R;
+    fn visit_call(&self, function: R, parameter: R) -> R;
 
-    fn visit_attrset_bind_push(self, begin: Option<R>, last: R) -> R;
+    fn visit_attrset_bind_push(&self, begin: Option<R>, last: R) -> R;
 }
 
 
@@ -47,23 +47,23 @@ const BUILTIN_SELECT: &[u8] = b"__builtin_select";
 
 impl<'a> ASTVisitor<'a, AST<'a>> for ASTBuilder {
 
-    fn visit_identifier(self, id: &'a [u8]) -> AST<'a> {
+    fn visit_identifier(&self, id: &'a [u8]) -> AST<'a> {
         AST::Identifier(id)
     }
     
-    fn visit_integer(self, integer: i64) -> AST<'a> {
+    fn visit_integer(&self, integer: i64) -> AST<'a> {
         AST::Integer(integer)
     }
 
-    fn visit_float(self, float: f64) -> AST<'a> {
+    fn visit_float(&self, float: f64) -> AST<'a> {
         AST::Float(float)
     }
 
-    fn visit_todo(self) -> AST<'a> {
+    fn visit_todo(&self) -> AST<'a> {
         todo!()
     }
 
-    fn visit_select(self, expr: AST<'a>, attrpath: AST<'a>, default: Option<AST<'a>>) -> AST<'a> {
+    fn visit_select(&self, expr: AST<'a>, attrpath: AST<'a>, default: Option<AST<'a>>) -> AST<'a> {
         let value =  AST::Call(
             Box::new(AST::Call(
                 Box::new(AST::Identifier(BUILTIN_SELECT)),
@@ -90,7 +90,7 @@ impl<'a> ASTVisitor<'a, AST<'a>> for ASTBuilder {
         }
     }
 
-    fn visit_infix_operation(self, left: AST<'a>, right: AST<'a>, operator: NixTokenType<'a>) -> AST<'a> {
+    fn visit_infix_operation(&self, left: AST<'a>, right: AST<'a>, operator: NixTokenType<'a>) -> AST<'a> {
         AST::Call(
             Box::new(AST::Call(
                 Box::new(AST::Identifier(match operator {
@@ -135,7 +135,7 @@ impl<'a> ASTVisitor<'a, AST<'a>> for ASTBuilder {
         )
     }
 
-    fn visit_if(self, condition: AST<'a>, true_case: AST<'a>, false_case: AST<'a>) -> AST<'a> {
+    fn visit_if(&self, condition: AST<'a>, true_case: AST<'a>, false_case: AST<'a>) -> AST<'a> {
         AST::Call(
             Box::new(AST::Call(
                 Box::new(AST::Call(
@@ -148,7 +148,7 @@ impl<'a> ASTVisitor<'a, AST<'a>> for ASTBuilder {
         )
     }
 
-    fn visit_attrpath_part(self, begin: AST<'a>, last: AST<'a>) -> AST<'a> {
+    fn visit_attrpath_part(&self, begin: AST<'a>, last: AST<'a>) -> AST<'a> {
         AST::Call(
             Box::new(AST::Call(
                 Box::new(AST::Identifier(BUILTIN_SELECT)),
@@ -158,7 +158,7 @@ impl<'a> ASTVisitor<'a, AST<'a>> for ASTBuilder {
         )
     }
 
-    fn visit_path_concatenate(self, begin: AST<'a>, last: AST<'a>) -> AST<'a> {
+    fn visit_path_concatenate(&self, begin: AST<'a>, last: AST<'a>) -> AST<'a> {
         AST::Call(
             Box::new(AST::Call(
                 Box::new(AST::Identifier(BUILTIN_PATH_CONCATENATE)),
@@ -168,19 +168,19 @@ impl<'a> ASTVisitor<'a, AST<'a>> for ASTBuilder {
         )
     }
 
-    fn visit_path_segment(self, segment: &'a [u8]) -> AST<'a> {
+    fn visit_path_segment(&self, segment: &'a [u8]) -> AST<'a> {
         AST::PathSegment(segment)
     }
 
-    fn visit_string(self, string: &'a [u8]) -> AST<'a> {
+    fn visit_string(&self, string: &'a [u8]) -> AST<'a> {
         AST::String(string)
     }
 
-    fn visit_string_concatenate(self, begin: AST<'a>, last: AST<'a>) -> AST<'a> {
+    fn visit_string_concatenate(&self, begin: AST<'a>, last: AST<'a>) -> AST<'a> {
         todo!()
     }
 
-    fn visit_array_push(self, begin: Option<AST<'a>>, last: AST<'a>) -> AST<'a> {
+    fn visit_array_push(&self, begin: Option<AST<'a>>, last: AST<'a>) -> AST<'a> {
         match begin {
             Some(begin) => {
                 AST::Call(Box::new(AST::Identifier(b"cons")), Box::new(AST::Call(Box::new(begin), Box::new(last))))
@@ -191,15 +191,15 @@ impl<'a> ASTVisitor<'a, AST<'a>> for ASTBuilder {
         }
     }
 
-    fn visit_array_end(self, array: AST<'a>) -> AST<'a> {
+    fn visit_array_end(&self, array: AST<'a>) -> AST<'a> {
         AST::Call(Box::new(array), Box::new(AST::Identifier(b"nil")))
     }
 
-    fn visit_call(self, function: AST<'a>, parameter: AST<'a>) -> AST<'a> {
+    fn visit_call(&self, function: AST<'a>, parameter: AST<'a>) -> AST<'a> {
         AST::Call(Box::new(function), Box::new(parameter))
     }
 
-    fn visit_prefix_operation(self, operator: NixTokenType<'a>, expr: AST<'a>) -> AST<'a> {
+    fn visit_prefix_operation(&self, operator: NixTokenType<'a>, expr: AST<'a>) -> AST<'a> {
         AST::Call(
             Box::new(AST::Identifier(match operator {
                 NixTokenType::Subtraction => BUILTIN_UNARY_MINUS,
@@ -212,7 +212,7 @@ impl<'a> ASTVisitor<'a, AST<'a>> for ASTBuilder {
         )
     }
 
-    fn visit_attrset_bind_push(self, begin: Option<AST<'a>>, last: AST<'a>) -> AST<'a> {
+    fn visit_attrset_bind_push(&self, begin: Option<AST<'a>>, last: AST<'a>) -> AST<'a> {
         //AST::Let(item.0, item.1, Box::new(accum))
         todo!()
     }
