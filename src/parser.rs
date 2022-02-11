@@ -423,7 +423,8 @@ impl<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug, R: std::fmt::Debug,
                         tokens => {
                             self.lexer.reset_peek();
 
-                            array = Some(self.visitor.visit_array_push(array, self.parse_expr_select().unwrap()))
+                            let last = self.parse_expr_select().unwrap();
+                            array = Some(self.visitor.visit_array_push(array, last))
                         }
                     }
                 }
@@ -549,7 +550,8 @@ impl<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug, R: std::fmt::Debug,
         }) = self.lexer.peek()
         {
             self.expect(NixTokenType::Subtraction);
-            Some(self.visitor.visit_prefix_operation(NixTokenType::Subtraction, self.parse_expr_app().expect("failed to parse arithmetic minus expression")))
+            let expr = self.parse_expr_app().expect("failed to parse arithmetic minus expression");
+            Some(self.visitor.visit_prefix_operation(NixTokenType::Subtraction, expr))
         } else {
             self.lexer.reset_peek();
             self.parse_expr_app()
@@ -597,8 +599,9 @@ impl<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug, R: std::fmt::Debug,
         }) = self.lexer.peek()
         {
             self.expect(NixTokenType::ExclamationMark);
-            Some(self.visitor.visit_prefix_operation(NixTokenType::ExclamationMark, self.parse_expr_arithmetic_or_concatenate()
-                        .expect("failed to parse negated expression")
+            let expr = self.parse_expr_arithmetic_or_concatenate()
+            .expect("failed to parse negated expression");
+            Some(self.visitor.visit_prefix_operation(NixTokenType::ExclamationMark,  expr
                 )
             )
         } else {
