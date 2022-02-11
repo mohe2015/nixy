@@ -199,7 +199,7 @@ impl<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug, R: std::fmt::Debug,
     }
 
     #[cfg_attr(debug_assertions, instrument(name = "let", skip_all, ret))]
-    pub fn parse_let(&mut self) -> Option<AST<'a>> {
+    pub fn parse_let(&mut self) -> Option<R> {
         self.expect(NixTokenType::Let);
 
         // maybe do this like the method after? so the let has a third parameter which is the body and which we can then concatenate afterwards
@@ -321,7 +321,7 @@ impl<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug, R: std::fmt::Debug,
     }
 
     #[cfg_attr(debug_assertions, instrument(name = "attrs", skip_all, ret))]
-    pub fn parse_attrset(&mut self) -> Option<AST<'a>> {
+    pub fn parse_attrset(&mut self) -> Option<R> {
         self.expect(NixTokenType::CurlyOpen);
 
         // I think we need to do it in this way because otherwise the order would be wrong
@@ -690,10 +690,10 @@ impl<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug, R: std::fmt::Debug,
 
     // this returns none for some reason
     #[cfg_attr(debug_assertions, instrument(name = "args", skip_all, ret))]
-    pub fn parse_formals(&mut self) -> Option<AST<'a>> {
+    pub fn parse_formals(&mut self) -> Option<R> {
         // we need quite some peekahead here do differentiate between attrsets
         // this is probably the most complicated function in here
-        let formals: Vec<AST<'a>> = Vec::new();
+        let formals: Vec<R> = Vec::new();
         let mut parsed_first = false;
         if let Some(NixToken {
             token_type: NixTokenType::CurlyOpen,
@@ -736,7 +736,7 @@ impl<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug, R: std::fmt::Debug,
                             }
                             self.expect( NixTokenType::Identifier(b""));
                             self.expect( NixTokenType::CurlyClose);
-                            return Some(AST::Identifier(b"TODO formals")); // TODO FIXME
+                            return Some(self.visitor.visit_todo()); // Some(AST::Identifier(b"TODO formals")); // TODO FIXME
                         } else {
                             // probably an attrset
                             self.lexer.reset_peek();
@@ -780,7 +780,7 @@ impl<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug, R: std::fmt::Debug,
                                     self.expect( NixTokenType::CurlyOpen);
                                     self.expect( NixTokenType::CurlyClose);
                                     self.lexer.reset_peek();
-                                    return Some(AST::Identifier(b"TODO formals"));
+                                    return Some(self.visitor.visit_todo()); // return Some(AST::Identifier(b"TODO formals"));
                                     // TODO FIXME
                                 }
                                 Some(NixToken {
@@ -792,7 +792,7 @@ impl<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug, R: std::fmt::Debug,
                                     self.expect( NixTokenType::AtSign);
                                     self.expect( NixTokenType::Identifier(b""));
                                     self.lexer.reset_peek();
-                                    return Some(AST::Identifier(b"TODO formals"));
+                                    return Some(self.visitor.visit_todo()); // return Some(AST::Identifier(b"TODO formals"));
                                     // TODO FIXME
                                 }
                                 _ => {
@@ -803,7 +803,7 @@ impl<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug, R: std::fmt::Debug,
                             }
                         }
                         self.expect( NixTokenType::CurlyClose);
-                        return Some(AST::Identifier(b"TODO formals")); // TODO FIXME
+                        return Some(self.visitor.visit_todo());  //return Some(AST::Identifier(b"TODO formals")); // TODO FIXME
                     }
                     Some(NixToken {
                         token_type: NixTokenType::StringStart,
