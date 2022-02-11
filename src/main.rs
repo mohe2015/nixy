@@ -45,9 +45,11 @@ fn main() -> Result<()> {
                     _ => true,
                 });
 
-                for token in lexer.clone() {
+                //success += lexer.count();
+                
+                //for token in lexer.clone() {
                     //println!("{:?}", token.token_type);
-                }
+                //}
 
                 parse(&mut multipeek(lexer));
             };

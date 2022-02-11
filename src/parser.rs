@@ -1022,8 +1022,6 @@ pub fn parse_expr<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
 pub fn parse<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug>(
     lexer: &mut MultiPeek<I>,
 ) -> Option<AST<'a>> {
-    tracing::trace!("Hello, world!");
-
     let result = parse_expr(lexer);
     assert_eq!(None, lexer.next());
     result
