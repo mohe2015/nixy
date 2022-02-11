@@ -883,16 +883,26 @@ impl<
                 }
                 self.parse_expr_function()
             }
-            Some(NixTokenType::Identifier(_ident)) => {
+            Some(NixTokenType::Identifier(ident)) => {
                 match self.lexer.peek() {
                     Some(NixToken {
                         token_type: NixTokenType::Colon,
                     }) => {
                         // function call
-                        // TODO parameter
-                        let _ident = self.lexer.next();
-                        self.expect(NixTokenType::Colon);
-                        self.parse_expr_function()
+                        let ident = self.lexer.next().unwrap();
+                        match ident {
+                            NixToken { token_type: NixTokenType::Identifier(ident) } => {
+                                let arg = self.visitor.visit_identifier(ident);
+                        
+                                self.visitor.visit_function_enter(&arg);
+        
+                                self.expect(NixTokenType::Colon);
+                                let body = self.parse_expr_function().unwrap();
+        
+                                Some(self.visitor.visit_function_exit(arg, body))
+                            }
+                            _ => todo!()
+                        }
                     }
                     Some(NixToken {
                         token_type: NixTokenType::AtSign,

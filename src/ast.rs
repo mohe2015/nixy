@@ -47,6 +47,10 @@ pub trait ASTVisitor<'a, R: std::fmt::Debug> {
     fn visit_call(&mut self, function: R, parameter: R) -> R;
 
     fn visit_attrset_bind_push(&mut self, begin: Option<R>, last: R) -> R;
+
+    fn visit_function_enter(&mut self, arg: &R);
+
+    fn visit_function_exit(&mut self, arg: R, body: R) -> R;
 }
 
 pub struct ASTJavaTranspiler<'a, W: Write> {
@@ -63,6 +67,15 @@ impl<'a, W: Write> ASTVisitor<'a, ()> for ASTJavaTranspiler<'a, W> {
 
     fn visit_file_end(&mut self) {
         
+    }
+
+    fn visit_function_enter(&mut self, arg: &()) {
+        write!(self.writer, "ff").unwrap();
+
+    }
+
+    fn visit_function_exit(&mut self, arg: (), body: ()) -> () {
+        write!(self.writer, "}}").unwrap();
     }
     
     fn visit_identifier(&mut self, id: &'a [u8]) -> () {
@@ -221,6 +234,10 @@ impl<'a> ASTVisitor<'a, AST<'a>> for ASTBuilder {
         }
     }
 
+    fn visit_infix_lhs(&mut self, operator: NixTokenType<'a>, left: &AST<'a>) {
+        todo!()
+    }
+
     fn visit_infix_operation(
         &mut self,
         left: AST<'a>,
@@ -268,6 +285,17 @@ impl<'a> ASTVisitor<'a, AST<'a>> for ASTBuilder {
                 Box::new(left),
             )),
             Box::new(right),
+        )
+    }
+
+    fn visit_prefix_operation(&mut self, operator: NixTokenType<'a>, expr: AST<'a>) -> AST<'a> {
+        AST::Call(
+            Box::new(AST::Identifier(match operator {
+                NixTokenType::Subtraction => BUILTIN_UNARY_MINUS,
+                NixTokenType::ExclamationMark => BUILTIN_UNARY_NOT,
+                _ => todo!(),
+            })),
+            Box::new(expr),
         )
     }
 
@@ -334,23 +362,16 @@ impl<'a> ASTVisitor<'a, AST<'a>> for ASTBuilder {
         AST::Call(Box::new(function), Box::new(parameter))
     }
 
-    fn visit_prefix_operation(&mut self, operator: NixTokenType<'a>, expr: AST<'a>) -> AST<'a> {
-        AST::Call(
-            Box::new(AST::Identifier(match operator {
-                NixTokenType::Subtraction => BUILTIN_UNARY_MINUS,
-                NixTokenType::ExclamationMark => BUILTIN_UNARY_NOT,
-                _ => todo!(),
-            })),
-            Box::new(expr),
-        )
-    }
-
     fn visit_attrset_bind_push(&mut self, _begin: Option<AST<'a>>, _last: AST<'a>) -> AST<'a> {
         //AST::Let(item.0, item.1, Box::new(accum))
         todo!()
     }
 
-    fn visit_infix_lhs(&mut self, operator: NixTokenType<'a>, left: &AST<'a>) {
+    fn visit_function_enter(&mut self, arg: &AST<'a>) {
+        todo!()
+    }
+
+    fn visit_function_exit(&mut self, arg: AST<'a>, body: AST<'a>) -> AST<'a> {
         todo!()
     }
 }
