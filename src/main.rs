@@ -35,8 +35,11 @@ fn main() -> Result<()> {
             if f_name.ends_with(".nix") {
                 //println!("{}", path.display());
 
+                // ./target/release/nixy | sort -n
+
                 // check whether this here is cache-wise better or if reading in chunks is better
                 let file = fs::read(path).unwrap();
+                println!("{} {}", file.len(), path.display());
 
                 let lexer = NixLexer::new(&file).filter(|t| match t.token_type {
                     NixTokenType::Whitespace(_)

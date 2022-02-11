@@ -37,3 +37,4 @@
 /target
 cachegrind.out.*
 perf.data
+dhat.out.*
