@@ -530,15 +530,15 @@ impl<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug, R: std::fmt::Debug,
     }
 
     #[cfg_attr(debug_assertions, instrument(name = "app", skip_all, ret))]
-    pub fn parse_expr_app(&mut self ) -> Option<AST<'a>> {
-        let mut result: Option<AST<'a>> = None;
+    pub fn parse_expr_app(&mut self ) -> Option<R> {
+        let mut result: Option<R> = None;
         loop {
             let jo = self.parse_expr_select();
             match jo {
                 Some(expr) => {
                     match result {
                         Some(a) => {
-                            result = Some(AST::Call(Box::new(a), Box::new(expr)));
+                            result = Some(self.visitor.visit_call(a, expr));
                         }
                         None => result = Some(expr),
                     }
@@ -554,18 +554,13 @@ impl<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug, R: std::fmt::Debug,
     }
 
     #[cfg_attr(debug_assertions, instrument(name = "-", skip_all, ret))]
-    pub fn parse_expr_arithmetic_negation(&mut self) -> Option<AST<'a>> {
+    pub fn parse_expr_arithmetic_negation(&mut self) -> Option<R> {
         if let Some(NixToken {
             token_type: NixTokenType::Subtraction,
         }) = self.lexer.peek()
         {
             self.expect(NixTokenType::Subtraction);
-            Some(AST::Call(
-                Box::new(AST::Identifier(BUILTIN_UNARY_MINUS)),
-                Box::new(
-                    self.parse_expr_app().expect("failed to parse arithmetic minus expression"),
-                ),
-            ))
+            Some(self.visitor.visit_prefix_operation(NixTokenType::Subtraction, self.parse_expr_app().expect("failed to parse arithmetic minus expression")))
         } else {
             self.lexer.reset_peek();
             self.parse_expr_app()
@@ -607,19 +602,16 @@ impl<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug, R: std::fmt::Debug,
     }
 
     #[cfg_attr(debug_assertions, instrument(name = "!", skip_all, ret))]
-    pub fn parse_expr_not(&mut self) -> Option<AST<'a>> {
+    pub fn parse_expr_not(&mut self) -> Option<R> {
         if let Some(NixToken {
             token_type: NixTokenType::ExclamationMark,
         }) = self.lexer.peek()
         {
             self.expect(NixTokenType::ExclamationMark);
-            Some(AST::Call(
-                Box::new(AST::Identifier(BUILTIN_UNARY_NOT)),
-                Box::new(
-                    self.parse_expr_arithmetic_or_concatenate()
-                        .expect("failed to parse negated expression"),
-                ),
-            ))
+            Some(self.visitor.visit_prefix_operation(NixTokenType::ExclamationMark, self.parse_expr_arithmetic_or_concatenate()
+                        .expect("failed to parse negated expression")
+                )
+            )
         } else {
             self.lexer.reset_peek();
             self.parse_expr_arithmetic_or_concatenate()
@@ -687,7 +679,7 @@ impl<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug, R: std::fmt::Debug,
                 let true_case = self.parse_expr().expect("failed to parse if true case");
                 self.expect( NixTokenType::Else);
                 let false_case = self.parse_expr().expect("failed to parse if false case");
-                self.visitor.visit_if()
+                Some(self.visitor.visit_if(condition, true_case, false_case))
             }
             _ => {
                 self.lexer.reset_peek();
@@ -833,7 +825,7 @@ impl<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug, R: std::fmt::Debug,
     }
 
     #[cfg_attr(debug_assertions, instrument(name = "fn", skip_all, ret))]
-    pub fn parse_expr_function(&mut self) -> Option<AST<'a>> {
+    pub fn parse_expr_function(&mut self) -> Option<R> {
         let token = self.lexer.peek();
         match token.map(|t| &t.token_type) {
             Some(NixTokenType::Let) => {

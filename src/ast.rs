@@ -1,4 +1,4 @@
-use crate::{parser::{AST, BUILTIN_IF, BUILTIN_PATH_CONCATENATE}, lexer::NixTokenType};
+use crate::{parser::{AST, BUILTIN_IF, BUILTIN_PATH_CONCATENATE, BUILTIN_UNARY_MINUS, BUILTIN_UNARY_NOT}, lexer::NixTokenType};
 
 pub trait ASTVisitor<'a, R: std::fmt::Debug> {
 
@@ -13,6 +13,8 @@ pub trait ASTVisitor<'a, R: std::fmt::Debug> {
     fn visit_select(self, expr: R, attrpath: R, default: Option<R>) -> R;
 
     fn visit_infix_operation(self, left: R, right: R, operator: NixTokenType<'a>) -> R;
+
+    fn visit_prefix_operation(self, operator: NixTokenType<'a>, expr: R) -> R;
 
     fn visit_if(self, condition: R, true_case: R, false_case: R) -> R;
 
@@ -30,6 +32,8 @@ pub trait ASTVisitor<'a, R: std::fmt::Debug> {
 
     /// This is always called after `visit_array_push` and may help some implementations.
     fn visit_array_end(self, array: R) -> R;
+
+    fn visit_call(self, function: R, parameter: R) -> R;
 }
 
 
@@ -187,5 +191,22 @@ impl<'a> ASTVisitor<'a, AST<'a>> for ASTBuilder {
 
     fn visit_array_end(self, array: AST<'a>) -> AST<'a> {
         AST::Call(Box::new(array), Box::new(AST::Identifier(b"nil")))
+    }
+
+    fn visit_call(self, function: AST<'a>, parameter: AST<'a>) -> AST<'a> {
+        AST::Call(Box::new(function), Box::new(parameter))
+    }
+
+    fn visit_prefix_operation(self, operator: NixTokenType<'a>, expr: AST<'a>) -> AST<'a> {
+        AST::Call(
+            Box::new(AST::Identifier(match operator {
+                NixTokenType::Subtraction => BUILTIN_UNARY_MINUS,
+                NixTokenType::ExclamationMark => BUILTIN_UNARY_NOT,
+                _ => todo!()
+            })),
+            Box::new(
+                expr
+            ),
+        )
     }
 }
