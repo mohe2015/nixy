@@ -1,10 +1,10 @@
-use crate::lexer::{NixLexer, NixToken, NixTokenType};
+use crate::{lexer::{NixLexer, NixToken, NixTokenType}, ast::{ASTVisitor, ASTBuilder}};
 use core::fmt;
 use itertools::MultiPeek;
 use std::{
     fmt::Debug,
     mem::discriminant,
-    process::{Command, ExitStatus, Stdio},
+    process::{Command, ExitStatus, Stdio}, marker::PhantomData,
 };
 //#[cfg(debug_assertions)]
 use tracing::instrument;
@@ -67,11 +67,13 @@ impl<'a> Debug for AST<'a> {
     }
 }
 
-pub struct Parser<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug> {
+pub struct Parser<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug, R, A: ASTVisitor<R>> {
     pub lexer: MultiPeek<I>,
+    pub visitor: A,
+    pub phantom: PhantomData<R> // https://github.com/rust-lang/rust/issues/23246
 }
 
-impl<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug> Parser<'a, I> {
+impl<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug, R, A: ASTVisitor<R>> Parser<'a, I, R, A> {
     #[cfg_attr(debug_assertions, instrument(name = "expect", skip_all, ret))]
     pub fn expect(&mut self, t: NixTokenType<'a>) {
         let token = self.lexer.next();
@@ -1006,6 +1008,8 @@ impl<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug> Parser<'a, I> {
 
 #[cfg(test)]
 fn can_parse(code: &str) {
+    use crate::ast::ASTBuilder;
+
     std::fs::write("/tmp/foo", code).expect("Unable to write file");
 
     let mut cmd = Command::new("nix");
@@ -1036,8 +1040,10 @@ fn can_parse(code: &str) {
         println!("{:?}", token.token_type);
     }
 
-    let parser = Parser {
-        lexer: itertools::multipeek(lexer)
+    let mut parser = Parser {
+        lexer: itertools::multipeek(lexer),
+        visitor: ASTBuilder,
+        phantom: PhantomData,
     };
 
     let result = parser.parse();
@@ -1122,7 +1128,7 @@ fn test_operators() {
     }",
     );
 
-    let parser = Parser { lexer: itertools::multipeek(
+    let mut parser = Parser { lexer: itertools::multipeek(
         [
             NixToken {
                 token_type: NixTokenType::Integer(1),
@@ -1134,13 +1140,15 @@ fn test_operators() {
                 token_type: NixTokenType::Integer(41),
             },
         ]
-        .into_iter()) };
+        .into_iter()),
+        visitor: ASTBuilder,
+        phantom: PhantomData, };
     let r = parser.parse_expr_op()
     .unwrap();
     assert_eq!(
         AST::Call(
             Box::new(AST::Call(
-                Box::new(AST::Identifier(b"Addition")),
+                Box::new(AST::Identifier(b"addition")),
                 Box::new(AST::Integer(1))
             )),
             Box::new(AST::Integer(41))

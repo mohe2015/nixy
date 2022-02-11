@@ -1,11 +1,11 @@
 use itertools::{multipeek, Itertools};
-use std::{fs, io::Result};
+use std::{fs, io::Result, marker::PhantomData};
 use tracing::Level;
 use tracing_subscriber::fmt::format::FmtSpan;
 use walkdir::WalkDir;
 
 use crate::{
-    lexer::{NixLexer, NixTokenType}, parser::Parser,
+    lexer::{NixLexer, NixTokenType}, parser::Parser, ast::ASTBuilder,
 };
 
 pub mod ast;
@@ -59,6 +59,8 @@ fn main() -> Result<()> {
 
             let mut parser = Parser {
                 lexer: multipeek(lexer),
+                visitor: ASTBuilder,
+                phantom: PhantomData,
             };
 
             parser.parse();
