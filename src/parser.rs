@@ -81,24 +81,19 @@ impl<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug, R: std::fmt::Debug,
     }
 
     #[cfg_attr(debug_assertions, instrument(name = "attrpath", skip_all, ret))]
-    pub fn parse_attrpath(&mut self) -> Option<AST<'a>> {
-        let mut result: Option<AST<'a>> = None;
+    pub fn parse_attrpath(&mut self) -> Option<R> {
+        let mut result: Option<R> = None;
         loop {
             match self.lexer.peek() {
                 Some(NixToken {
                     token_type: NixTokenType::Identifier(id),
                 }) => {
+                    let id_ast = self.visitor.visit_identifier(id);
                     match result {
                         Some(a) => {
-                            result = Some(AST::Call(
-                                Box::new(AST::Call(
-                                    Box::new(AST::Identifier(BUILTIN_SELECT)),
-                                    Box::new(a),
-                                )),
-                                Box::new(AST::Identifier(id)),
-                            ));
+                            result = Some(self.visitor.visit_attrpath_part(a, id_ast));
                         }
-                        None => result = Some(AST::Identifier(id)),
+                        None => result = Some(id_ast),
                     }
 
                     self.lexer.next();
@@ -119,13 +114,7 @@ impl<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug, R: std::fmt::Debug,
                     .unwrap();
                     match result {
                         Some(a) => {
-                            result = Some(AST::Call(
-                                Box::new(AST::Call(
-                                    Box::new(AST::Identifier(BUILTIN_SELECT)),
-                                    Box::new(a),
-                                )),
-                                Box::new(res),
-                            ));
+                            result = Some(self.visitor.visit_attrpath_part(a, res));
                         }
                         None => result = Some(res),
                     }
@@ -138,13 +127,7 @@ impl<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug, R: std::fmt::Debug,
                     self.expect(NixTokenType::CurlyClose);
                     match result {
                         Some(a) => {
-                            result = Some(AST::Call(
-                                Box::new(AST::Call(
-                                    Box::new(AST::Identifier(BUILTIN_SELECT)),
-                                    Box::new(a),
-                                )),
-                                Box::new(expr),
-                            ));
+                            result = Some(self.visitor.visit_attrpath_part(a, expr));
                         }
                         None => result = Some(expr),
                     }

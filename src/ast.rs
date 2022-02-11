@@ -15,6 +15,8 @@ pub trait ASTVisitor<'a, R: std::fmt::Debug> {
     fn visit_infix_operation(self, left: R, right: R, operator: NixTokenType<'a>) -> R;
 
     fn visit_if(self, condition: R, true_case: R, false_case: R) -> R;
+
+    fn visit_attrpath_part(self, begin: R, last: R) -> R;
 }
 
 
@@ -125,5 +127,15 @@ impl<'a> ASTVisitor<'a, AST<'a>> for ASTBuilder {
             )),
             Box::new(false_case),
         )
+    }
+
+    fn visit_attrpath_part(self, begin: AST<'a>, last: AST<'a>) -> AST<'a> {
+        Some(AST::Call(
+            Box::new(AST::Call(
+                Box::new(AST::Identifier(BUILTIN_SELECT)),
+                Box::new(a),
+            )),
+            Box::new(AST::Identifier(id)),
+        ));
     }
 }
