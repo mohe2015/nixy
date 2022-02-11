@@ -1,10 +1,9 @@
-use crate::{lexer::{NixLexer, NixToken, NixTokenType}, ast::{ASTVisitor, ASTBuilder}};
+use crate::{lexer::{NixToken, NixTokenType}, ast::{ASTVisitor}};
 use core::fmt;
 use itertools::MultiPeek;
 use std::{
     fmt::Debug,
-    mem::discriminant,
-    process::{Command, ExitStatus, Stdio}, marker::PhantomData,
+    mem::discriminant, marker::PhantomData,
 };
 //#[cfg(debug_assertions)]
 use tracing::instrument;
@@ -153,7 +152,7 @@ impl<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug, R: std::fmt::Debug,
                         token_type: NixTokenType::ParenOpen,
                     }) => {
                         self.expect(NixTokenType::ParenOpen);
-                        let expr = self.parse_expr();
+                        let _expr = self.parse_expr();
                         self.expect(NixTokenType::ParenClose);
                     }
                     _ => {
@@ -179,15 +178,15 @@ impl<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug, R: std::fmt::Debug,
                 self.expect(NixTokenType::Semicolon);
                 self.visitor.visit_todo()
             }
-            other => {
+            _other => {
                 self.lexer.reset_peek();
-                let attrpath = self.parse_attrpath();
+                let _attrpath = self.parse_attrpath();
                 self.expect(NixTokenType::Assign);
 
                 //println!("TEST {:?}", lexer.peek());
                 //lexer.reset_peek();
 
-                let expr = self.parse_expr().expect("expected expression in binding at");
+                let _expr = self.parse_expr().expect("expected expression in binding at");
                 self.expect(NixTokenType::Semicolon);
 
                 //(Box::new(attrpath.unwrap()), Box::new(expr))
@@ -201,7 +200,7 @@ impl<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug, R: std::fmt::Debug,
         self.expect(NixTokenType::Let);
 
         // maybe do this like the method after? so the let has a third parameter which is the body and which we can then concatenate afterwards
-        let mut binds: Option<R> = None;
+        let _binds: Option<R> = None;
         loop {
             match self.lexer.peek() {
                 Some(NixToken {
@@ -209,7 +208,7 @@ impl<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug, R: std::fmt::Debug,
                 }) => {
                     self.lexer.next();
 
-                    let body =
+                    let _body =
                         self.parse_expr_function().expect("failed to parse body of let binding");
 
                     break Some(self.visitor.visit_todo()); /*Some(binds.into_iter().fold(body, |accum, item| {
@@ -218,7 +217,7 @@ impl<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug, R: std::fmt::Debug,
                 }
                 _ => {
                     self.lexer.reset_peek();
-                    let bind = self.parse_bind();
+                    let _bind = self.parse_bind();
 
                     //binds.push(bind);
                 }
@@ -268,7 +267,7 @@ impl<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug, R: std::fmt::Debug,
     #[cfg_attr(debug_assertions, instrument(name = "str", skip_all, ret))]
     pub fn parse_some_string(&mut self,
         start: NixTokenType<'a>,
-        end: NixTokenType<'a>,
+        _end: NixTokenType<'a>,
     ) -> Option<R> {
         self.expect(start);
         let mut accum: Option<R> = None;
@@ -312,7 +311,7 @@ impl<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug, R: std::fmt::Debug,
                         }
                     }
                 }
-                Some(NixToken { token_type: end }) => break accum,
+                Some(NixToken { token_type: _end }) => break accum,
                 v => panic!("unexpected {:?}", v),
             }
         }
@@ -397,7 +396,7 @@ impl<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug, R: std::fmt::Debug,
                 self.expect(NixTokenType::ParenOpen);
                 let expr = self.parse_expr();
                 self.expect(NixTokenType::ParenClose);
-                expr;
+                drop(expr);
                 Some(self.visitor.visit_todo())
             }
             Some(NixToken {
@@ -420,7 +419,7 @@ impl<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug, R: std::fmt::Debug,
                             self.lexer.next();
                             break;
                         }
-                        tokens => {
+                        _tokens => {
                             self.lexer.reset_peek();
 
                             let last = self.parse_expr_select().unwrap();
@@ -685,7 +684,7 @@ impl<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug, R: std::fmt::Debug,
     pub fn parse_formals(&mut self) -> Option<R> {
         // we need quite some peekahead here do differentiate between attrsets
         // this is probably the most complicated function in here
-        let formals: Vec<R> = Vec::new();
+        let _formals: Vec<R> = Vec::new();
         let mut parsed_first = false;
         if let Some(NixToken {
             token_type: NixTokenType::CurlyOpen,
@@ -694,7 +693,7 @@ impl<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug, R: std::fmt::Debug,
             loop {
                 match self.lexer.peek() {
                     Some(NixToken {
-                        token_type: NixTokenType::Identifier(a),
+                        token_type: NixTokenType::Identifier(_a),
                     }) => {
                         let token = self.lexer.peek();
                         if let Some(NixToken {
@@ -838,21 +837,21 @@ impl<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug, R: std::fmt::Debug,
                     Some(NixToken {
                         token_type: NixTokenType::AtSign,
                     }) => {
-                        let ident = self.expect( NixTokenType::Identifier(b""));
+                        let _ident = self.expect( NixTokenType::Identifier(b""));
                         self.expect( NixTokenType::Colon);
                     }
                     _ => todo!(),
                 }
                 self.parse_expr_function()
             }
-            Some(NixTokenType::Identifier(ident)) => {
+            Some(NixTokenType::Identifier(_ident)) => {
                 match self.lexer.peek() {
                     Some(NixToken {
                         token_type: NixTokenType::Colon,
                     }) => {
                         // function call
                         // TODO parameter
-                        let ident = self.lexer.next();
+                        let _ident = self.lexer.next();
                         self.expect( NixTokenType::Colon);
                         self.parse_expr_function()
                     }
@@ -860,9 +859,9 @@ impl<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug, R: std::fmt::Debug,
                         token_type: NixTokenType::AtSign,
                     }) => {
                         // function call
-                        let ident = self.lexer.next();
+                        let _ident = self.lexer.next();
                         self.expect( NixTokenType::AtSign);
-                        let formals = self.parse_formals().unwrap();
+                        let _formals = self.parse_formals().unwrap();
                         self.expect( NixTokenType::Colon);
                         self.parse_expr_function()
                     }
@@ -874,14 +873,14 @@ impl<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug, R: std::fmt::Debug,
             }
             Some(NixTokenType::Assert) => {
                 self.expect( NixTokenType::Assert);
-                let assert_expr = self.parse_expr();
+                let _assert_expr = self.parse_expr();
                 self.expect( NixTokenType::Semicolon);
                 let body = self.parse_expr();
                 body // TODO FIXME
             }
             Some(NixTokenType::With) => {
                 self.expect( NixTokenType::With);
-                let with_expr = self.parse_expr();
+                let _with_expr = self.parse_expr();
                 self.expect( NixTokenType::Semicolon);
                 let body = self.parse_expr();
 

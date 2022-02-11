@@ -1,4 +1,4 @@
-use itertools::{multipeek, Itertools};
+use itertools::{multipeek};
 use std::{fs, io::Result, marker::PhantomData};
 use tracing::Level;
 use tracing_subscriber::fmt::format::FmtSpan;
@@ -22,8 +22,8 @@ fn main() -> Result<()> {
 
     tracing::subscriber::set_global_default(subscriber).unwrap();
 
-    let mut success = 0;
-    let mut failure = 0;
+    let success = 0;
+    let failure = 0;
 
     for entry in WalkDir::new("/etc/nixos/nixpkgs") {
         let entry = entry.unwrap();

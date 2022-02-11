@@ -288,7 +288,7 @@ impl<'a> Iterator for NixLexer<'a> {
                 Some((_offset, b'@')) => Some(NixToken {
                     token_type: NixTokenType::AtSign,
                 }),
-                Some((offset, b'!')) => match self.iter.peek() {
+                Some((_offset, b'!')) => match self.iter.peek() {
                     Some((_, b'=')) => {
                         self.iter.next();
                         Some(NixToken {

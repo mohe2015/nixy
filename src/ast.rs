@@ -176,7 +176,7 @@ impl<'a> ASTVisitor<'a, AST<'a>> for ASTBuilder {
         AST::String(string)
     }
 
-    fn visit_string_concatenate(&self, begin: AST<'a>, last: AST<'a>) -> AST<'a> {
+    fn visit_string_concatenate(&self, _begin: AST<'a>, _last: AST<'a>) -> AST<'a> {
         todo!()
     }
 
@@ -212,7 +212,7 @@ impl<'a> ASTVisitor<'a, AST<'a>> for ASTBuilder {
         )
     }
 
-    fn visit_attrset_bind_push(&self, begin: Option<AST<'a>>, last: AST<'a>) -> AST<'a> {
+    fn visit_attrset_bind_push(&self, _begin: Option<AST<'a>>, _last: AST<'a>) -> AST<'a> {
         //AST::Let(item.0, item.1, Box::new(accum))
         todo!()
     }
