@@ -22,9 +22,14 @@ pub trait ASTVisitor<'a, R: std::fmt::Debug> {
 
     fn visit_path_segment(self, segment: &'a [u8]) -> R;
 
-    fn visit_string(self, id: &'a [u8]) -> R;
+    fn visit_string(self, string: &'a [u8]) -> R;
 
     fn visit_string_concatenate(self, begin: R, last: R) -> R;
+
+    fn visit_array_push(self, begin: Option<R>, last: R) -> R;
+
+    /// This is always called after `visit_array_push` and may help some implementations.
+    fn visit_array_end(self, array: R) -> R;
 }
 
 
@@ -161,11 +166,26 @@ impl<'a> ASTVisitor<'a, AST<'a>> for ASTBuilder {
         AST::PathSegment(segment)
     }
 
-    fn visit_string(self, id: &'a [u8]) -> AST<'a> {
-        todo!()
+    fn visit_string(self, string: &'a [u8]) -> AST<'a> {
+        AST::String(string)
     }
 
     fn visit_string_concatenate(self, begin: AST<'a>, last: AST<'a>) -> AST<'a> {
         todo!()
+    }
+
+    fn visit_array_push(self, begin: Option<AST<'a>>, last: AST<'a>) -> AST<'a> {
+        match begin {
+            Some(begin) => {
+                AST::Call(Box::new(AST::Identifier(b"cons")), Box::new(AST::Call(Box::new(begin), Box::new(last))))
+            }
+            None => {
+                AST::Call(Box::new(AST::Identifier(b"cons")), Box::new(last))
+            }
+        }
+    }
+
+    fn visit_array_end(self, array: AST<'a>) -> AST<'a> {
+        AST::Call(Box::new(array), Box::new(AST::Identifier(b"nil")))
     }
 }

@@ -420,8 +420,9 @@ impl<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug, R: std::fmt::Debug,
             Some(NixToken {
                 token_type: NixTokenType::BracketOpen,
             }) => {
+                // array
                 self.expect( NixTokenType::BracketOpen);
-                let mut array = Vec::new();
+                let mut array = None;
                 loop {
                     match self.lexer.peek() {
                         Some(NixToken {
@@ -430,34 +431,28 @@ impl<'a, I: Iterator<Item = NixToken<'a>> + std::fmt::Debug, R: std::fmt::Debug,
                             self.lexer.next();
                             break;
                         }
-                        token => {
+                        tokens => {
                             self.lexer.reset_peek();
-                            array.push(self.parse_expr_select().unwrap());
+
+                            array = Some(self.visitor.visit_array_push(array, self.parse_expr_select().unwrap()))
                         }
                     }
                 }
-                Some(
-                    array
-                        .into_iter()
-                        .fold(AST::Identifier(b"cons"), |accum, item| {
-                            AST::Call(Box::new(accum), Box::new(item))
-                        }),
-                );
-                Some(self.visitor.visit_todo())
+                Some(self.visitor.visit_array_end(array.unwrap()))
             }
             Some(NixToken {
                 token_type: NixTokenType::Let,
             }) => {
                 self.expect(NixTokenType::Let);
                 self.parse_attrset();
-                self.visitor.visit_todo()
+                Some(self.visitor.visit_todo())
             }
             Some(NixToken {
                 token_type: NixTokenType::Rec,
             }) => {
                 self.expect(NixTokenType::Rec);
                 self.parse_attrset();
-                self.visitor.visit_todo()
+                Some(self.visitor.visit_todo())
             }
             _ => {
                 self.lexer.reset_peek();
