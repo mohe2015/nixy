@@ -299,41 +299,24 @@ impl<
             match self.lexer.next() {
                 Some(NixToken {
                     token_type: NixTokenType::String(string),
-                }) => match accum {
-                    Some(v) => {
-                        let string = self.visitor.visit_string(string);
-                        accum = Some(self.visitor.visit_string_concatenate(v, string));
-                    }
-                    None => {
-                        accum = Some(self.visitor.visit_string(string));
-                    }
-                },
+                }) => {
+                    let string = self.visitor.visit_string(string);
+                    accum = Some(self.visitor.visit_string_concatenate(accum, string));
+                }
                 Some(NixToken {
                     token_type: NixTokenType::IndentedString(string),
-                }) => match accum {
-                    Some(v) => {
-                        let string = self.visitor.visit_string(string);
-                        accum = Some(self.visitor.visit_string_concatenate(v, string));
-                    }
-                    None => {
-                        accum = Some(self.visitor.visit_string(string));
-                    }
-                },
+                }) => {
+                    let string = self.visitor.visit_string(string);
+                    accum = Some(self.visitor.visit_string_concatenate(accum, string));
+                }
                 Some(NixToken {
                     token_type: NixTokenType::InterpolateStart,
                 }) => {
                     let expr = self.parse_expr().unwrap();
                     self.expect(NixTokenType::CurlyClose);
-                    match accum {
-                        Some(v) => {
-                            accum = Some(self.visitor.visit_string_concatenate(v, expr));
-                        }
-                        None => {
-                            accum = Some(expr);
-                        }
-                    }
+                    accum = Some(self.visitor.visit_string_concatenate(accum, expr));
                 }
-                Some(NixToken { token_type: _end }) => break accum,
+                Some(NixToken { token_type: _end }) => break Some(self.visitor.visit_string_concatenate_end(accum)),
                 v => panic!("unexpected {:?}", v),
             }
         }

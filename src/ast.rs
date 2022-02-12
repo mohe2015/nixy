@@ -46,7 +46,9 @@ pub trait ASTVisitor<'a, R: std::fmt::Debug> {
 
     fn visit_string(&mut self, string: &'a [u8]) -> R;
 
-    fn visit_string_concatenate(&mut self, begin: R, last: R) -> R;
+    fn visit_string_concatenate(&mut self, begin: Option<R>, last: R) -> R;
+
+    fn visit_string_concatenate_end(&mut self, result: Option<R>) -> R;
 
     fn visit_array_start(&mut self);
 
@@ -98,6 +100,7 @@ pub struct ASTJavaTranspiler<'a, W: Write> {
 #[test]
 pub fn test_java_transpiler() {
     // https://learnxinyminutes.com/docs/nix/
+    test_java_transpiler_code(br#"("Your home directory is ${1} ${1}")"#);
     test_java_transpiler_code(b"(true && false)");
     test_java_transpiler_code(b"(true || false)");
     test_java_transpiler_code(br#"(if 3 < 4 then "a" else "b")"#);
@@ -106,32 +109,43 @@ pub fn test_java_transpiler() {
     test_java_transpiler_code(br#"(7 / 2)"#);
     test_java_transpiler_code(br#"(7 / 2.0)"#);
     test_java_transpiler_code(br#""Strings literals are in double quotes.""#);
-    test_java_transpiler_code(br#""
+    test_java_transpiler_code(
+        br#""
     String literals can span
     multiple lines.
-  ""#);
-    test_java_transpiler_code(br#"''
+  ""#,
+    );
+    test_java_transpiler_code(
+        br#"''
     This is called an "indented string" literal.
     It intelligently strips leading whitespace.
-  ''"#);
-    test_java_transpiler_code(br#"''
+  ''"#,
+    );
+    test_java_transpiler_code(
+        br#"''
     a
       b
-  ''"#);
+  ''"#,
+    );
     test_java_transpiler_code(br#"("ab" + "cd")"#);
-    test_java_transpiler_code(br#"("Your home directory is ${1}")"#);
     test_java_transpiler_code(br#"/tmp/tutorials/learn.nix"#);
     test_java_transpiler_code(br#"7/2"#);
     test_java_transpiler_code(br#"(7 / 2)"#);
     test_java_transpiler_code(br#"(import /tmp/foo.nix)"#);
-    test_java_transpiler_code(br#"(let x = "a"; in
-    x + x + x)"#);
-    test_java_transpiler_code(br#" (let y = x + "b";
+    test_java_transpiler_code(
+        br#"(let x = "a"; in
+    x + x + x)"#,
+    );
+    test_java_transpiler_code(
+        br#" (let y = x + "b";
     x = "a"; in
- y + "c")"#);
-    test_java_transpiler_code(br#"(let a = 1; in
+ y + "c")"#,
+    );
+    test_java_transpiler_code(
+        br#"(let a = 1; in
         let a = 2; in
-          a)"#);
+          a)"#,
+    );
     test_java_transpiler_code(br#"(n: n + 1)"#);
     test_java_transpiler_code(br#"((n: n + 1) 5)"#);
     test_java_transpiler_code(br#"(let succ = (n: n + 1); in succ 5)"#);
@@ -153,20 +167,28 @@ pub fn test_java_transpiler() {
     test_java_transpiler_code(br#"({ a = 1; b = 2; } // { a = 3; c = 4; })"#);
     test_java_transpiler_code(br#"(let a = 1; in { a = 2; b = a; }.b)"#);
     test_java_transpiler_code(br#"(let a = 1; in rec { a = 2; b = a; }.b)"#);
-    test_java_transpiler_code(br#"{
+    test_java_transpiler_code(
+        br#"{
         a.b = 1;
         a.c.d = 2;
         a.c.e = 3;
-      }.a.c"#);
-    test_java_transpiler_code(br#"{
+      }.a.c"#,
+    );
+    test_java_transpiler_code(
+        br#"{
         a = { b = 1; };
         a.c = 2;
-      }"#);
-    test_java_transpiler_code(br#"(with { a = 1; b = 2; };
-        a + b)"#);
-    test_java_transpiler_code(br#"(with { a = 1; b = 2; };
+      }"#,
+    );
+    test_java_transpiler_code(
+        br#"(with { a = 1; b = 2; };
+        a + b)"#,
+    );
+    test_java_transpiler_code(
+        br#"(with { a = 1; b = 2; };
         (with { a = 5; };
-          a + b))"#);
+          a + b))"#,
+    );
     test_java_transpiler_code(br#"(args: args.x + "-" + args.y) { x = "a"; y = "b"; }"#);
     test_java_transpiler_code(br#"({x, y}: x + "-" + y) { x = "a"; y = "b"; }"#);
     test_java_transpiler_code(br#"({x, y, ...}: x + "-" + y) { x = "a"; y = "b"; z = "c"; }"#);
@@ -345,8 +367,19 @@ public class MainClosure extends NixLazyBase {{
         .unwrap();
     }
 
-    fn visit_string_concatenate(&mut self, begin: (), last: ()) -> () {
-        todo!()
+    fn visit_string_concatenate(&mut self, begin: Option<()>, last: ()) -> () {
+        match begin {
+            Some(_) => {
+                write!(self.writer, r#").add("#,).unwrap();
+            }
+            None => {
+                write!(self.writer, r#".add("#,).unwrap();
+            }
+        }
+    }
+
+    fn visit_string_concatenate_end(&mut self, result: Option<()>) -> () {
+        write!(self.writer, r#")"#,).unwrap();
     }
 
     fn visit_array_start(&mut self) {
@@ -675,7 +708,7 @@ impl<'a> ASTVisitor<'a, AST<'a>> for ASTBuilder {
         AST::String(string)
     }
 
-    fn visit_string_concatenate(&mut self, _begin: AST<'a>, _last: AST<'a>) -> AST<'a> {
+    fn visit_string_concatenate(&mut self, _begin: Option<AST<'a>>, _last: AST<'a>) -> AST<'a> {
         todo!()
     }
     fn visit_array_start(&mut self) {
@@ -779,6 +812,10 @@ impl<'a> ASTVisitor<'a, AST<'a>> for ASTBuilder {
     }
 
     fn visit_attrset(&mut self, binds: Option<AST<'a>>) -> AST<'a> {
+        todo!()
+    }
+
+    fn visit_string_concatenate_end(&mut self, result: Option<AST<'a>>) -> AST<'a> {
         todo!()
     }
 }

@@ -6,13 +6,17 @@ public interface NixLazy {
 		return () -> ((NixBoolean) condition.force()).value ? trueCase.force() : falseCase.force();
 	}
 
+	default NixLazy add() {
+		return this;
+	}
+
 	default NixLazy add(NixLazy second) {
 		NixLambda.ensureLambda(second);
 		return () -> {
 			NixValue thisForced = this.force();
 			NixValue secondForced = second.force();
-			if (thisForced instanceof NixString && secondForced instanceof NixString) {
-				return NixString.create(((NixString) thisForced).value + ((NixString) secondForced).value).force();
+			if (thisForced instanceof NixString || secondForced instanceof NixString) {
+				return NixString.create(((NixToString) thisForced).toNixString().value + ((NixToString) secondForced).toNixString().value).force();
 			}
 			if (thisForced instanceof NixFloat || secondForced instanceof NixFloat) {
 				return NixFloat.create(((NixNumber) thisForced).toNixFloat().value + ((NixNumber) secondForced).toNixFloat().value).force();

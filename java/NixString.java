@@ -1,6 +1,6 @@
 import java.util.Objects;
 
-public class NixString implements NixValue {
+public class NixString implements NixValue, NixToString {
 
 	String value;
 
@@ -35,5 +35,11 @@ public class NixString implements NixValue {
 		return "NixString{" +
 				"value='" + value + '\'' +
 				'}';
+	}
+
+
+	@Override
+	public NixString toNixString() {
+		return this;
 	}
 }

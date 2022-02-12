@@ -1,6 +1,6 @@
 import java.util.Objects;
 
-public class NixBoolean implements NixValue {
+public class NixBoolean implements NixValue, NixToString {
 
 	boolean value;
 
@@ -37,4 +37,8 @@ public class NixBoolean implements NixValue {
 				'}';
 	}
 
+	@Override
+	public NixString toNixString() {
+		return (NixString) NixString.create(Boolean.toString(value)).force();
+	}
 }
