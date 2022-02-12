@@ -100,10 +100,15 @@ pub struct ASTJavaTranspiler<'a, W: Write> {
 #[test]
 pub fn test_java_transpiler() {
     // https://learnxinyminutes.com/docs/nix/
-    test_java_transpiler_code(
+    /*test_java_transpiler_code(
         br#" (let y = x + "b";
     x = "a"; in
  y + "c")"#,
+    );*/
+    test_java_transpiler_code(
+        br#"(let a = 1; in
+        let a = 2; in
+          a)"#,
     );
     test_java_transpiler_code(br#"(import /tmp/foo.nix)"#);
     test_java_transpiler_code(br#"/tmp/tutorials/learn.nix"#);
@@ -140,11 +145,6 @@ pub fn test_java_transpiler() {
     test_java_transpiler_code(
         br#"(let x = "a"; in
     x + x + x)"#,
-    );
-    test_java_transpiler_code(
-        br#"(let a = 1; in
-        let a = 2; in
-          a)"#,
     );
     test_java_transpiler_code(br#"(n: n + 1)"#);
     test_java_transpiler_code(br#"((n: n + 1) 5)"#);
@@ -446,8 +446,11 @@ public class MainClosure extends NixLazyBase {{
     fn visit_let_before(&mut self) {
         write!(
             self.writer,
-            r#"((NixLazy) () -> {{
-			/* head */\n"#,
+            "(new NixLazy() {{
+
+                @Override
+                public NixValue force() {{
+			/* head */\n",
         )
         .unwrap();
     }
@@ -459,7 +462,7 @@ public class MainClosure extends NixLazyBase {{
     }
 
     fn visit_let(&mut self, binds: Option<()>, body: ()) -> () {
-        write!(self.writer, ".force(); }})",).unwrap();
+        write!(self.writer, ".force(); }}}})",).unwrap();
     }
 
     fn visit_attrset_before(&mut self, binds: &Option<()>) {
