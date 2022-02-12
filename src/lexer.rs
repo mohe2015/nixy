@@ -309,7 +309,7 @@ impl<'a> Iterator for NixLexer<'a> {
                     Some((_, b'*')) => {
                         self.iter.next();
                         loop {
-                            let current = self.iter.next().unwrap().0;
+                            let current = self.iter.next().map(|v| v.0).unwrap_or(self.data.len());
 
                             if self.data[current..].starts_with(b"*/") {
                                 self.iter.next();
@@ -473,7 +473,7 @@ impl<'a> Iterator for NixLexer<'a> {
                 }),
                 Some((offset, b'#')) if self.line_start => {
                     let end = self.iter.find(|(_, c)| **c == b'\n');
-                    let comment = &self.data[offset..=end.map(|v| v.0).unwrap_or(usize::MAX)];
+                    let comment = &self.data[offset..=end.map(|v| v.0).unwrap_or(self.data.len())];
                     //println!("{:?}", std::str::from_utf8(comment));
                     Some(NixToken {
                         token_type: NixTokenType::SingleLineComment(comment),
@@ -487,7 +487,7 @@ impl<'a> Iterator for NixLexer<'a> {
                     while let Some((_, b' ')) | Some((_, b'\t')) | Some((_, b'\r'))
                     | Some((_, b'\n')) = self.iter.peek()
                     {
-                        end = self.iter.next().unwrap().0;
+                        end = self.iter.next().map(|v| v.0).unwrap_or(self.data.len());
                     }
                     let whitespace = &self.data[offset..end];
                     //println!("{:?}", std::str::from_utf8(whitespace));
@@ -508,7 +508,7 @@ impl<'a> Iterator for NixLexer<'a> {
                     {
                         self.iter.next();
                     }
-                    let identifier = &self.data[offset..self.iter.peek().unwrap().0];
+                    let identifier = &self.data[offset..self.iter.peek().map(|v| v.0).unwrap_or(self.data.len())];
                     Some(NixToken {
                         token_type: (match identifier {
                             b"if" => NixTokenType::If,
@@ -528,13 +528,13 @@ impl<'a> Iterator for NixLexer<'a> {
                 Some((offset, b'0'..=b'9')) => {
                     let mut last = offset;
                     while let Some((_, b'0'..=b'9')) = self.iter.peek() {
-                        last = self.iter.next().unwrap().0;
+                        last = self.iter.next().map(|v| v.0).unwrap_or(self.data.len());
                     }
                     if let Some((_, b'.')) = self.iter.peek() {
                         // float
                         self.iter.next();
                         while let Some((_, b'0'..=b'9')) = self.iter.peek() {
-                            last = self.iter.next().unwrap().0;
+                            last = self.iter.next().map(|v| v.0).unwrap_or(self.data.len());
                         }
                         let float = std::str::from_utf8(&self.data[offset..=last]).unwrap();
                         //println!("{:?}", integer);
@@ -562,10 +562,10 @@ impl<'a> Iterator for NixLexer<'a> {
                 }
             },
             state @ (Some(NixLexerState::String) | Some(NixLexerState::IndentedString)) => {
-                let start = self.iter.peek().unwrap().0; // TODO FIXME throw proper parse error (maybe error token)
+                let start = self.iter.peek().map(|v| v.0).unwrap_or(self.data.len()); // TODO FIXME throw proper parse error (maybe error token)
 
                 loop {
-                    let current = self.iter.peek().unwrap().0;
+                    let current = self.iter.peek().map(|v| v.0).unwrap_or(self.data.len());
                     if state == Some(&NixLexerState::String) && self.data[current] == b'"' {
                         if current == start {
                             self.iter.next();
@@ -585,7 +585,7 @@ impl<'a> Iterator for NixLexer<'a> {
                     if state == Some(&NixLexerState::String) && self.data[current] == b'\\' {
                         if current == start {
                             self.iter.next();
-                            let tok = self.iter.next().unwrap().0; // TODO FIXME
+                            let tok = self.iter.next().map(|v| v.0).unwrap_or(self.data.len()); // TODO FIXME
 
                             return Some(NixToken {
                                 token_type: NixTokenType::String(&self.data[tok..tok]),
@@ -604,7 +604,7 @@ impl<'a> Iterator for NixLexer<'a> {
                         if current == start {
                             self.iter.next();
                             self.iter.next();
-                            let current = self.iter.next().unwrap().0;
+                            let current = self.iter.next().map(|v| v.0).unwrap_or(self.data.len());
 
                             break Some(NixToken {
                                 token_type: NixTokenType::String(&self.data[current..current]),
@@ -623,7 +623,7 @@ impl<'a> Iterator for NixLexer<'a> {
                         if current == start {
                             self.iter.next();
                             self.iter.next();
-                            let current = self.iter.next().unwrap().0;
+                            let current = self.iter.next().map(|v| v.0).unwrap_or(self.data.len());
 
                             break Some(NixToken {
                                 token_type: NixTokenType::String(&self.data[current..current]),
@@ -697,7 +697,7 @@ impl<'a> Iterator for NixLexer<'a> {
             state @ (Some(NixLexerState::Path)
             | Some(NixLexerState::SearchPath)
             | Some(NixLexerState::HomePath)) => {
-                let start = self.iter.peek().unwrap().0; // TODO FIXME throw proper parse error (maybe error token)
+                let start = self.iter.peek().map(|v| v.0).unwrap_or(self.data.len()); // TODO FIXME throw proper parse error (maybe error token)
 
                 // $ read
                 // peek for {
