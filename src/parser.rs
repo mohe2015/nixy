@@ -216,13 +216,15 @@ impl<
         self.visitor.visit_let_before();
 
         // maybe do this like the method after? so the let has a third parameter which is the body and which we can then concatenate afterwards
-        let binds: Option<R> = None;
+        let mut binds: Option<R> = None;
         loop {
             match self.lexer.peek() {
                 Some(NixToken {
                     token_type: NixTokenType::In,
                 }) => {
                     self.lexer.next();
+
+                    self.visitor.visit_let_before_body(&binds);
 
                     let body = self
                         .parse_expr_function()
