@@ -105,7 +105,7 @@ public class MainClosure implements NixObject {{
 
     fn visit_function_exit(&mut self, arg: (), body: ()) -> () {
         write!(self.writer, ";
-}}").unwrap();
+}})").unwrap();
     }
     
     fn visit_identifier(&mut self, id: &'a [u8]) -> () {
@@ -228,6 +228,45 @@ fn test_java_transpiler_code(code: &[u8]) {
     parser.parse();
 
     println!("code: {}", std::str::from_utf8(&data).unwrap());
+
+    std::fs::write("/tmp/MainClosure.java", data).expect("Unable to write file");
+
+
+
+    let mut fmt_cmd = std::process::Command::new("google-java-format");
+
+    fmt_cmd.arg("--replace").arg("/tmp/MainClosure.java");
+
+    let fmt_output = fmt_cmd.output().unwrap();
+
+    println!(
+        "java formatter exited with {} {} {}",
+        fmt_output.status,
+        String::from_utf8(fmt_output.stderr).unwrap(),
+        String::from_utf8(fmt_output.stdout).unwrap()
+    );
+
+    if !fmt_output.status.success() {
+        panic!("invalid syntax (according to java formatter)");
+    }
+
+
+
+    let mut compile_cmd = std::process::Command::new("javac");
+
+    compile_cmd.arg("-cp").arg("java/").arg("/tmp/MainClosure.java");
+
+    let compile_output = compile_cmd.output().unwrap();
+    println!(
+        "java compiler exited with {} {} {}",
+        compile_output.status,
+        String::from_utf8(compile_output.stderr).unwrap(),
+        String::from_utf8(compile_output.stdout).unwrap()
+    );
+
+    if !compile_output.status.success() {
+        panic!("invalid syntax (according to java compiler)");
+    }
 }
 
 pub struct ASTBuilder;
