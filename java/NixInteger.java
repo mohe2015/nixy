@@ -8,7 +8,7 @@ public class NixInteger implements NixValue {
 		this.value = value;
 	}
 
-	public static NixLazy create(int value) {
+	public static NixLazy<NixInteger> create(int value) {
 		return () -> new NixInteger(value);
 	}
 

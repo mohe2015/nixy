@@ -8,7 +8,7 @@ public class NixBoolean implements NixValue {
 		this.value = value;
 	}
 
-	public static NixLazy create(boolean value) {
+	public static NixLazy<NixBoolean> create(boolean value) {
 		return () -> {
 			return new NixBoolean(value);
 		};
