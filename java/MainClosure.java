@@ -33,6 +33,8 @@ c""").add().createCall()).force(); }).createCall().force();
 		currentVars.computeIfAbsent("a", (k) -> new ArrayDeque<>()).add(NixInteger.create(1));
 
 
+		currentVars.put("a", () -> currentVars.get("b"));
+		currentVars.put("b", () -> 5);
 
 
 		currentVars.get("a").pop();
