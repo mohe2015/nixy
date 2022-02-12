@@ -136,8 +136,32 @@ public class MainClosure implements NixLazy {{
             NixTokenType::Addition => {
                 write!(self.writer, ".add(").unwrap();
             }
+            NixTokenType::Subtraction => {
+                write!(self.writer, ".subtract(").unwrap();
+            }
+            NixTokenType::Multiplication => {
+                write!(self.writer, ".multiply(").unwrap();
+            }
+            NixTokenType::Division => {
+                write!(self.writer, ".divide(").unwrap();
+            }
             NixTokenType::Equals => {
                 write!(self.writer, ".eq(").unwrap();
+            }
+            NixTokenType::NotEquals => {
+                write!(self.writer, ".neq(").unwrap();
+            }
+            NixTokenType::LessThan => {
+                write!(self.writer, ".lt(").unwrap();
+            }
+            NixTokenType::LessThanOrEqual => {
+                write!(self.writer, ".lte(").unwrap();
+            }
+            NixTokenType::GreaterThan => {
+                write!(self.writer, ".gt(").unwrap();
+            }
+            NixTokenType::GreaterThanOrEqual => {
+                write!(self.writer, ".gte(").unwrap();
             }
             _ => todo!()
         }
