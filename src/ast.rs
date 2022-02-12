@@ -3,7 +3,7 @@ use std::io::Write;
 
 use crate::{
     lexer::NixTokenType,
-    parser::{AST, BUILTIN_IF, BUILTIN_PATH_CONCATENATE, BUILTIN_UNARY_MINUS, BUILTIN_UNARY_NOT, BUILTIN_SELECT, Parser},
+    parser::{AST, BUILTIN_IF, BUILTIN_PATH_CONCATENATE, BUILTIN_UNARY_MINUS, BUILTIN_UNARY_NOT, BUILTIN_SELECT, Parser, BindType},
 };
 
 pub trait ASTVisitor<'a, R: std::fmt::Debug> {
@@ -60,19 +60,17 @@ pub trait ASTVisitor<'a, R: std::fmt::Debug> {
 
     fn visit_call(&mut self, function: R, parameter: R) -> R;
 
-    fn visit_attrset_bind_push(&mut self, begin: Option<R>, last: R) -> R;
-
     fn visit_function_enter(&mut self, arg: &R);
 
     fn visit_function_exit(&mut self, arg: R, body: R) -> R;
 
     fn visit_function_before(&mut self);
 
-    fn visit_bind_before(&mut self);
+    fn visit_bind_before(&mut self, bind_type: BindType);
 
-    fn visit_bind_between(&mut self, attrpath: &R);
+    fn visit_bind_between(&mut self, bind_type: BindType, attrpath: &R);
 
-    fn visit_bind_after(&mut self, attrpath: R, expr: R) -> R;
+    fn visit_bind_after(&mut self, bind_type: BindType, attrpath: R, expr: R) -> R;
 
     fn visit_let_before(&mut self);
 
@@ -81,6 +79,12 @@ pub trait ASTVisitor<'a, R: std::fmt::Debug> {
     fn visit_let_before_body(&mut self, binds: &Option<R>);
 
     fn visit_let(&mut self, binds: Option<R>, body: R) -> R;
+
+    fn visit_attrset_before(&mut self, binds: &Option<R>);
+
+    fn visit_attrset_bind_push(&mut self, begin: Option<R>, last: R) -> R;
+
+    fn visit_attrset(&mut self, binds: Option<R>) -> R;
 }
 
 pub struct ASTJavaTranspiler<'a, W: Write> {
@@ -274,19 +278,15 @@ public class MainClosure implements NixLazy {{
         write!(self.writer, r#")"#, ).unwrap();
     }
 
-    fn visit_attrset_bind_push(&mut self, begin: Option<()>, last: ()) -> () {
-        todo!()
-    }
-
-    fn visit_bind_before(&mut self) {
+    fn visit_bind_before(&mut self, bind_type: BindType) {
         write!(self.writer, r#"NixLazy "#, ).unwrap();
     }
 
-    fn visit_bind_between(&mut self, attrpath: &()) {
+    fn visit_bind_between(&mut self, bind_type: BindType, attrpath: &()) {
         write!(self.writer, r#" = "#, ).unwrap();
     }
 
-    fn visit_bind_after(&mut self, attrpath: (), expr: ()) -> () {
+    fn visit_bind_after(&mut self, bind_type: BindType, attrpath: (), expr: ()) -> () {
         write!(self.writer, ";\n", ).unwrap();
     }
 
@@ -304,6 +304,18 @@ public class MainClosure implements NixLazy {{
 
     fn visit_let(&mut self, binds: Option<()>, body: ()) -> () {
         write!(self.writer, ".force(); }})", ).unwrap();
+    }
+
+    fn visit_attrset_before(&mut self, binds: &Option<()>) {
+        todo!()
+    }
+
+    fn visit_attrset_bind_push(&mut self, begin: Option<()>, last: ()) -> () {
+        write!(self.writer, r#"attrset"#, ).unwrap();
+    }
+
+    fn visit_attrset(&mut self, binds: Option<()>) -> () {
+        todo!()
     }
 
 }
@@ -605,15 +617,15 @@ impl<'a> ASTVisitor<'a, AST<'a>> for ASTBuilder {
         todo!()
     }
 
-    fn visit_bind_before(&mut self) {
+    fn visit_bind_before(&mut self, bind_type: BindType) {
         todo!()
     }
 
-    fn visit_bind_between(&mut self, attrpath: &AST<'a>) {
+    fn visit_bind_between(&mut self, bind_type: BindType, attrpath: &AST<'a>) {
         todo!()
     }
 
-    fn visit_bind_after(&mut self, attrpath: AST<'a>, expr: AST<'a>) -> AST<'a> {
+    fn visit_bind_after(&mut self, bind_type: BindType, attrpath: AST<'a>, expr: AST<'a>) -> AST<'a> {
         todo!()
     }
 
@@ -630,6 +642,14 @@ impl<'a> ASTVisitor<'a, AST<'a>> for ASTBuilder {
     }
 
     fn visit_let_before_body(&mut self, binds: &Option<AST<'a>>) {
+        todo!()
+    }
+
+    fn visit_attrset_before(&mut self, binds: &Option<AST<'a>>) {
+        todo!()
+    }
+
+    fn visit_attrset(&mut self, binds: Option<AST<'a>>) -> AST<'a> {
         todo!()
     }
 

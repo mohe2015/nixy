@@ -77,6 +77,9 @@ pub struct Parser<
     pub phantom: PhantomData<R>, // https://github.com/rust-lang/rust/issues/23246
 }
 
+#[derive(Copy, Clone)]
+pub enum BindType { Let, Attrset }
+
 impl<
         'a,
         I: Iterator<Item = NixToken<'a>> + std::fmt::Debug,
@@ -151,8 +154,9 @@ impl<
         result
     }
 
+
     #[cfg_attr(debug_assertions, instrument(name = "bind", skip_all, ret))]
-    pub fn parse_bind(&mut self) -> R {
+    pub fn parse_bind(&mut self, bind_type: BindType) -> R {
         match self.lexer.peek() {
             Some(NixToken {
                 token_type: NixTokenType::Inherit,
@@ -192,19 +196,19 @@ impl<
             _other => {
                 self.lexer.reset_peek();
 
-                self.visitor.visit_bind_before();
+                self.visitor.visit_bind_before(bind_type);
 
                 let attrpath = self.parse_attrpath().unwrap();
                 self.expect(NixTokenType::Assign);
 
-                self.visitor.visit_bind_between(&attrpath);
+                self.visitor.visit_bind_between(bind_type, &attrpath);
 
                 let expr = self
                     .parse_expr()
                     .expect("expected expression in binding at");
                 self.expect(NixTokenType::Semicolon);
 
-                self.visitor.visit_bind_after(attrpath, expr)
+                self.visitor.visit_bind_after(bind_type, attrpath, expr)
             }
         }
     }
@@ -234,7 +238,7 @@ impl<
                 }
                 _ => {
                     self.lexer.reset_peek();
-                    let bind = self.parse_bind();
+                    let bind = self.parse_bind(BindType::Let);
 
                     binds = Some(self.visitor.visit_let_push_bind(binds, bind));
                 }
@@ -350,17 +354,18 @@ impl<
 
         let mut binds: Option<R> = None;
         loop {
+            self.visitor.visit_attrset_before(&binds);
             match self.lexer.peek() {
                 Some(NixToken {
                     token_type: NixTokenType::CurlyClose,
                 }) => {
                     self.expect(NixTokenType::CurlyClose);
 
-                    break binds;
+                    break Some(self.visitor.visit_attrset(binds));
                 }
                 _ => {
                     self.lexer.reset_peek();
-                    let bind = self.parse_bind();
+                    let bind = self.parse_bind(BindType::Attrset);
 
                     binds = Some(self.visitor.visit_attrset_bind_push(binds, bind));
                 }
@@ -426,8 +431,7 @@ impl<
             Some(NixToken {
                 token_type: NixTokenType::CurlyOpen,
             }) => {
-                self.parse_attrset();
-                Some(self.visitor.visit_todo())
+                self.parse_attrset()
             }
             Some(NixToken {
                 token_type: NixTokenType::BracketOpen,
