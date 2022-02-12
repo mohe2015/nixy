@@ -1,3 +1,6 @@
+import java.util.IdentityHashMap;
+import java.util.Map;
+
 public class MainClosure implements NixLazy {
 
 	public static void main(String[] args) {
@@ -5,13 +8,15 @@ public class MainClosure implements NixLazy {
 	}
 
 	public NixValue force() {
-		return NixInteger.create(1).add(() -> {
+
+		return NixAttrset.create(new IdentityHashMap<String, NixLazy>() {{
 			// head
 			NixLazy a = NixInteger.create(5);
 			NixLazy b = NixInteger.create(7);
 
 			// body
-			return a.add(b).force();
-		}).force();
+			this.put("a".intern(), a);
+			this.put("b".intern(), a);
+		}}).force();
 	}
 }

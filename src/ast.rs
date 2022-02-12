@@ -90,6 +90,7 @@ pub struct ASTJavaTranspiler<'a, W: Write> {
 // cargo test ast::test_java_transpiler -- --nocapture
 #[test]
 pub fn test_java_transpiler() {
+    test_java_transpiler_code(b"{ a = 1; b = 10; }");
     test_java_transpiler_code(b"let a = 5; b = 7; in a + b");
     test_java_transpiler_code(b"(a: a + 1) 2");
     test_java_transpiler_code(br#"["1" "true" "yes"]"#);
