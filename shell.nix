@@ -8,6 +8,7 @@ stdenv.mkDerivation {
     rust-analyzer
     rustfmt
     google-java-format
+    openjdk17
   ];
   buildInputs = [ ];
 

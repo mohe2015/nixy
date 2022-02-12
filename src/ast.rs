@@ -92,7 +92,7 @@ public class MainClosure implements NixObject {{
     }
 
     fn visit_function_before(&mut self) {
-        write!(self.writer, "((").unwrap();
+        write!(self.writer, "((NixObject) (").unwrap();
     }
 
     fn visit_function_enter(&mut self, arg: &()) {
