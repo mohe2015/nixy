@@ -97,6 +97,82 @@ pub struct ASTJavaTranspiler<'a, W: Write> {
 // cargo test ast::test_java_transpiler -- --nocapture
 #[test]
 pub fn test_java_transpiler() {
+    // https://learnxinyminutes.com/docs/nix/
+    test_java_transpiler_code(b"(true && false)");
+    test_java_transpiler_code(b"(true || false)");
+    test_java_transpiler_code(br#"(if 3 < 4 then "a" else "b")"#);
+    test_java_transpiler_code(br#"(4 + 6 + 12 - 2)"#);
+    test_java_transpiler_code(br#"(4 - 2.5)"#);
+    test_java_transpiler_code(br#"(7 / 2)"#);
+    test_java_transpiler_code(br#"(7 / 2.0)"#);
+    test_java_transpiler_code(br#""Strings literals are in double quotes.""#);
+    test_java_transpiler_code(br#""
+    String literals can span
+    multiple lines.
+  ""#);
+    test_java_transpiler_code(br#"''
+    This is called an "indented string" literal.
+    It intelligently strips leading whitespace.
+  ''"#);
+    test_java_transpiler_code(br#"''
+    a
+      b
+  ''"#);
+    test_java_transpiler_code(br#"("ab" + "cd")"#);
+    test_java_transpiler_code(br#"("Your home directory is ${1}")"#);
+    test_java_transpiler_code(br#"/tmp/tutorials/learn.nix"#);
+    test_java_transpiler_code(br#"7/2"#);
+    test_java_transpiler_code(br#"(7 / 2)"#);
+    test_java_transpiler_code(br#"(import /tmp/foo.nix)"#);
+    test_java_transpiler_code(br#"(let x = "a"; in
+    x + x + x)"#);
+    test_java_transpiler_code(br#" (let y = x + "b";
+    x = "a"; in
+ y + "c")"#);
+    test_java_transpiler_code(br#"(let a = 1; in
+        let a = 2; in
+          a)"#);
+    test_java_transpiler_code(br#"(n: n + 1)"#);
+    test_java_transpiler_code(br#"((n: n + 1) 5)"#);
+    test_java_transpiler_code(br#"(let succ = (n: n + 1); in succ 5)"#);
+    test_java_transpiler_code(br#"((x: y: x + "-" + y) "a" "b")"#);
+    test_java_transpiler_code(br#"length [1 2 3 "x"])"#);
+    test_java_transpiler_code(br#"([1 2 3] ++ [4 5])"#);
+    test_java_transpiler_code(br#"(concatLists [[1 2] [3 4] [5]])"#);
+    test_java_transpiler_code(br#"(head [1 2 3])"#);
+    test_java_transpiler_code(br#"(tail [1 2 3])"#);
+    test_java_transpiler_code(br#"(elemAt ["a" "b" "c" "d"] 2)"#);
+    test_java_transpiler_code(br#"(elem 2 [1 2 3])"#);
+    test_java_transpiler_code(br#"(elem 5 [1 2 3])"#);
+    test_java_transpiler_code(br#"(filter (n: n < 3) [1 2 3 4])"#);
+    test_java_transpiler_code(br#"{ foo = [1 2]; bar = "x"; }"#);
+    test_java_transpiler_code(br#"{ a = 1; b = 2; }.a"#);
+    test_java_transpiler_code(br#"({ a = 1; b = 2; } ? a)"#);
+    test_java_transpiler_code(br#"({ a = 1; b = 2; } ? c)"#);
+    test_java_transpiler_code(br#"({ a = 1; } // { b = 2; })"#);
+    test_java_transpiler_code(br#"({ a = 1; b = 2; } // { a = 3; c = 4; })"#);
+    test_java_transpiler_code(br#"(let a = 1; in { a = 2; b = a; }.b)"#);
+    test_java_transpiler_code(br#"(let a = 1; in rec { a = 2; b = a; }.b)"#);
+    test_java_transpiler_code(br#"{
+        a.b = 1;
+        a.c.d = 2;
+        a.c.e = 3;
+      }.a.c"#);
+    test_java_transpiler_code(br#"{
+        a = { b = 1; };
+        a.c = 2;
+      }"#);
+    test_java_transpiler_code(br#"(with { a = 1; b = 2; };
+        a + b)"#);
+    test_java_transpiler_code(br#"(with { a = 1; b = 2; };
+        (with { a = 5; };
+          a + b))"#);
+    test_java_transpiler_code(br#"(args: args.x + "-" + args.y) { x = "a"; y = "b"; }"#);
+    test_java_transpiler_code(br#"({x, y}: x + "-" + y) { x = "a"; y = "b"; }"#);
+    test_java_transpiler_code(br#"({x, y, ...}: x + "-" + y) { x = "a"; y = "b"; z = "c"; }"#);
+    test_java_transpiler_code(br#"(assert 1 < 2; 42)"#);
+    test_java_transpiler_code(br#"(tryEval 42)"#);
+
     test_java_transpiler_code(b"{ a = 1; b = 10; }");
     test_java_transpiler_code(b"let a = 5; b = 7; in a + b");
     test_java_transpiler_code(b"(a: a + 1) 2");
