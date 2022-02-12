@@ -508,7 +508,8 @@ impl<'a> Iterator for NixLexer<'a> {
                     {
                         self.iter.next();
                     }
-                    let identifier = &self.data[offset..self.iter.peek().map(|v| v.0).unwrap_or(self.data.len())];
+                    let identifier = &self.data
+                        [offset..self.iter.peek().map(|v| v.0).unwrap_or(self.data.len())];
                     Some(NixToken {
                         token_type: (match identifier {
                             b"if" => NixTokenType::If,

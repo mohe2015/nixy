@@ -21,7 +21,6 @@ pub const BUILTIN_STRING_CONCATENATE: &[u8] = b"__builtin_string_concatenate";
 pub const BUILTIN_UNARY_MINUS: &[u8] = b"__builtin_unary_minus";
 pub const BUILTIN_SELECT: &[u8] = b"__builtin_select";
 
-
 #[derive(PartialEq)]
 pub enum AST<'a> {
     Identifier(&'a [u8]),
@@ -78,7 +77,10 @@ pub struct Parser<
 }
 
 #[derive(Copy, Clone)]
-pub enum BindType { Let, Attrset }
+pub enum BindType {
+    Let,
+    Attrset,
+}
 
 impl<
         'a,
@@ -153,7 +155,6 @@ impl<
         }
         result
     }
-
 
     #[cfg_attr(debug_assertions, instrument(name = "bind", skip_all, ret))]
     pub fn parse_bind(&mut self, bind_type: BindType) -> R {
@@ -275,11 +276,7 @@ impl<
                 }) => match result {
                     Some(a) => {
                         let segment = self.visitor.visit_path_segment(segment);
-                        result =
-                            Some(self.visitor.visit_path_concatenate(
-                                a,
-                                segment
-                            ));
+                        result = Some(self.visitor.visit_path_concatenate(a, segment));
                     }
                     None => result = Some(self.visitor.visit_path_segment(segment)),
                 },
@@ -305,10 +302,7 @@ impl<
                 }) => match accum {
                     Some(v) => {
                         let string = self.visitor.visit_string(string);
-                        accum = Some(
-                            self.visitor
-                                .visit_string_concatenate(v, string),
-                        );
+                        accum = Some(self.visitor.visit_string_concatenate(v, string));
                     }
                     None => {
                         accum = Some(self.visitor.visit_string(string));
@@ -319,10 +313,7 @@ impl<
                 }) => match accum {
                     Some(v) => {
                         let string = self.visitor.visit_string(string);
-                        accum = Some(
-                            self.visitor
-                                .visit_string_concatenate(v, string),
-                        );
+                        accum = Some(self.visitor.visit_string_concatenate(v, string));
                     }
                     None => {
                         accum = Some(self.visitor.visit_string(string));
@@ -430,9 +421,7 @@ impl<
             }
             Some(NixToken {
                 token_type: NixTokenType::CurlyOpen,
-            }) => {
-                self.parse_attrset()
-            }
+            }) => self.parse_attrset(),
             Some(NixToken {
                 token_type: NixTokenType::BracketOpen,
             }) => {
@@ -561,7 +550,7 @@ impl<
         let mut result: Option<R> = None;
         loop {
             self.visitor.visit_call_maybe(&result);
-            let jo = self.parse_expr_select();            
+            let jo = self.parse_expr_select();
             match jo {
                 Some(expr) => {
                     match result {
@@ -716,7 +705,8 @@ impl<
                 self.visitor.visit_if_after_condition(&condition);
                 self.expect(NixTokenType::Then);
                 let true_case = self.parse_expr().expect("failed to parse if true case");
-                self.visitor.visit_if_after_true_case(&condition, &true_case);
+                self.visitor
+                    .visit_if_after_true_case(&condition, &true_case);
                 self.expect(NixTokenType::Else);
                 let false_case = self.parse_expr().expect("failed to parse if false case");
                 Some(self.visitor.visit_if(condition, true_case, false_case))
@@ -901,19 +891,21 @@ impl<
                         // function call
                         let ident = self.lexer.next().unwrap();
                         match ident {
-                            NixToken { token_type: NixTokenType::Identifier(ident) } => {
+                            NixToken {
+                                token_type: NixTokenType::Identifier(ident),
+                            } => {
                                 self.visitor.visit_function_before();
 
                                 let arg = self.visitor.visit_identifier(ident);
-                        
+
                                 self.visitor.visit_function_enter(&arg);
-        
+
                                 self.expect(NixTokenType::Colon);
                                 let body = self.parse_expr_function().unwrap();
-        
+
                                 Some(self.visitor.visit_function_exit(arg, body))
                             }
-                            _ => todo!()
+                            _ => todo!(),
                         }
                     }
                     Some(NixToken {

@@ -1,9 +1,12 @@
-use std::{io::BufWriter, marker::PhantomData};
 use std::io::Write;
+use std::{io::BufWriter, marker::PhantomData};
 
 use crate::{
     lexer::NixTokenType,
-    parser::{AST, BUILTIN_IF, BUILTIN_PATH_CONCATENATE, BUILTIN_UNARY_MINUS, BUILTIN_UNARY_NOT, BUILTIN_SELECT, Parser, BindType},
+    parser::{
+        BindType, Parser, AST, BUILTIN_IF, BUILTIN_PATH_CONCATENATE, BUILTIN_SELECT,
+        BUILTIN_UNARY_MINUS, BUILTIN_UNARY_NOT,
+    },
 };
 
 pub trait ASTVisitor<'a, R: std::fmt::Debug> {
@@ -88,7 +91,7 @@ pub trait ASTVisitor<'a, R: std::fmt::Debug> {
 }
 
 pub struct ASTJavaTranspiler<'a, W: Write> {
-    writer: &'a mut W
+    writer: &'a mut W,
 }
 
 // cargo test ast::test_java_transpiler -- --nocapture
@@ -106,22 +109,30 @@ pub fn test_java_transpiler() {
 
 impl<'a, W: Write> ASTVisitor<'a, ()> for ASTJavaTranspiler<'a, W> {
     fn visit_file_start(&mut self) {
-        write!(self.writer, r#"
+        write!(
+            self.writer,
+            r#"
 public class MainClosure implements NixLazy {{
 
     public NixValue force() {{
-        return "#).unwrap();
+        return "#
+        )
+        .unwrap();
     }
 
     fn visit_file_end(&mut self) {
-        write!(self.writer, r#".force();
+        write!(
+            self.writer,
+            r#".force();
     }}
 
     public static void main(String[] args) {{
 		System.out.println(new MainClosure().force());
 	}}
 }}
-        "#).unwrap();
+        "#
+        )
+        .unwrap();
     }
 
     // probably also make functions lazy?
@@ -130,17 +141,24 @@ public class MainClosure implements NixLazy {{
     }
 
     fn visit_function_enter(&mut self, arg: &()) {
-        write!(self.writer, r#" -> {{
+        write!(
+            self.writer,
+            r#" -> {{
             return 
-        "#).unwrap();
-
+        "#
+        )
+        .unwrap();
     }
 
     fn visit_function_exit(&mut self, arg: (), body: ()) -> () {
-        write!(self.writer, ".force();
-}})").unwrap();
+        write!(
+            self.writer,
+            ".force();
+}})"
+        )
+        .unwrap();
     }
-    
+
     fn visit_identifier(&mut self, id: &'a [u8]) -> () {
         write!(self.writer, "{}", std::str::from_utf8(id).unwrap()).unwrap();
     }
@@ -193,7 +211,7 @@ public class MainClosure implements NixLazy {{
             NixTokenType::GreaterThanOrEqual => {
                 write!(self.writer, ".gte(").unwrap();
             }
-            _ => todo!()
+            _ => todo!(),
         }
     }
 
@@ -235,7 +253,12 @@ public class MainClosure implements NixLazy {{
 
     fn visit_string(&mut self, string: &'a [u8]) -> () {
         // https://www.vojtechruzicka.com/raw-strings/
-        write!(self.writer, "NixString.create(\"\"\"\n{}\"\"\")", std::str::from_utf8(string).unwrap()).unwrap();
+        write!(
+            self.writer,
+            "NixString.create(\"\"\"\n{}\"\"\")",
+            std::str::from_utf8(string).unwrap()
+        )
+        .unwrap();
     }
 
     fn visit_string_concatenate(&mut self, begin: (), last: ()) -> () {
@@ -243,97 +266,100 @@ public class MainClosure implements NixLazy {{
     }
 
     fn visit_array_start(&mut self) {
-        write!(self.writer, r#"NixArray.create(java.util.Arrays.asList("#, ).unwrap();
+        write!(self.writer, r#"NixArray.create(java.util.Arrays.asList("#,).unwrap();
     }
 
     fn visit_array_push_before(&mut self, begin: &Option<()>) {
         if let Some(_) = begin {
-            write!(self.writer, r#","#, ).unwrap();
+            write!(self.writer, r#","#,).unwrap();
         }
     }
 
-    fn visit_array_push(&mut self, begin: Option<()>, last: ()) -> () {
-    }
+    fn visit_array_push(&mut self, begin: Option<()>, last: ()) -> () {}
 
     fn visit_array_end(&mut self, array: ()) -> () {
-        write!(self.writer, r#"))"#, ).unwrap();
+        write!(self.writer, r#"))"#,).unwrap();
     }
 
     fn visit_call_maybe(&mut self, expr: &Option<()>) {
         match expr {
             Some(_) => {
-                write!(self.writer, r#".createCall("#, ).unwrap();
+                write!(self.writer, r#".createCall("#,).unwrap();
             }
             None => {
-               // write!(self.writer, r#"NixLambda.createCall("#, ).unwrap();
+                // write!(self.writer, r#"NixLambda.createCall("#, ).unwrap();
             }
         }
     }
 
     fn visit_call_maybe_not(&mut self) {
-        write!(self.writer, r#")"#, ).unwrap();
+        write!(self.writer, r#")"#,).unwrap();
     }
 
     fn visit_call(&mut self, function: (), parameter: ()) -> () {
-        write!(self.writer, r#")"#, ).unwrap();
+        write!(self.writer, r#")"#,).unwrap();
     }
 
     fn visit_bind_before(&mut self, bind_type: BindType) {
         match bind_type {
-            BindType::Let => write!(self.writer, r#"NixLazy "#, ).unwrap(),
-            BindType::Attrset => write!(self.writer, r#"this.put(""#, ).unwrap(),
+            BindType::Let => write!(self.writer, r#"NixLazy "#,).unwrap(),
+            BindType::Attrset => write!(self.writer, r#"this.put(""#,).unwrap(),
         }
     }
 
     fn visit_bind_between(&mut self, bind_type: BindType, attrpath: &()) {
         match bind_type {
-            BindType::Let => write!(self.writer, r#" = "#, ).unwrap(),
-            BindType::Attrset => write!(self.writer, r#"".intern(), "#, ).unwrap(),
+            BindType::Let => write!(self.writer, r#" = "#,).unwrap(),
+            BindType::Attrset => write!(self.writer, r#"".intern(), "#,).unwrap(),
         }
     }
 
     fn visit_bind_after(&mut self, bind_type: BindType, attrpath: (), expr: ()) -> () {
         match bind_type {
-            BindType::Let => write!(self.writer, ";\n", ).unwrap(),
-            BindType::Attrset => write!(self.writer, ");", ).unwrap(),
+            BindType::Let => write!(self.writer, ";\n",).unwrap(),
+            BindType::Attrset => write!(self.writer, ");",).unwrap(),
         }
     }
 
     fn visit_let_before(&mut self) {
-        write!(self.writer, r#"((NixLazy) () -> {{
-			/* head */"#, ).unwrap();
+        write!(
+            self.writer,
+            r#"((NixLazy) () -> {{
+			/* head */"#,
+        )
+        .unwrap();
     }
 
-    fn visit_let_push_bind(&mut self, binds: Option<()>, bind: ()) -> () {
-    }
+    fn visit_let_push_bind(&mut self, binds: Option<()>, bind: ()) -> () {}
 
     fn visit_let_before_body(&mut self, binds: &Option<()>) {
-        write!(self.writer, "\n/* body */ \nreturn ", ).unwrap();
+        write!(self.writer, "\n/* body */ \nreturn ",).unwrap();
     }
 
     fn visit_let(&mut self, binds: Option<()>, body: ()) -> () {
-        write!(self.writer, ".force(); }})", ).unwrap();
+        write!(self.writer, ".force(); }})",).unwrap();
     }
 
     fn visit_attrset_before(&mut self, binds: &Option<()>) {
-        if let None = binds { 
-            write!(self.writer, "NixAttrset.create(new java.util.IdentityHashMap<String, NixLazy>() {{{{\n", ).unwrap();
+        if let None = binds {
+            write!(
+                self.writer,
+                "NixAttrset.create(new java.util.IdentityHashMap<String, NixLazy>() {{{{\n",
+            )
+            .unwrap();
         }
     }
 
-    fn visit_attrset_bind_push(&mut self, begin: Option<()>, last: ()) -> () {
-    }
+    fn visit_attrset_bind_push(&mut self, begin: Option<()>, last: ()) -> () {}
 
     fn visit_attrset(&mut self, binds: Option<()>) -> () {
-        write!(self.writer, r#"}}}})"#, ).unwrap();
+        write!(self.writer, r#"}}}})"#,).unwrap();
     }
 }
 
 fn test_java_transpiler_code(code: &[u8]) {
     let mut data = Vec::new();
-    let transpiler = ASTJavaTranspiler {
-        writer: &mut data
-    };
+    let transpiler = ASTJavaTranspiler { writer: &mut data };
 
     let lexer = crate::lexer::NixLexer::new(code).filter(|t| match t.token_type {
         NixTokenType::Whitespace(_)
@@ -358,8 +384,6 @@ fn test_java_transpiler_code(code: &[u8]) {
 
     std::fs::write("/tmp/MainClosure.java", data).expect("Unable to write file");
 
-
-
     let mut fmt_cmd = std::process::Command::new("google-java-format");
 
     fmt_cmd.arg("--replace").arg("/tmp/MainClosure.java");
@@ -377,11 +401,12 @@ fn test_java_transpiler_code(code: &[u8]) {
         panic!("invalid syntax (according to java formatter)");
     }
 
-
-
     let mut compile_cmd = std::process::Command::new("javac");
 
-    compile_cmd.arg("-cp").arg("java/").arg("/tmp/MainClosure.java");
+    compile_cmd
+        .arg("-cp")
+        .arg("java/")
+        .arg("/tmp/MainClosure.java");
 
     let compile_output = compile_cmd.output().unwrap();
     println!(
@@ -431,7 +456,12 @@ impl<'a> ASTVisitor<'a, AST<'a>> for ASTBuilder {
         todo!()
     }
 
-    fn visit_select(&mut self, expr: AST<'a>, attrpath: AST<'a>, default: Option<AST<'a>>) -> AST<'a> {
+    fn visit_select(
+        &mut self,
+        expr: AST<'a>,
+        attrpath: AST<'a>,
+        default: Option<AST<'a>>,
+    ) -> AST<'a> {
         let value = AST::Call(
             Box::new(AST::Call(
                 Box::new(AST::Identifier(BUILTIN_SELECT)),
@@ -634,7 +664,12 @@ impl<'a> ASTVisitor<'a, AST<'a>> for ASTBuilder {
         todo!()
     }
 
-    fn visit_bind_after(&mut self, bind_type: BindType, attrpath: AST<'a>, expr: AST<'a>) -> AST<'a> {
+    fn visit_bind_after(
+        &mut self,
+        bind_type: BindType,
+        attrpath: AST<'a>,
+        expr: AST<'a>,
+    ) -> AST<'a> {
         todo!()
     }
 
@@ -661,6 +696,4 @@ impl<'a> ASTVisitor<'a, AST<'a>> for ASTBuilder {
     fn visit_attrset(&mut self, binds: Option<AST<'a>>) -> AST<'a> {
         todo!()
     }
-
-   
 }
