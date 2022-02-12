@@ -100,6 +100,11 @@ pub struct ASTJavaTranspiler<'a, W: Write> {
 #[test]
 pub fn test_java_transpiler() {
     // https://learnxinyminutes.com/docs/nix/
+    test_java_transpiler_code(
+        br#" (let y = x + "b";
+    x = "a"; in
+ y + "c")"#,
+    );
     test_java_transpiler_code(br#"(import /tmp/foo.nix)"#);
     test_java_transpiler_code(br#"/tmp/tutorials/learn.nix"#);
     test_java_transpiler_code(br#"("Your home directory is ${1} ${1}")"#);
@@ -135,11 +140,6 @@ pub fn test_java_transpiler() {
     test_java_transpiler_code(
         br#"(let x = "a"; in
     x + x + x)"#,
-    );
-    test_java_transpiler_code(
-        br#" (let y = x + "b";
-    x = "a"; in
- y + "c")"#,
     );
     test_java_transpiler_code(
         br#"(let a = 1; in
@@ -447,7 +447,7 @@ public class MainClosure extends NixLazyBase {{
         write!(
             self.writer,
             r#"((NixLazy) () -> {{
-			/* head */"#,
+			/* head */\n"#,
         )
         .unwrap();
     }
