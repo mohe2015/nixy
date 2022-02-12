@@ -1,5 +1,4 @@
-import java.util.IdentityHashMap;
-import java.util.Map;
+import java.util.*;
 
 public class MainClosure implements NixLazy {
 
@@ -7,16 +6,20 @@ public class MainClosure implements NixLazy {
 		System.out.println(new MainClosure().force().call(NixInteger.create(5)));
 	}
 
+	IdentityHashMap<String, Deque<NixLazy>> currentVars = new IdentityHashMap<>();
+
+	//Deque<List<String>> stackFrames = new ArrayDeque<>();
+
 	public NixValue force() {
+		// let binding
+		/*stackFrames.push(new ArrayList<>());
+		stackFrames.peek().add("a");
+		stackFrames.peek().add("b");*/
+		currentVars.computeIfAbsent("a", (k) -> new ArrayDeque<>()).add(NixInteger.create(1));
 
-		return NixAttrset.create(new IdentityHashMap<String, NixLazy>() {{
-			// head
-			NixLazy a = NixInteger.create(5);
-			NixLazy b = NixInteger.create(7);
 
-			// body
-			this.put("a".intern(), a);
-			this.put("b".intern(), a);
-		}}).force();
+
+		currentVars.get("a").pop();
+		return null;
 	}
 }

@@ -46,6 +46,16 @@ public interface NixLazy {
 		return () -> NixBoolean.create(((NixInteger) this.force()).value >= ((NixInteger) second.force()).value).force();
 	}
 
+	default NixLazy land(NixLazy second) {
+		NixLambda.ensureLambda(second);
+		return () -> NixBoolean.create(((NixBoolean) this.force()).value && ((NixBoolean) second.force()).value).force();
+	}
+
+	default NixLazy lor(NixLazy second) {
+		NixLambda.ensureLambda(second);
+		return () -> NixBoolean.create(((NixBoolean) this.force()).value || ((NixBoolean) second.force()).value).force();
+	}
+
 	default NixLazy eq(NixLazy second) {
 		NixLambda.ensureLambda(second);
 		return () -> NixBoolean.create(this.force().equals(second.force())).force();

@@ -236,7 +236,9 @@ public class MainClosure implements NixLazy {{
     }
 
     fn visit_identifier(&mut self, id: &'a [u8]) -> () {
-        write!(self.writer, "{}", std::str::from_utf8(id).unwrap()).unwrap();
+        // I think just because of the with statement
+        // we need to make this completely dynamic
+        write!(self.writer, "__nixy_vars.get(\"{}\")", std::str::from_utf8(id).unwrap()).unwrap();
     }
 
     fn visit_integer(&mut self, integer: i64) -> () {
@@ -286,6 +288,12 @@ public class MainClosure implements NixLazy {{
             }
             NixTokenType::GreaterThanOrEqual => {
                 write!(self.writer, ".gte(").unwrap();
+            }
+            NixTokenType::And => {
+                write!(self.writer, ".land(").unwrap();
+            }
+            NixTokenType::Or => {
+                write!(self.writer, ".lor(").unwrap();
             }
             _ => todo!(),
         }
