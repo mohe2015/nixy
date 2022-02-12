@@ -51,6 +51,8 @@ pub trait ASTVisitor<'a, R: std::fmt::Debug> {
     fn visit_function_enter(&mut self, arg: &R);
 
     fn visit_function_exit(&mut self, arg: R, body: R) -> R;
+
+    fn visit_function_before(&mut self);
 }
 
 pub struct ASTJavaTranspiler<'a, W: Write> {
@@ -84,13 +86,23 @@ public class MainClosure implements NixObject {{
         "#).unwrap();
     }
 
+    fn visit_function_before(&mut self) {
+        write!(self.writer, "((").unwrap();
+    }
+
     fn visit_function_enter(&mut self, arg: &()) {
-        write!(self.writer, "ff").unwrap();
+        write!(self.writer, r#") -> {{
+            if (arg == null) {{
+                throw new IllegalArgumentException("This is a lambda. Therefore you need to pass a parameter.");
+            }}
+            return 
+        "#).unwrap();
 
     }
 
     fn visit_function_exit(&mut self, arg: (), body: ()) -> () {
-        write!(self.writer, "}}").unwrap();
+        write!(self.writer, ";
+}}").unwrap();
     }
     
     fn visit_identifier(&mut self, id: &'a [u8]) -> () {
@@ -98,7 +110,7 @@ public class MainClosure implements NixObject {{
     }
 
     fn visit_integer(&mut self, integer: i64) -> () {
-        write!(self.writer, "(new NixInteger({}))", integer).unwrap();
+        write!(self.writer, "NixInteger.create({})", integer).unwrap();
     }
 
     fn visit_float(&mut self, float: f64) -> () {
@@ -123,7 +135,8 @@ public class MainClosure implements NixObject {{
     }
 
     fn visit_infix_operation(&mut self, left: (), right: (), operator: NixTokenType<'a>) -> () {
-        write!(self.writer, ")").unwrap();
+        // TODO FIXME probably put the force somewhere else
+        write!(self.writer, ").call(null)").unwrap();
     }
 
     fn visit_prefix_operation(&mut self, operator: NixTokenType<'a>, expr: ()) -> () {
@@ -379,6 +392,10 @@ impl<'a> ASTVisitor<'a, AST<'a>> for ASTBuilder {
     }
 
     fn visit_function_exit(&mut self, arg: AST<'a>, body: AST<'a>) -> AST<'a> {
+        todo!()
+    }
+
+    fn visit_function_before(&mut self) {
         todo!()
     }
 }

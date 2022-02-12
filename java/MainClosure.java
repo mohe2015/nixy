@@ -9,8 +9,8 @@ public class MainClosure implements NixObject {
 				throw new IllegalArgumentException("This is a lazy value and no lambda. Therefore you need to pass null.");
 			}
 			return ((NixBoolean)NixBoolean.create(true).call(null)).value ?
-					NixInteger.add(NixInteger.create(1), arg).call(null) :
-					NixInteger.add(NixInteger.create(2), call(arg)).call(null);
+					NixInteger.create(1).add(arg).call(null) :
+					NixInteger.create(2).add(call(arg)).call(null);
 		};
 	}
 

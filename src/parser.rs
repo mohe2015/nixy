@@ -892,6 +892,8 @@ impl<
                         let ident = self.lexer.next().unwrap();
                         match ident {
                             NixToken { token_type: NixTokenType::Identifier(ident) } => {
+                                self.visitor.visit_function_before();
+
                                 let arg = self.visitor.visit_identifier(ident);
                         
                                 self.visitor.visit_function_enter(&arg);
