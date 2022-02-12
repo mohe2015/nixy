@@ -1,4 +1,4 @@
-public interface NixLazy<T extends NixValue> {
+public interface NixLazy {
 
 	static NixLazy createIf(NixLazy condition, NixLazy trueCase, NixLazy falseCase) {
 		return () -> {
@@ -6,9 +6,9 @@ public interface NixLazy<T extends NixValue> {
 		};
 	}
 
-	T force();
+	NixValue force();
 
-	default NixLazy<NixInteger> add(NixLazy<? extends NixValue> second) {
+	default NixLazy add(NixLazy second) {
 		NixLambda.ensureLambda(second);
 		return () -> {
 			return NixInteger.create(((NixInteger) this.force()).value + ((NixInteger) second.force()).value).force();

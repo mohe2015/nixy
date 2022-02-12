@@ -8,8 +8,13 @@ public class NixInteger implements NixValue {
 		this.value = value;
 	}
 
-	public static NixLazy<NixInteger> create(int value) {
+	public static NixLazy create(int value) {
 		return () -> new NixInteger(value);
+	}
+
+	@Override
+	public NixValue call(NixLazy arg) {
+		throw new IllegalStateException("can't call an integer");
 	}
 
 	@Override

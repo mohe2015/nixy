@@ -8,10 +8,13 @@ public class NixBoolean implements NixValue {
 		this.value = value;
 	}
 
-	public static NixLazy<NixBoolean> create(boolean value) {
-		return () -> {
-			return new NixBoolean(value);
-		};
+	public static NixLazy create(boolean value) {
+		return () -> new NixBoolean(value);
+	}
+
+	@Override
+	public NixValue call(NixLazy arg) {
+		throw new IllegalStateException("can't call a boolean");
 	}
 
 	@Override
@@ -33,4 +36,5 @@ public class NixBoolean implements NixValue {
 				"value=" + value +
 				'}';
 	}
+
 }
