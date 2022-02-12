@@ -87,6 +87,10 @@ public class MainClosure implements NixObject {{
     fn visit_file_end(&mut self) {
         write!(self.writer, r#".force();
     }}
+
+    public static void main(String[] args) {{
+		System.out.println(new MainClosure().force());
+	}}
 }}
         "#).unwrap();
     }
@@ -266,6 +270,22 @@ fn test_java_transpiler_code(code: &[u8]) {
 
     if !compile_output.status.success() {
         panic!("invalid syntax (according to java compiler)");
+    }
+
+    let mut run_cmd = std::process::Command::new("java");
+
+    run_cmd.arg("-cp").arg("/tmp:java/").arg("MainClosure");
+
+    let run_cmd = run_cmd.output().unwrap();
+    println!(
+        "java program exited with {} {} {}",
+        run_cmd.status,
+        String::from_utf8(run_cmd.stderr).unwrap(),
+        String::from_utf8(run_cmd.stdout).unwrap()
+    );
+
+    if !run_cmd.status.success() {
+        panic!("failed to run java program");
     }
 }
 
