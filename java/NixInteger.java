@@ -1,6 +1,6 @@
 import java.util.Objects;
 
-public class NixInteger implements NixObject {
+public class NixInteger implements NixValue {
 
 	int value;
 
@@ -8,16 +8,8 @@ public class NixInteger implements NixObject {
 		this.value = value;
 	}
 
-	public static NixObject create(int value) {
-		return (arg) -> {
-			NixObject.ensureLazy(arg);
-			return new NixInteger(value);
-		};
-	}
-
-	@Override
-	public NixObject call(NixObject arg) {
-		throw new IllegalStateException("This is already a forced value");
+	public static NixLazy create(int value) {
+		return () -> new NixInteger(value);
 	}
 
 	@Override

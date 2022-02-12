@@ -1,14 +1,13 @@
-public class MainClosure implements NixObject {
+public class MainClosure implements NixLazy {
 
-	public NixObject call(NixObject arg) {
-		NixObject.ensureLazy(arg);
-		return NixObject.createFunction(a -> {
+	public NixValue force() {
+		return NixLambda.createFunction(a -> {
 			return
 					a.add(NixInteger.create(1)).force();
 		}).force();
 	}
 
 	public static void main(String[] args) {
-		System.out.println(new MainClosure().force());
+		System.out.println(new MainClosure().force().call());
 	}
 }

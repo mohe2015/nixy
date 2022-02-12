@@ -1,6 +1,6 @@
 import java.util.Objects;
 
-public class NixBoolean implements NixObject {
+public class NixBoolean implements NixValue {
 
 	boolean value;
 
@@ -8,16 +8,10 @@ public class NixBoolean implements NixObject {
 		this.value = value;
 	}
 
-	public static NixObject create(boolean value) {
-		return (arg) -> {
-			NixObject.ensureLazy(arg);
+	public static NixLazy create(boolean value) {
+		return () -> {
 			return new NixBoolean(value);
 		};
-	}
-
-	@Override
-	public NixObject call(NixObject arg) {
-		throw new IllegalStateException("This is already a forced value");
 	}
 
 	@Override

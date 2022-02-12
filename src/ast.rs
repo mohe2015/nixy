@@ -77,10 +77,10 @@ pub fn test_java_transpiler() {
 impl<'a, W: Write> ASTVisitor<'a, ()> for ASTJavaTranspiler<'a, W> {
     fn visit_file_start(&mut self) {
         write!(self.writer, r#"
-public class MainClosure implements NixObject {{
+public class MainClosure implements NixLambda {{
 
-    public NixObject call(NixObject arg) {{
-        NixObject.ensureLazy(arg);
+    public NixLambda call(NixLambda arg) {{
+        NixLambda.ensureLazy(arg);
         return "#).unwrap();
     }
 
@@ -97,7 +97,7 @@ public class MainClosure implements NixObject {{
 
     // probably also make functions lazy?
     fn visit_function_before(&mut self) {
-        write!(self.writer, "NixObject.createFunction(").unwrap();
+        write!(self.writer, "NixLambda.createFunction(").unwrap();
     }
 
     fn visit_function_enter(&mut self, arg: &()) {
@@ -153,7 +153,7 @@ public class MainClosure implements NixObject {{
     }
 
     fn visit_if_before(&mut self) {
-        write!(self.writer, r#"NixObject.createIf("#).unwrap();
+        write!(self.writer, r#"NixLambda.createIf("#).unwrap();
     }
 
     fn visit_if_after_condition(&mut self, condition: &()) {
