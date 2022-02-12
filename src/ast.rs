@@ -27,6 +27,12 @@ pub trait ASTVisitor<'a, R: std::fmt::Debug> {
 
     fn visit_prefix_operation(&mut self, operator: NixTokenType<'a>, expr: R) -> R;
 
+    fn visit_if_before(&mut self);
+
+    fn visit_if_after_condition(&mut self, condition: &R);
+
+    fn visit_if_after_true_case(&mut self, condition: &R, true_case: &R);
+
     fn visit_if(&mut self, condition: R, true_case: R, false_case: R) -> R;
 
     fn visit_attrpath_part(&mut self, begin: R, last: R) -> R;
@@ -142,10 +148,20 @@ public class MainClosure implements NixObject {{
         todo!()
     }
 
+    fn visit_if_before(&mut self) {
+        write!(self.writer, r#"NixObject.createIf("#).unwrap();
+    }
+
+    fn visit_if_after_condition(&mut self, condition: &()) {
+        write!(self.writer, r#","#).unwrap();
+    }
+
+    fn visit_if_after_true_case(&mut self, condition: &(), true_case: &()) {
+        write!(self.writer, r#","#).unwrap();
+    }
+
     fn visit_if(&mut self, condition: (), true_case: (), false_case: ()) -> () {
-        write!(self.writer, r#"
-        
-        "#).unwrap();
+        write!(self.writer, r#")"#).unwrap();
     }
 
     fn visit_attrpath_part(&mut self, begin: (), last: ()) -> () {
@@ -183,6 +199,7 @@ public class MainClosure implements NixObject {{
     fn visit_attrset_bind_push(&mut self, begin: Option<()>, last: ()) -> () {
         todo!()
     }
+
 }
 
 fn test_java_transpiler_code(code: &[u8]) {
@@ -397,6 +414,18 @@ impl<'a> ASTVisitor<'a, AST<'a>> for ASTBuilder {
     }
 
     fn visit_function_before(&mut self) {
+        todo!()
+    }
+
+    fn visit_if_before(&mut self) {
+        todo!()
+    }
+
+    fn visit_if_after_condition(&mut self, condition: &AST<'a>) {
+        todo!()
+    }
+
+    fn visit_if_after_true_case(&mut self, condition: &AST<'a>, true_case: &AST<'a>) {
         todo!()
     }
 }

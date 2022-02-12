@@ -704,9 +704,12 @@ impl<
                 token_type: NixTokenType::If,
             }) => {
                 self.expect(NixTokenType::If);
+                self.visitor.visit_if_before();
                 let condition = self.parse_expr().expect("failed to parse if condition");
+                self.visitor.visit_if_after_condition(&condition);
                 self.expect(NixTokenType::Then);
                 let true_case = self.parse_expr().expect("failed to parse if true case");
+                self.visitor.visit_if_after_true_case(&condition, &true_case);
                 self.expect(NixTokenType::Else);
                 let false_case = self.parse_expr().expect("failed to parse if false case");
                 Some(self.visitor.visit_if(condition, true_case, false_case))
