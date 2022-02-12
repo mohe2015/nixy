@@ -1,6 +1,6 @@
 import java.util.*;
 
-public class MainClosure implements NixLazy {
+public class MainClosure extends NixLazyBase {
 
 	public static void main(String[] args) {
 		System.out.println(new MainClosure().force().call(NixInteger.create(5)));

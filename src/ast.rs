@@ -188,7 +188,7 @@ impl<'a, W: Write> ASTVisitor<'a, ()> for ASTJavaTranspiler<'a, W> {
         write!(
             self.writer,
             r#"
-public class MainClosure implements NixLazy {{
+public class MainClosure extends NixLazyBase {{
 
     public NixValue force() {{
         return "#
@@ -238,7 +238,7 @@ public class MainClosure implements NixLazy {{
     fn visit_identifier(&mut self, id: &'a [u8]) -> () {
         // I think just because of the with statement
         // we need to make this completely dynamic
-        write!(self.writer, "__nixy_vars.get(\"{}\")", std::str::from_utf8(id).unwrap()).unwrap();
+        write!(self.writer, "{}_", std::str::from_utf8(id).unwrap()).unwrap();
     }
 
     fn visit_integer(&mut self, integer: i64) -> () {
@@ -246,7 +246,7 @@ public class MainClosure implements NixLazy {{
     }
 
     fn visit_float(&mut self, float: f64) -> () {
-        todo!()
+        write!(self.writer, "NixFloat.create({}f)", float).unwrap();
     }
 
     fn visit_todo(&mut self) -> () {
