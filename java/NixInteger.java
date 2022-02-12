@@ -1,3 +1,5 @@
+import java.util.Objects;
+
 public class NixInteger implements NixObject {
 
 	int value;
@@ -16,6 +18,19 @@ public class NixInteger implements NixObject {
 	@Override
 	public NixObject call(NixObject arg) {
 		throw new IllegalStateException("This is already a forced value");
+	}
+
+	@Override
+	public boolean equals(Object o) {
+		if (this == o) return true;
+		if (o == null || getClass() != o.getClass()) return false;
+		NixInteger that = (NixInteger) o;
+		return value == that.value;
+	}
+
+	@Override
+	public int hashCode() {
+		return Objects.hash(value);
 	}
 
 	@Override

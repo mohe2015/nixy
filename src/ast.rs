@@ -64,6 +64,7 @@ pub struct ASTJavaTranspiler<'a, W: Write> {
 pub fn test_java_transpiler() {
     test_java_transpiler_code(b"1");
     test_java_transpiler_code(b"1 + 1");
+    test_java_transpiler_code(b"if 1 == 1 then 1 + 1 else 2 + 2");
     test_java_transpiler_code(b"a: a + 1");
 }
 
@@ -126,6 +127,9 @@ public class MainClosure implements NixObject {{
             NixTokenType::Addition => {
                 write!(self.writer, ".add(").unwrap();
             }
+            NixTokenType::Equals => {
+                write!(self.writer, ".eq(").unwrap();
+            }
             _ => todo!()
         }
     }
@@ -139,7 +143,9 @@ public class MainClosure implements NixObject {{
     }
 
     fn visit_if(&mut self, condition: (), true_case: (), false_case: ()) -> () {
-        todo!()
+        write!(self.writer, r#"
+        
+        "#).unwrap();
     }
 
     fn visit_attrpath_part(&mut self, begin: (), last: ()) -> () {

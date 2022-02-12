@@ -1,5 +1,8 @@
 interface NixObject {
 
+	// TODO FIXME maybe split up into two subclasses lambda and lazy?
+	// this *could* maybe help us with type-safety
+
 	NixObject call(NixObject arg);
 
 	default NixObject force() {
@@ -7,9 +10,25 @@ interface NixObject {
 	}
 
 	default NixObject add(NixObject second) {
+		NixObject.ensureLambda(second);
 		return (arg) -> {
 			NixObject.ensureLazy(arg);
 			return NixInteger.create(((NixInteger) this.force()).value + ((NixInteger) second.force()).value);
+		};
+	}
+
+	default NixObject eq(NixObject second) {
+		NixObject.ensureLambda(second);
+		return (arg) -> {
+			NixObject.ensureLazy(arg);
+			return NixBoolean.create(this.force().equals(second.force()));
+		};
+	}
+
+	static NixObject createIf(NixObject condition, NixObject trueCase, NixObject falseCase) {
+		return (arg) -> {
+			NixObject.ensureLazy(arg);
+			return ((NixBoolean)condition.force()).value ? trueCase.force() : falseCase.force();
 		};
 	}
 
