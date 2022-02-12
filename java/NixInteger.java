@@ -8,9 +8,7 @@ public class NixInteger implements NixObject {
 
 	public static NixObject create(int value) {
 		return (arg) -> {
-			if (arg != null) {
-				throw new IllegalArgumentException("This is a lazy value and no lambda. Therefore you need to pass null.");
-			}
+			NixObject.ensureLazy(arg);
 			return new NixInteger(value);
 		};
 	}

@@ -73,14 +73,12 @@ impl<'a, W: Write> ASTVisitor<'a, ()> for ASTJavaTranspiler<'a, W> {
 public class MainClosure implements NixObject {{
 
     public NixObject call(NixObject arg) {{
-        if (arg != null) {{
-            throw new IllegalArgumentException("This is a lazy value and no lambda. Therefore you need to pass null.");
-        }}
+        NixObject.ensureLazy(arg);
         return "#).unwrap();
     }
 
     fn visit_file_end(&mut self) {
-        write!(self.writer, r#";
+        write!(self.writer, r#".force();
     }}
 }}
         "#).unwrap();
@@ -92,9 +90,7 @@ public class MainClosure implements NixObject {{
 
     fn visit_function_enter(&mut self, arg: &()) {
         write!(self.writer, r#") -> {{
-            if (arg == null) {{
-                throw new IllegalArgumentException("This is a lambda. Therefore you need to pass a parameter.");
-            }}
+            NixObject.ensureLambda(arg);
             return 
         "#).unwrap();
 
@@ -135,8 +131,7 @@ public class MainClosure implements NixObject {{
     }
 
     fn visit_infix_operation(&mut self, left: (), right: (), operator: NixTokenType<'a>) -> () {
-        // TODO FIXME probably put the force somewhere else
-        write!(self.writer, ").call(null)").unwrap();
+        write!(self.writer, ")").unwrap();
     }
 
     fn visit_prefix_operation(&mut self, operator: NixTokenType<'a>, expr: ()) -> () {

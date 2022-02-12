@@ -8,9 +8,7 @@ public class NixBoolean implements NixObject {
 
 	public static NixObject create(boolean value) {
 		return (arg) -> {
-			if (arg != null) {
-				throw new IllegalArgumentException("This is a lazy value and no lambda. Therefore you need to pass null.");
-			}
+			NixObject.ensureLazy(arg);
 			return new NixBoolean(value);
 		};
 	}
