@@ -150,7 +150,7 @@ pub fn test_java_transpiler() {
     test_java_transpiler_code(br#"((n: n + 1) 5)"#);
     test_java_transpiler_code(br#"(let succ = (n: n + 1); in succ 5)"#);
     test_java_transpiler_code(br#"((x: y: x + "-" + y) "a" "b")"#);
-    test_java_transpiler_code(br#"length [1 2 3 "x"])"#);
+    test_java_transpiler_code(br#"(length [1 2 3 "x"])"#);
     test_java_transpiler_code(br#"([1 2 3] ++ [4 5])"#);
     test_java_transpiler_code(br#"(concatLists [[1 2] [3 4] [5]])"#);
     test_java_transpiler_code(br#"(head [1 2 3])"#);

@@ -7,14 +7,6 @@ public class MainClosure extends NixLazyBase {
 	}
 
 	public NixValue force() {
-		(new NixLazy() {
-
-			@Override
-			public NixValue force() {
-				return null;
-			}
-		}).force()
-
 		return ((NixLazy) () -> {
 			NixProxy x_ = new NixProxy();
 			NixProxy y_ = new NixProxy();
