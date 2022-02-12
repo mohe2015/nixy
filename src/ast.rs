@@ -57,16 +57,31 @@ pub struct ASTJavaTranspiler<'a, W: Write> {
     writer: &'a mut W
 }
 
+// cargo test ast::test_java_transpiler -- --nocapture
+#[test]
+pub fn test_java_transpiler() {
+    test_java_transpiler_code(b"1");
+    test_java_transpiler_code(b"1 + 1");
+    test_java_transpiler_code(b"a: a + 1");
+}
+
 impl<'a, W: Write> ASTVisitor<'a, ()> for ASTJavaTranspiler<'a, W> {
     fn visit_file_start(&mut self) {
-        write!(self.writer, "
-        test
-        
-        ").unwrap();
+        write!(self.writer, r#"
+public class MainClosure implements NixObject {{
+
+    public NixObject call(NixObject arg) {{
+        if (arg != null) {{
+            throw new IllegalArgumentException("This is a lazy value and no lambda. Therefore you need to pass null.");
+        }}
+        return "#).unwrap();
     }
 
     fn visit_file_end(&mut self) {
-        
+        write!(self.writer, r#";
+    }}
+}}
+        "#).unwrap();
     }
 
     fn visit_function_enter(&mut self, arg: &()) {
@@ -182,14 +197,6 @@ fn test_java_transpiler_code(code: &[u8]) {
     parser.parse();
 
     println!("code: {}", std::str::from_utf8(&data).unwrap());
-}
-
-// cargo test ast::test_java_transpiler -- --nocapture
-#[test]
-pub fn test_java_transpiler() {
-    test_java_transpiler_code(b"1");
-    test_java_transpiler_code(b"1 + 1");
-    test_java_transpiler_code(b"a: a + 1");
 }
 
 pub struct ASTBuilder;
