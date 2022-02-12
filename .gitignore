@@ -38,3 +38,5 @@
 cachegrind.out.*
 perf.data
 dhat.out.*
+.idea
+*.class

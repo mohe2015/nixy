@@ -1,11 +1,13 @@
-use itertools::{multipeek, Itertools};
-use std::{fs, io::Result};
+use itertools::multipeek;
+use std::{fs, io::Result, marker::PhantomData};
 use tracing::Level;
 use tracing_subscriber::fmt::format::FmtSpan;
 use walkdir::WalkDir;
 
 use crate::{
-    lexer::{NixLexer, NixTokenType}, parser::Parser,
+    ast::ASTBuilder,
+    lexer::{NixLexer, NixTokenType},
+    parser::Parser,
 };
 
 pub mod ast;
@@ -22,8 +24,8 @@ fn main() -> Result<()> {
 
     tracing::subscriber::set_global_default(subscriber).unwrap();
 
-    let mut success = 0;
-    let mut failure = 0;
+    let success = 0;
+    let failure = 0;
 
     for entry in WalkDir::new("/etc/nixos/nixpkgs") {
         let entry = entry.unwrap();
@@ -59,6 +61,8 @@ fn main() -> Result<()> {
 
             let mut parser = Parser {
                 lexer: multipeek(lexer),
+                visitor: ASTBuilder,
+                phantom: PhantomData,
             };
 
             parser.parse();
