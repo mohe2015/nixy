@@ -468,6 +468,7 @@ fn test_java_transpiler_code(code: &[u8]) {
 
     std::fs::write("/tmp/MainClosure.java", data).expect("Unable to write file");
 
+    /*
     let mut fmt_cmd = std::process::Command::new("google-java-format");
 
     fmt_cmd.arg("--replace").arg("/tmp/MainClosure.java");
@@ -483,7 +484,7 @@ fn test_java_transpiler_code(code: &[u8]) {
 
     if !fmt_output.status.success() {
         panic!("invalid syntax (according to java formatter)");
-    }
+    }*/
 
     let mut compile_cmd = std::process::Command::new("javac");
 

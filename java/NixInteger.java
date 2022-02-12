@@ -1,6 +1,6 @@
 import java.util.Objects;
 
-public class NixInteger implements NixValue {
+public class NixInteger implements NixValue, NixNumber {
 
 	int value;
 
@@ -35,5 +35,10 @@ public class NixInteger implements NixValue {
 		return "NixInteger{" +
 				"value=" + value +
 				'}';
+	}
+
+	@Override
+	public NixFloat toNixFloat() {
+		return (NixFloat) NixFloat.create(this.value).force();
 	}
 }
