@@ -699,6 +699,7 @@ impl<'a> Iterator for NixLexer<'a> {
             | Some(NixLexerState::SearchPath)
             | Some(NixLexerState::HomePath)) => {
                 let start = self.iter.peek().map(|v| v.0).unwrap_or(self.data.len()); // TODO FIXME throw proper parse error (maybe error token)
+                let mut end = start;
 
                 // $ read
                 // peek for {
@@ -708,25 +709,27 @@ impl<'a> Iterator for NixLexer<'a> {
 
                 loop {
                     match self.iter.peek() {
-                        Some((_, b'a'..=b'z'))
-                        | Some((_, b'A'..=b'Z'))
-                        | Some((_, b'0'..=b'9'))
-                        | Some((_, b'.'))
-                        | Some((_, b'_'))
-                        | Some((_, b'-'))
-                        | Some((_, b'+'))
-                        | Some((_, b'/')) => {
+                        Some((offset, b'a'..=b'z'))
+                        | Some((offset, b'A'..=b'Z'))
+                        | Some((offset, b'0'..=b'9'))
+                        | Some((offset, b'.'))
+                        | Some((offset, b'_'))
+                        | Some((offset, b'-'))
+                        | Some((offset, b'+'))
+                        | Some((offset, b'/')) => {
+                            end = *offset;
                             self.iter.next();
                         }
                         Some((offset, b'>')) if state == Some(&NixLexerState::SearchPath) => {
-                            if start == *offset {
+                            end = *offset;
+                            if start == end {
                                 self.iter.next();
                                 self.state.pop();
                                 break Some(NixToken {
                                     token_type: NixTokenType::PathEnd,
                                 });
                             } else {
-                                let path = &self.data[start - 1..*offset];
+                                let path = &self.data[start - 1..end];
                                 //println!("{:?}", std::str::from_utf8(path));
                                 break Some(NixToken {
                                     token_type: NixTokenType::PathSegment(path),
@@ -734,18 +737,27 @@ impl<'a> Iterator for NixLexer<'a> {
                             }
                         }
                         Some((offset, _)) => {
-                            if start == *offset {
+                            end = *offset;
+                            if start == end {
                                 self.state.pop();
                                 break Some(NixToken {
                                     token_type: NixTokenType::PathEnd,
                                 });
                             } else {
-                                let path = &self.data[start - 1..*offset];
+                                let path = &self.data[start - 1..end];
                                 //println!("{:?}", std::str::from_utf8(path));
                                 break Some(NixToken {
                                     token_type: NixTokenType::PathSegment(path),
                                 });
                             }
+                        }
+                        None => {
+                            self.state.pop();
+                            let path = &self.data[start - 1..=end];
+                            //println!("{:?}", std::str::from_utf8(path));
+                            break Some(NixToken {
+                                token_type: NixTokenType::PathSegment(path),
+                            });
                         }
                         _ => todo!(),
                     }
