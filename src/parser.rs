@@ -418,8 +418,7 @@ impl<
                 self.expect(NixTokenType::ParenOpen);
                 let expr = self.parse_expr();
                 self.expect(NixTokenType::ParenClose);
-                drop(expr);
-                Some(self.visitor.visit_todo())
+                expr
             }
             Some(NixToken {
                 token_type: NixTokenType::CurlyOpen,
@@ -554,7 +553,10 @@ impl<
     pub fn parse_expr_app(&mut self) -> Option<R> {
         let mut result: Option<R> = None;
         loop {
-            let jo = self.parse_expr_select();
+            if let Some(_) = result {
+                self.visitor.visit_call_maybe();
+            }
+            let jo = self.parse_expr_select();            
             match jo {
                 Some(expr) => {
                     match result {
@@ -563,10 +565,10 @@ impl<
                         }
                         None => result = Some(expr),
                     }
-
                     //lexer.next();
                 }
                 None => {
+                    self.visitor.visit_call_maybe_not();
                     break;
                 }
             }

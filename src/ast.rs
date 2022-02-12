@@ -54,6 +54,10 @@ pub trait ASTVisitor<'a, R: std::fmt::Debug> {
     /// This is always called after `visit_array_push` and may help some implementations.
     fn visit_array_end(&mut self, array: R) -> R;
 
+    fn visit_call_maybe(&mut self);
+
+    fn visit_call_maybe_not(&mut self);
+
     fn visit_call(&mut self, function: R, parameter: R) -> R;
 
     fn visit_attrset_bind_push(&mut self, begin: Option<R>, last: R) -> R;
@@ -72,6 +76,7 @@ pub struct ASTJavaTranspiler<'a, W: Write> {
 // cargo test ast::test_java_transpiler -- --nocapture
 #[test]
 pub fn test_java_transpiler() {
+    test_java_transpiler_code(b"(a: a + 1) 2");
     test_java_transpiler_code(br#"["1" "true" "yes"]"#);
     test_java_transpiler_code(b"1");
     test_java_transpiler_code(b"1 + 1");
@@ -234,8 +239,16 @@ public class MainClosure implements NixLazy {{
         write!(self.writer, r#"))"#, ).unwrap();
     }
 
+    fn visit_call_maybe(&mut self) {
+        write!(self.writer, r#".callOrNop("#, ).unwrap();
+    }
+
+    fn visit_call_maybe_not(&mut self) {
+        write!(self.writer, r#")"#, ).unwrap();
+    }
+
     fn visit_call(&mut self, function: (), parameter: ()) -> () {
-        todo!()
+        write!(self.writer, r#")"#, ).unwrap();
     }
 
     fn visit_attrset_bind_push(&mut self, begin: Option<()>, last: ()) -> () {
@@ -531,6 +544,14 @@ impl<'a> ASTVisitor<'a, AST<'a>> for ASTBuilder {
     }
 
     fn visit_if_after_true_case(&mut self, condition: &AST<'a>, true_case: &AST<'a>) {
+        todo!()
+    }
+
+    fn visit_call_maybe(&mut self) {
+        todo!()
+    }
+
+    fn visit_call_maybe_not(&mut self) {
         todo!()
     }
 
