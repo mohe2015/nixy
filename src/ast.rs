@@ -354,7 +354,12 @@ public class MainClosure extends NixLazyBase {{
     }
 
     fn visit_path_segment(&mut self, segment: &'a [u8]) -> () {
-        todo!()
+        write!(
+            self.writer,
+            "NixPath.create(\"\"\"\n{}\"\"\")",
+            std::str::from_utf8(segment).unwrap()
+        )
+        .unwrap();
     }
 
     fn visit_string(&mut self, string: &'a [u8]) -> () {

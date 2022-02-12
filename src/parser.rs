@@ -376,8 +376,7 @@ impl<
                 token_type: NixTokenType::PathStart,
             }) => {
                 self.lexer.reset_peek();
-                self.parse_path();
-                Some(self.visitor.visit_todo())
+                self.parse_path()
             }
             Some(NixToken {
                 token_type: NixTokenType::IndentedStringStart,

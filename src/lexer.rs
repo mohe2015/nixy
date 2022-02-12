@@ -752,12 +752,18 @@ impl<'a> Iterator for NixLexer<'a> {
                             }
                         }
                         None => {
-                            self.state.pop();
-                            let path = &self.data[start - 1..=end];
-                            //println!("{:?}", std::str::from_utf8(path));
-                            break Some(NixToken {
-                                token_type: NixTokenType::PathSegment(path),
-                            });
+                            if start == end {
+                                self.state.pop();
+                                break Some(NixToken {
+                                    token_type: NixTokenType::PathEnd,
+                                });
+                            } else {
+                                let path = &self.data[start - 1..=end];
+                                //println!("{:?}", std::str::from_utf8(path));
+                                break Some(NixToken {
+                                    token_type: NixTokenType::PathSegment(path),
+                                });
+                            }
                         }
                         _ => todo!(),
                     }
