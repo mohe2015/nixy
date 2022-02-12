@@ -54,7 +54,7 @@ pub trait ASTVisitor<'a, R: std::fmt::Debug> {
     /// This is always called after `visit_array_push` and may help some implementations.
     fn visit_array_end(&mut self, array: R) -> R;
 
-    fn visit_call_maybe(&mut self);
+    fn visit_call_maybe(&mut self, expr: &Option<R>);
 
     fn visit_call_maybe_not(&mut self);
 
@@ -239,8 +239,15 @@ public class MainClosure implements NixLazy {{
         write!(self.writer, r#"))"#, ).unwrap();
     }
 
-    fn visit_call_maybe(&mut self) {
-        write!(self.writer, r#".callOrNop("#, ).unwrap();
+    fn visit_call_maybe(&mut self, expr: &Option<()>) {
+        match expr {
+            Some(_) => {
+                write!(self.writer, r#".createCall("#, ).unwrap();
+            }
+            None => {
+               // write!(self.writer, r#"NixLambda.createCall("#, ).unwrap();
+            }
+        }
     }
 
     fn visit_call_maybe_not(&mut self) {
@@ -547,7 +554,7 @@ impl<'a> ASTVisitor<'a, AST<'a>> for ASTBuilder {
         todo!()
     }
 
-    fn visit_call_maybe(&mut self) {
+    fn visit_call_maybe(&mut self, expr: &Option<AST<'a>>) {
         todo!()
     }
 

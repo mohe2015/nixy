@@ -553,9 +553,7 @@ impl<
     pub fn parse_expr_app(&mut self) -> Option<R> {
         let mut result: Option<R> = None;
         loop {
-            if let Some(_) = result {
-                self.visitor.visit_call_maybe();
-            }
+            self.visitor.visit_call_maybe(&result);
             let jo = self.parse_expr_select();            
             match jo {
                 Some(expr) => {

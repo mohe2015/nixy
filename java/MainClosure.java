@@ -8,6 +8,6 @@ public class MainClosure implements NixLazy {
 		return NixArray.create(java.util.Arrays.asList(NixString.create("""
 1"""),NixString.create("""
 true"""),NixString.create("""
-yes"""))).force().call(false);
+yes"""))).createCall().force();
 	}
 }

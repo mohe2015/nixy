@@ -55,4 +55,13 @@ public interface NixLazy {
 		NixLambda.ensureLambda(second);
 		return () -> NixBoolean.create(!this.force().equals(second.force())).force();
 	}
+
+	default NixLazy createCall(NixLazy second) {
+		NixLambda.ensureLambda(second);
+		return () -> this.force().call(second);
+	}
+
+	default NixLazy createCall() {
+		return this;
+	}
 }
