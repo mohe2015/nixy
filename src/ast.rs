@@ -100,6 +100,7 @@ pub struct ASTJavaTranspiler<'a, W: Write> {
 #[test]
 pub fn test_java_transpiler() {
     // https://learnxinyminutes.com/docs/nix/
+    test_java_transpiler_code(br#"(import /tmp/foo.nix)"#);
     test_java_transpiler_code(br#"/tmp/tutorials/learn.nix"#);
     test_java_transpiler_code(br#"("Your home directory is ${1} ${1}")"#);
     test_java_transpiler_code(b"(true && false)");
@@ -131,7 +132,6 @@ pub fn test_java_transpiler() {
     test_java_transpiler_code(br#"("ab" + "cd")"#);
     test_java_transpiler_code(br#"7/2"#);
     test_java_transpiler_code(br#"(7 / 2)"#);
-    test_java_transpiler_code(br#"(import /tmp/foo.nix)"#);
     test_java_transpiler_code(
         br#"(let x = "a"; in
     x + x + x)"#,
