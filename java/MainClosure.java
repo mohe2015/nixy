@@ -2,10 +2,14 @@ public class MainClosure implements NixObject {
 
 	public NixObject call(NixObject arg) {
 		NixObject.ensureLazy(arg);
-		return ((NixObject) (a) -> {
+		((NixObject) (a) -> {
 			NixObject.ensureLambda(a);
-			return
-					a.add(NixInteger.create(1));
+			return a.add(NixInteger.create(1));
+		}).force();
+
+		return ((NixObject) a -> {
+			NixObject.ensureLambda(a);
+			return a.add(NixInteger.create(1));
 		}).force();
 	}
 

@@ -91,13 +91,13 @@ public class MainClosure implements NixObject {{
         "#).unwrap();
     }
 
+    // probably also make functions lazy?
     fn visit_function_before(&mut self) {
-        write!(self.writer, "((NixObject) (").unwrap();
+        write!(self.writer, "NixObject.createFunction(").unwrap();
     }
 
     fn visit_function_enter(&mut self, arg: &()) {
-        write!(self.writer, r#") -> {{
-            NixObject.ensureLambda(arg);
+        write!(self.writer, r#" -> {{
             return 
         "#).unwrap();
 

@@ -32,6 +32,16 @@ interface NixObject {
 		};
 	}
 
+	static NixObject createFunction(NixObject function) {
+		return (a) -> {
+			NixObject.ensureLazy(a);
+			return (arg) -> {
+				NixObject.ensureLambda(arg);
+				return function.call(arg);
+			};
+		};
+	}
+
 	static void ensureLambda(NixObject arg) {
 		if (arg == null) {
 			throw new IllegalArgumentException("This is a lambda. Therefore you need to pass a parameter.");
