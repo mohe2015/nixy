@@ -13,7 +13,7 @@ interface NixObject {
 		NixObject.ensureLambda(second);
 		return (arg) -> {
 			NixObject.ensureLazy(arg);
-			return NixInteger.create(((NixInteger) this.force()).value + ((NixInteger) second.force()).value);
+			return NixInteger.create(((NixInteger) this.force()).value + ((NixInteger) second.force()).value).force();
 		};
 	}
 
@@ -21,7 +21,7 @@ interface NixObject {
 		NixObject.ensureLambda(second);
 		return (arg) -> {
 			NixObject.ensureLazy(arg);
-			return NixBoolean.create(this.force().equals(second.force()));
+			return NixBoolean.create(this.force().equals(second.force())).force();
 		};
 	}
 
