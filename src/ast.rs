@@ -279,15 +279,24 @@ public class MainClosure implements NixLazy {{
     }
 
     fn visit_bind_before(&mut self, bind_type: BindType) {
-        write!(self.writer, r#"NixLazy "#, ).unwrap();
+        match bind_type {
+            BindType::Let => write!(self.writer, r#"NixLazy "#, ).unwrap(),
+            BindType::Attrset => write!(self.writer, r#"this.put(""#, ).unwrap(),
+        }
     }
 
     fn visit_bind_between(&mut self, bind_type: BindType, attrpath: &()) {
-        write!(self.writer, r#" = "#, ).unwrap();
+        match bind_type {
+            BindType::Let => write!(self.writer, r#" = "#, ).unwrap(),
+            BindType::Attrset => write!(self.writer, r#"".intern(), "#, ).unwrap(),
+        }
     }
 
     fn visit_bind_after(&mut self, bind_type: BindType, attrpath: (), expr: ()) -> () {
-        write!(self.writer, ";\n", ).unwrap();
+        match bind_type {
+            BindType::Let => write!(self.writer, ";\n", ).unwrap(),
+            BindType::Attrset => write!(self.writer, ");", ).unwrap(),
+        }
     }
 
     fn visit_let_before(&mut self) {
@@ -307,17 +316,17 @@ public class MainClosure implements NixLazy {{
     }
 
     fn visit_attrset_before(&mut self, binds: &Option<()>) {
-        todo!()
+        if let None = binds { 
+            write!(self.writer, "NixAttrset.create(new java.util.IdentityHashMap<String, NixLazy>() {{{{\n", ).unwrap();
+        }
     }
 
     fn visit_attrset_bind_push(&mut self, begin: Option<()>, last: ()) -> () {
-        write!(self.writer, r#"attrset"#, ).unwrap();
     }
 
     fn visit_attrset(&mut self, binds: Option<()>) -> () {
-        todo!()
+        write!(self.writer, r#"}}}})"#, ).unwrap();
     }
-
 }
 
 fn test_java_transpiler_code(code: &[u8]) {
