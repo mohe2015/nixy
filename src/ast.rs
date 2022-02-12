@@ -67,6 +67,18 @@ pub trait ASTVisitor<'a, R: std::fmt::Debug> {
     fn visit_function_exit(&mut self, arg: R, body: R) -> R;
 
     fn visit_function_before(&mut self);
+
+    fn visit_bind_before(&mut self);
+
+    fn visit_bind_between(&mut self, attrpath: &R);
+
+    fn visit_bind_after(&mut self, attrpath: R, expr: R) -> R;
+
+    fn visit_let_before(&mut self);
+
+    fn visit_let_push_bind(&mut self, binds: Option<R>, bind: R) -> R;
+
+    fn visit_let(&mut self, binds: Option<R>, body: R) -> R;
 }
 
 pub struct ASTJavaTranspiler<'a, W: Write> {
@@ -76,6 +88,7 @@ pub struct ASTJavaTranspiler<'a, W: Write> {
 // cargo test ast::test_java_transpiler -- --nocapture
 #[test]
 pub fn test_java_transpiler() {
+    test_java_transpiler_code(b"let a = 5; b = 7; in a + 5");
     test_java_transpiler_code(b"(a: a + 1) 2");
     test_java_transpiler_code(br#"["1" "true" "yes"]"#);
     test_java_transpiler_code(b"1");
@@ -262,7 +275,29 @@ public class MainClosure implements NixLazy {{
         todo!()
     }
 
+    fn visit_bind_before(&mut self) {
+        todo!()
+    }
 
+    fn visit_bind_between(&mut self, attrpath: &()) {
+        todo!()
+    }
+
+    fn visit_bind_after(&mut self, attrpath: (), expr: ()) -> () {
+        todo!()
+    }
+
+    fn visit_let_before(&mut self) {
+        todo!()
+    }
+
+    fn visit_let_push_bind(&mut self, binds: Option<()>, bind: ()) -> () {
+        todo!()
+    }
+
+    fn visit_let(&mut self, binds: Option<()>, body: ()) -> () {
+        todo!()
+    }
 }
 
 fn test_java_transpiler_code(code: &[u8]) {
@@ -559,6 +594,30 @@ impl<'a> ASTVisitor<'a, AST<'a>> for ASTBuilder {
     }
 
     fn visit_call_maybe_not(&mut self) {
+        todo!()
+    }
+
+    fn visit_bind_before(&mut self) {
+        todo!()
+    }
+
+    fn visit_bind_between(&mut self, attrpath: &AST<'a>) {
+        todo!()
+    }
+
+    fn visit_bind_after(&mut self, attrpath: AST<'a>, expr: AST<'a>) -> AST<'a> {
+        todo!()
+    }
+
+    fn visit_let_before(&mut self) {
+        todo!()
+    }
+
+    fn visit_let_push_bind(&mut self, binds: Option<AST<'a>>, bind: AST<'a>) -> AST<'a> {
+        todo!()
+    }
+
+    fn visit_let(&mut self, binds: Option<AST<'a>>, body: AST<'a>) -> AST<'a> {
         todo!()
     }
 

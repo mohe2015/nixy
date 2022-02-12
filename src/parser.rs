@@ -191,19 +191,20 @@ impl<
             }
             _other => {
                 self.lexer.reset_peek();
-                let _attrpath = self.parse_attrpath();
+
+                self.visitor.visit_bind_before();
+
+                let attrpath = self.parse_attrpath().unwrap();
                 self.expect(NixTokenType::Assign);
 
-                //println!("TEST {:?}", lexer.peek());
-                //lexer.reset_peek();
+                self.visitor.visit_bind_between(&attrpath);
 
-                let _expr = self
+                let expr = self
                     .parse_expr()
                     .expect("expected expression in binding at");
                 self.expect(NixTokenType::Semicolon);
 
-                //(Box::new(attrpath.unwrap()), Box::new(expr))
-                self.visitor.visit_todo()
+                self.visitor.visit_bind_after(attrpath, expr)
             }
         }
     }
@@ -212,8 +213,10 @@ impl<
     pub fn parse_let(&mut self) -> Option<R> {
         self.expect(NixTokenType::Let);
 
+        self.visitor.visit_let_before();
+
         // maybe do this like the method after? so the let has a third parameter which is the body and which we can then concatenate afterwards
-        let _binds: Option<R> = None;
+        let binds: Option<R> = None;
         loop {
             match self.lexer.peek() {
                 Some(NixToken {
@@ -221,19 +224,17 @@ impl<
                 }) => {
                     self.lexer.next();
 
-                    let _body = self
+                    let body = self
                         .parse_expr_function()
                         .expect("failed to parse body of let binding");
 
-                    break Some(self.visitor.visit_todo()); /*Some(binds.into_iter().fold(body, |accum, item| {
-                                                               AST::Let(item.0, item.1, Box::new(accum))
-                                                           }));*/
+                    return Some(self.visitor.visit_let(binds, body));
                 }
                 _ => {
                     self.lexer.reset_peek();
-                    let _bind = self.parse_bind();
+                    let bind = self.parse_bind();
 
-                    //binds.push(bind);
+                    binds = Some(self.visitor.visit_let_push_bind(binds, bind));
                 }
             }
         }

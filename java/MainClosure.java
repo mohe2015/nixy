@@ -5,9 +5,13 @@ public class MainClosure implements NixLazy {
 	}
 
 	public NixValue force() {
-		return NixArray.create(java.util.Arrays.asList(NixString.create("""
-1"""),NixString.create("""
-true"""),NixString.create("""
-yes"""))).createCall().force();
+		return NixInteger.create(1).add(() -> {
+			// head
+			NixLazy a = NixInteger.create(5);
+			NixLazy b = NixInteger.create(7);
+
+			// body
+			return a.add(b).force();
+		}).force();
 	}
 }
