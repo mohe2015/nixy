@@ -404,15 +404,13 @@ impl<
                 self.parse_some_string(
                     NixTokenType::IndentedStringStart,
                     NixTokenType::IndentedStringEnd,
-                );
-                Some(self.visitor.visit_todo())
+                )
             }
             Some(NixToken {
                 token_type: NixTokenType::StringStart,
             }) => {
                 self.lexer.reset_peek();
-                self.parse_some_string(NixTokenType::StringStart, NixTokenType::StringEnd);
-                Some(self.visitor.visit_todo())
+                self.parse_some_string(NixTokenType::StringStart, NixTokenType::StringEnd)
             }
             Some(NixToken {
                 token_type: NixTokenType::ParenOpen,
@@ -434,6 +432,7 @@ impl<
             }) => {
                 // array
                 self.expect(NixTokenType::BracketOpen);
+                self.visitor.visit_array_start();
                 let mut array = None;
                 loop {
                     match self.lexer.peek() {
@@ -446,6 +445,7 @@ impl<
                         _tokens => {
                             self.lexer.reset_peek();
 
+                            self.visitor.visit_array_push_before(&array);
                             let last = self.parse_expr_select().unwrap();
                             array = Some(self.visitor.visit_array_push(array, last))
                         }

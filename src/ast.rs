@@ -45,6 +45,10 @@ pub trait ASTVisitor<'a, R: std::fmt::Debug> {
 
     fn visit_string_concatenate(&mut self, begin: R, last: R) -> R;
 
+    fn visit_array_start(&mut self);
+
+    fn visit_array_push_before(&mut self, begin: &Option<R>);
+
     fn visit_array_push(&mut self, begin: Option<R>, last: R) -> R;
 
     /// This is always called after `visit_array_push` and may help some implementations.
@@ -68,6 +72,7 @@ pub struct ASTJavaTranspiler<'a, W: Write> {
 // cargo test ast::test_java_transpiler -- --nocapture
 #[test]
 pub fn test_java_transpiler() {
+    test_java_transpiler_code(br#"["1" "true" "yes"]"#);
     test_java_transpiler_code(b"1");
     test_java_transpiler_code(b"1 + 1");
     test_java_transpiler_code(b"if 1 == 1 then 1 + 1 else 2 + 2");
@@ -204,19 +209,29 @@ public class MainClosure implements NixLazy {{
     }
 
     fn visit_string(&mut self, string: &'a [u8]) -> () {
-        todo!()
+        // https://www.vojtechruzicka.com/raw-strings/
+        write!(self.writer, "NixString.create(\"\"\"\n{}\"\"\")", std::str::from_utf8(string).unwrap()).unwrap();
     }
 
     fn visit_string_concatenate(&mut self, begin: (), last: ()) -> () {
         todo!()
     }
 
+    fn visit_array_start(&mut self) {
+        write!(self.writer, r#"NixArray.create(java.util.Arrays.asList("#, ).unwrap();
+    }
+
+    fn visit_array_push_before(&mut self, begin: &Option<()>) {
+        if let Some(_) = begin {
+            write!(self.writer, r#","#, ).unwrap();
+        }
+    }
+
     fn visit_array_push(&mut self, begin: Option<()>, last: ()) -> () {
-        todo!()
     }
 
     fn visit_array_end(&mut self, array: ()) -> () {
-        todo!()
+        write!(self.writer, r#"))"#, ).unwrap();
     }
 
     fn visit_call(&mut self, function: (), parameter: ()) -> () {
@@ -226,6 +241,7 @@ public class MainClosure implements NixLazy {{
     fn visit_attrset_bind_push(&mut self, begin: Option<()>, last: ()) -> () {
         todo!()
     }
+
 
 }
 
@@ -463,6 +479,13 @@ impl<'a> ASTVisitor<'a, AST<'a>> for ASTBuilder {
     fn visit_string_concatenate(&mut self, _begin: AST<'a>, _last: AST<'a>) -> AST<'a> {
         todo!()
     }
+    fn visit_array_start(&mut self) {
+        todo!()
+    }
+
+    fn visit_array_push_before(&mut self, begin: &Option<AST<'a>>) {
+        todo!()
+    }
 
     fn visit_array_push(&mut self, begin: Option<AST<'a>>, last: AST<'a>) -> AST<'a> {
         match begin {
@@ -510,4 +533,6 @@ impl<'a> ASTVisitor<'a, AST<'a>> for ASTBuilder {
     fn visit_if_after_true_case(&mut self, condition: &AST<'a>, true_case: &AST<'a>) {
         todo!()
     }
+
+   
 }
