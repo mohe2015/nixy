@@ -665,6 +665,9 @@ impl<
 
         // we need quite some peekahead here do differentiate between attrsets
         // this is probably the most complicated function in here
+
+        // this looks way to complicated. what about peeking first to check what it is and then use a normal algorithm afterwards for actual parsing?
+
         let mut formals: Option<R> = None;
         let mut parsed_first = false;
         if let Some(NixToken {
@@ -760,7 +763,7 @@ impl<
                             parsed_first = true;
                         }
                         self.expect(NixTokenType::Ellipsis);
-
+                        self.expect(NixTokenType::CurlyClose);
                         return Some(self.visitor.visit_formals(None, None, true));
                     }
                     Some(NixToken {
