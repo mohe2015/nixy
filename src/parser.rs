@@ -3,9 +3,9 @@ use crate::{
     lexer::{NixToken, NixTokenType},
     visitor::ASTVisitor,
 };
-use core::fmt;
+
 use itertools::MultiPeek;
-use std::{fmt::Debug, marker::PhantomData, mem::discriminant};
+use std::{marker::PhantomData, mem::discriminant};
 //#[cfg(debug_assertions)]
 use tracing::instrument;
 
@@ -440,10 +440,8 @@ impl<
             if operators.contains(&next_token.unwrap().token_type) {
                 let token = self.lexer.next().unwrap();
                 self.visitor.visit_infix_lhs(token.token_type, &result);
-                let rhs = frhs(self).expect(&format!(
-                    "expected right hand side after {:?} but got nothing",
-                    token.token_type
-                ));
+                let rhs = frhs(self).unwrap_or_else(|| panic!("expected right hand side after {:?} but got nothing",
+                    token.token_type));
                 // TODO FIXME replace leaking by match to function name
                 result = self
                     .visitor
@@ -841,7 +839,7 @@ impl<
             Some(NixTokenType::CurlyOpen) => {
                 self.lexer.reset_peek();
                 let formals = self.parse_formals();
-                if let None = formals {
+                if formals.is_none() {
                     // not a function, probably an attrset
                     return self.parse_expr_if();
                 }
@@ -859,7 +857,7 @@ impl<
                 }
                 self.parse_expr_function()
             }
-            Some(NixTokenType::Identifier(ident)) => {
+            Some(NixTokenType::Identifier(_ident)) => {
                 match self.lexer.peek() {
                     Some(NixToken {
                         token_type: NixTokenType::Colon,
@@ -904,16 +902,16 @@ impl<
                 self.expect(NixTokenType::Assert);
                 let _assert_expr = self.parse_expr();
                 self.expect(NixTokenType::Semicolon);
-                let body = self.parse_expr();
-                body // TODO FIXME
+                
+                self.parse_expr() // TODO FIXME
             }
             Some(NixTokenType::With) => {
                 self.expect(NixTokenType::With);
                 let _with_expr = self.parse_expr();
                 self.expect(NixTokenType::Semicolon);
-                let body = self.parse_expr();
+                
 
-                body // TODO FIXME
+                self.parse_expr() // TODO FIXME
             }
             _ => {
                 self.lexer.reset_peek();
@@ -977,7 +975,7 @@ fn can_parse(code: &str) {
         phantom: PhantomData,
     };
 
-    let result = parser.parse();
+    let _result = parser.parse();
 }
 
 #[test]

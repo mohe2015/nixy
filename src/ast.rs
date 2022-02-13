@@ -1,11 +1,11 @@
 use core::fmt::Debug;
 use std::io::Write;
-use std::{io::BufWriter, marker::PhantomData};
+
 
 use crate::{
-    lexer::{NixToken, NixTokenType},
+    lexer::{NixTokenType},
     parser::{
-        BindType, Parser, BUILTIN_IF, BUILTIN_PATH_CONCATENATE, BUILTIN_SELECT,
+        BindType, BUILTIN_IF, BUILTIN_PATH_CONCATENATE, BUILTIN_SELECT,
         BUILTIN_UNARY_MINUS, BUILTIN_UNARY_NOT,
     },
     visitor::ASTVisitor,
@@ -102,7 +102,7 @@ impl<'a> ASTVisitor<'a, AST<'a>> for ASTBuilder {
         }
     }
 
-    fn visit_infix_lhs(&mut self, operator: NixTokenType<'a>, left: &AST<'a>) {
+    fn visit_infix_lhs(&mut self, _operator: NixTokenType<'a>, _left: &AST<'a>) {
         todo!()
     }
 
@@ -215,7 +215,7 @@ impl<'a> ASTVisitor<'a, AST<'a>> for ASTBuilder {
         todo!()
     }
 
-    fn visit_array_push_before(&mut self, begin: &Option<AST<'a>>) {
+    fn visit_array_push_before(&mut self, _begin: &Option<AST<'a>>) {
         todo!()
     }
 
@@ -242,11 +242,11 @@ impl<'a> ASTVisitor<'a, AST<'a>> for ASTBuilder {
         todo!()
     }
 
-    fn visit_function_enter(&mut self, arg: &AST<'a>) {
+    fn visit_function_enter(&mut self, _arg: &AST<'a>) {
         todo!()
     }
 
-    fn visit_function_exit(&mut self, arg: AST<'a>, body: AST<'a>) -> AST<'a> {
+    fn visit_function_exit(&mut self, _arg: AST<'a>, _body: AST<'a>) -> AST<'a> {
         todo!()
     }
 
@@ -258,31 +258,31 @@ impl<'a> ASTVisitor<'a, AST<'a>> for ASTBuilder {
         todo!()
     }
 
-    fn visit_if_after_condition(&mut self, condition: &AST<'a>) {
+    fn visit_if_after_condition(&mut self, _condition: &AST<'a>) {
         todo!()
     }
 
-    fn visit_if_after_true_case(&mut self, condition: &AST<'a>, true_case: &AST<'a>) {
+    fn visit_if_after_true_case(&mut self, _condition: &AST<'a>, _true_case: &AST<'a>) {
         todo!()
     }
 
-    fn visit_call_maybe(&mut self, expr: &Option<AST<'a>>) {}
+    fn visit_call_maybe(&mut self, _expr: &Option<AST<'a>>) {}
 
     fn visit_call_maybe_not(&mut self) {}
 
-    fn visit_bind_before(&mut self, bind_type: BindType) {
+    fn visit_bind_before(&mut self, _bind_type: BindType) {
         todo!()
     }
 
-    fn visit_bind_between(&mut self, bind_type: BindType, attrpath: &AST<'a>) {
+    fn visit_bind_between(&mut self, _bind_type: BindType, _attrpath: &AST<'a>) {
         todo!()
     }
 
     fn visit_bind_after(
         &mut self,
-        bind_type: BindType,
-        attrpath: AST<'a>,
-        expr: AST<'a>,
+        _bind_type: BindType,
+        _attrpath: AST<'a>,
+        _expr: AST<'a>,
     ) -> AST<'a> {
         todo!()
     }
@@ -291,44 +291,44 @@ impl<'a> ASTVisitor<'a, AST<'a>> for ASTBuilder {
         todo!()
     }
 
-    fn visit_let_push_bind(&mut self, binds: Option<AST<'a>>, bind: AST<'a>) -> AST<'a> {
+    fn visit_let_push_bind(&mut self, _binds: Option<AST<'a>>, _bind: AST<'a>) -> AST<'a> {
         todo!()
     }
 
-    fn visit_let(&mut self, binds: Option<AST<'a>>, body: AST<'a>) -> AST<'a> {
+    fn visit_let(&mut self, _binds: Option<AST<'a>>, _body: AST<'a>) -> AST<'a> {
         todo!()
     }
 
-    fn visit_let_before_body(&mut self, binds: &Option<AST<'a>>) {
+    fn visit_let_before_body(&mut self, _binds: &Option<AST<'a>>) {
         todo!()
     }
 
-    fn visit_attrset_before(&mut self, binds: &Option<AST<'a>>) {
+    fn visit_attrset_before(&mut self, _binds: &Option<AST<'a>>) {
         todo!()
     }
 
-    fn visit_attrset(&mut self, binds: Option<AST<'a>>) -> AST<'a> {
+    fn visit_attrset(&mut self, _binds: Option<AST<'a>>) -> AST<'a> {
         todo!()
     }
 
-    fn visit_string_concatenate_end(&mut self, result: Option<AST<'a>>) -> AST<'a> {
+    fn visit_string_concatenate_end(&mut self, _result: Option<AST<'a>>) -> AST<'a> {
         todo!()
     }
 
     fn visit_formal(
         &mut self,
-        formals: Option<AST<'a>>,
-        identifier: &'a [u8],
-        default: Option<AST<'a>>,
+        _formals: Option<AST<'a>>,
+        _identifier: &'a [u8],
+        _default: Option<AST<'a>>,
     ) -> AST<'a> {
         todo!()
     }
 
     fn visit_formals(
         &mut self,
-        formals: Option<AST<'a>>,
-        at_identifier: Option<&'a [u8]>,
-        ellipsis: bool,
+        _formals: Option<AST<'a>>,
+        _at_identifier: Option<&'a [u8]>,
+        _ellipsis: bool,
     ) -> AST<'a> {
         todo!()
     }

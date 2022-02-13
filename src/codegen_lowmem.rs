@@ -158,7 +158,7 @@ public class MainClosure extends NixLazyBase {{
         write!(self.writer, "NixLambda.createFunction(").unwrap();
     }
 
-    fn visit_function_enter(&mut self, arg: &()) {
+    fn visit_function_enter(&mut self, _arg: &()) {
         write!(
             self.writer,
             r#" -> {{
@@ -168,7 +168,7 @@ public class MainClosure extends NixLazyBase {{
         .unwrap();
     }
 
-    fn visit_function_exit(&mut self, arg: (), body: ()) -> () {
+    fn visit_function_exit(&mut self, _arg: (), _body: ()) {
         write!(
             self.writer,
             ".force();
@@ -177,29 +177,29 @@ public class MainClosure extends NixLazyBase {{
         .unwrap();
     }
 
-    fn visit_identifier(&mut self, id: &'a [u8]) -> () {
+    fn visit_identifier(&mut self, id: &'a [u8]) {
         // I think just because of the with statement
         // we need to make this completely dynamic
         write!(self.writer, "{}_", std::str::from_utf8(id).unwrap()).unwrap();
     }
 
-    fn visit_integer(&mut self, integer: i64) -> () {
+    fn visit_integer(&mut self, integer: i64) {
         write!(self.writer, "NixInteger.create({})", integer).unwrap();
     }
 
-    fn visit_float(&mut self, float: f64) -> () {
+    fn visit_float(&mut self, float: f64) {
         write!(self.writer, "NixFloat.create({}f)", float).unwrap();
     }
 
-    fn visit_todo(&mut self) -> () {
+    fn visit_todo(&mut self) {
         todo!()
     }
 
-    fn visit_select(&mut self, expr: (), attrpath: (), default: Option<()>) -> () {
+    fn visit_select(&mut self, _expr: (), _attrpath: (), _default: Option<()>) {
         todo!()
     }
 
-    fn visit_infix_lhs(&mut self, operator: NixTokenType<'a>, left: &()) {
+    fn visit_infix_lhs(&mut self, operator: NixTokenType<'a>, _left: &()) {
         match operator {
             NixTokenType::Addition => {
                 write!(self.writer, ".add(").unwrap();
@@ -241,11 +241,11 @@ public class MainClosure extends NixLazyBase {{
         }
     }
 
-    fn visit_infix_operation(&mut self, left: (), right: (), operator: NixTokenType<'a>) -> () {
+    fn visit_infix_operation(&mut self, _left: (), _right: (), _operator: NixTokenType<'a>) {
         write!(self.writer, ")").unwrap();
     }
 
-    fn visit_prefix_operation(&mut self, operator: NixTokenType<'a>, expr: ()) -> () {
+    fn visit_prefix_operation(&mut self, _operator: NixTokenType<'a>, _expr: ()) {
         todo!()
     }
 
@@ -253,27 +253,27 @@ public class MainClosure extends NixLazyBase {{
         write!(self.writer, r#"NixLazy.createIf("#).unwrap();
     }
 
-    fn visit_if_after_condition(&mut self, condition: &()) {
+    fn visit_if_after_condition(&mut self, _condition: &()) {
         write!(self.writer, r#","#).unwrap();
     }
 
-    fn visit_if_after_true_case(&mut self, condition: &(), true_case: &()) {
+    fn visit_if_after_true_case(&mut self, _condition: &(), _true_case: &()) {
         write!(self.writer, r#","#).unwrap();
     }
 
-    fn visit_if(&mut self, condition: (), true_case: (), false_case: ()) -> () {
+    fn visit_if(&mut self, _condition: (), _true_case: (), _false_case: ()) {
         write!(self.writer, r#")"#).unwrap();
     }
 
-    fn visit_attrpath_part(&mut self, begin: (), last: ()) -> () {
+    fn visit_attrpath_part(&mut self, _begin: (), _last: ()) {
         todo!()
     }
 
-    fn visit_path_concatenate(&mut self, begin: (), last: ()) -> () {
+    fn visit_path_concatenate(&mut self, _begin: (), _last: ()) {
         todo!()
     }
 
-    fn visit_path_segment(&mut self, segment: &'a [u8]) -> () {
+    fn visit_path_segment(&mut self, segment: &'a [u8]) {
         write!(
             self.writer,
             "NixPath.create(\"\"\"\n{}\"\"\")",
@@ -282,7 +282,7 @@ public class MainClosure extends NixLazyBase {{
         .unwrap();
     }
 
-    fn visit_string(&mut self, string: &'a [u8]) -> () {
+    fn visit_string(&mut self, string: &'a [u8]) {
         // https://www.vojtechruzicka.com/raw-strings/
         write!(
             self.writer,
@@ -292,7 +292,7 @@ public class MainClosure extends NixLazyBase {{
         .unwrap();
     }
 
-    fn visit_string_concatenate(&mut self, begin: Option<()>, last: ()) -> () {
+    fn visit_string_concatenate(&mut self, begin: Option<()>, _last: ()) {
         match begin {
             Some(_) => {
                 write!(self.writer, r#").add("#,).unwrap();
@@ -303,7 +303,7 @@ public class MainClosure extends NixLazyBase {{
         }
     }
 
-    fn visit_string_concatenate_end(&mut self, result: Option<()>) -> () {
+    fn visit_string_concatenate_end(&mut self, _result: Option<()>) {
         write!(self.writer, r#")"#,).unwrap();
     }
 
@@ -312,14 +312,14 @@ public class MainClosure extends NixLazyBase {{
     }
 
     fn visit_array_push_before(&mut self, begin: &Option<()>) {
-        if let Some(_) = begin {
+        if begin.is_some() {
             write!(self.writer, r#","#,).unwrap();
         }
     }
 
-    fn visit_array_push(&mut self, begin: Option<()>, last: ()) -> () {}
+    fn visit_array_push(&mut self, _begin: Option<()>, _last: ()) {}
 
-    fn visit_array_end(&mut self, array: ()) -> () {
+    fn visit_array_end(&mut self, _array: ()) {
         write!(self.writer, r#"))"#,).unwrap();
     }
 
@@ -338,7 +338,7 @@ public class MainClosure extends NixLazyBase {{
         write!(self.writer, r#")"#,).unwrap();
     }
 
-    fn visit_call(&mut self, function: (), parameter: ()) -> () {
+    fn visit_call(&mut self, _function: (), _parameter: ()) {
         write!(self.writer, r#")"#,).unwrap();
     }
 
@@ -349,16 +349,16 @@ public class MainClosure extends NixLazyBase {{
         }
     }
 
-    fn visit_bind_between(&mut self, bind_type: BindType, attrpath: &()) {
+    fn visit_bind_between(&mut self, bind_type: BindType, _attrpath: &()) {
         match bind_type {
             BindType::Let => write!(self.writer, r#" = "#,).unwrap(),
             BindType::Attrset => write!(self.writer, r#"".intern(), "#,).unwrap(),
         }
     }
 
-    fn visit_bind_after(&mut self, bind_type: BindType, attrpath: (), expr: ()) -> () {
+    fn visit_bind_after(&mut self, bind_type: BindType, _attrpath: (), _expr: ()) {
         match bind_type {
-            BindType::Let => write!(self.writer, ";\n",).unwrap(),
+            BindType::Let => writeln!(self.writer, ";",).unwrap(),
             BindType::Attrset => write!(self.writer, ");",).unwrap(),
         }
     }
@@ -375,47 +375,47 @@ public class MainClosure extends NixLazyBase {{
         .unwrap();
     }
 
-    fn visit_let_push_bind(&mut self, binds: Option<()>, bind: ()) -> () {}
+    fn visit_let_push_bind(&mut self, _binds: Option<()>, _bind: ()) {}
 
-    fn visit_let_before_body(&mut self, binds: &Option<()>) {
+    fn visit_let_before_body(&mut self, _binds: &Option<()>) {
         write!(self.writer, "\n/* body */ \nreturn ",).unwrap();
     }
 
-    fn visit_let(&mut self, binds: Option<()>, body: ()) -> () {
+    fn visit_let(&mut self, _binds: Option<()>, _body: ()) {
         write!(self.writer, ".force(); }}}})",).unwrap();
     }
 
     fn visit_attrset_before(&mut self, binds: &Option<()>) {
-        if let None = binds {
-            write!(
+        if binds.is_none() {
+            writeln!(
                 self.writer,
-                "NixAttrset.create(new java.util.IdentityHashMap<String, NixLazy>() {{{{\n",
+                "NixAttrset.create(new java.util.IdentityHashMap<String, NixLazy>() {{{{",
             )
             .unwrap();
         }
     }
 
-    fn visit_attrset_bind_push(&mut self, begin: Option<()>, last: ()) -> () {}
+    fn visit_attrset_bind_push(&mut self, _begin: Option<()>, _last: ()) {}
 
-    fn visit_attrset(&mut self, binds: Option<()>) -> () {
+    fn visit_attrset(&mut self, _binds: Option<()>) {
         write!(self.writer, r#"}}}})"#,).unwrap();
     }
 
     fn visit_formal(
         &mut self,
-        formals: Option<()>,
-        identifier: &'a [u8],
-        default: Option<()>,
-    ) -> () {
+        _formals: Option<()>,
+        _identifier: &'a [u8],
+        _default: Option<()>,
+    ) {
         todo!()
     }
 
     fn visit_formals(
         &mut self,
-        formals: Option<()>,
-        at_identifier: Option<&'a [u8]>,
-        ellipsis: bool,
-    ) -> () {
+        _formals: Option<()>,
+        _at_identifier: Option<&'a [u8]>,
+        _ellipsis: bool,
+    ) {
         todo!()
     }
 }
