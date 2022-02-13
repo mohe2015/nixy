@@ -401,12 +401,7 @@ public class MainClosure extends NixLazyBase {{
         write!(self.writer, r#"}}}})"#,).unwrap();
     }
 
-    fn visit_formal(
-        &mut self,
-        _formals: Option<()>,
-        _identifier: &'a [u8],
-        _default: Option<()>,
-    ) {
+    fn visit_formal(&mut self, _formals: Option<()>, _identifier: &'a [u8], _default: Option<()>) {
         todo!()
     }
 

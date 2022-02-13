@@ -1,12 +1,11 @@
 use core::fmt::Debug;
 use std::{io::Write, vec};
 
-
 use crate::{
-    lexer::{NixTokenType},
+    lexer::NixTokenType,
     parser::{
-        BindType, BUILTIN_IF, BUILTIN_PATH_CONCATENATE, BUILTIN_SELECT,
-        BUILTIN_UNARY_MINUS, BUILTIN_UNARY_NOT,
+        BindType, BUILTIN_IF, BUILTIN_PATH_CONCATENATE, BUILTIN_SELECT, BUILTIN_UNARY_MINUS,
+        BUILTIN_UNARY_NOT,
     },
     visitor::ASTVisitor,
 };
@@ -14,7 +13,7 @@ use crate::{
 #[derive(PartialEq, Debug)]
 pub struct NixFunctionParameter<'a> {
     name: &'a [u8],
-    default: Option<AST<'a>>
+    default: Option<AST<'a>>,
 }
 
 #[derive(PartialEq)]
@@ -30,20 +29,43 @@ pub enum AST<'a> {
         parameters: Vec<NixFunctionParameter<'a>>,
         at_identifier: Option<&'a [u8]>,
         ellipsis: bool,
-    }
+    },
 }
 
 impl<'a> Debug for AST<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Identifier(arg0) => f.debug_tuple("Identifier").field(&std::str::from_utf8(arg0).unwrap()).finish(),
-            Self::String(arg0) => f.debug_tuple("String").field(&std::str::from_utf8(arg0).unwrap()).finish(),
-            Self::PathSegment(arg0) => f.debug_tuple("PathSegment").field(&std::str::from_utf8(arg0).unwrap()).finish(),
+            Self::Identifier(arg0) => f
+                .debug_tuple("Identifier")
+                .field(&std::str::from_utf8(arg0).unwrap())
+                .finish(),
+            Self::String(arg0) => f
+                .debug_tuple("String")
+                .field(&std::str::from_utf8(arg0).unwrap())
+                .finish(),
+            Self::PathSegment(arg0) => f
+                .debug_tuple("PathSegment")
+                .field(&std::str::from_utf8(arg0).unwrap())
+                .finish(),
             Self::Integer(arg0) => f.debug_tuple("Integer").field(arg0).finish(),
             Self::Float(arg0) => f.debug_tuple("Float").field(arg0).finish(),
-            Self::Let(arg0, arg1, arg2) => f.debug_tuple("Let").field(arg0).field(arg1).field(arg2).finish(),
+            Self::Let(arg0, arg1, arg2) => f
+                .debug_tuple("Let")
+                .field(arg0)
+                .field(arg1)
+                .field(arg2)
+                .finish(),
             Self::Call(arg0, arg1) => f.debug_tuple("Call").field(arg0).field(arg1).finish(),
-            Self::Formals { parameters, at_identifier, ellipsis } => f.debug_struct("Formals").field("parameters", parameters).field("at_identifier", at_identifier).field("ellipsis", ellipsis).finish(),
+            Self::Formals {
+                parameters,
+                at_identifier,
+                ellipsis,
+            } => f
+                .debug_struct("Formals")
+                .field("parameters", parameters)
+                .field("at_identifier", at_identifier)
+                .field("ellipsis", ellipsis)
+                .finish(),
         }
     }
 }
@@ -319,20 +341,22 @@ impl<'a> ASTVisitor<'a, AST<'a>> for ASTBuilder {
             default,
         };
         match formals {
-            Some(AST::Formals { mut parameters, at_identifier, ellipsis }) => {
+            Some(AST::Formals {
+                mut parameters,
+                at_identifier,
+                ellipsis,
+            }) => {
                 parameters.push(formal);
                 AST::Formals {
                     parameters,
                     at_identifier,
                     ellipsis,
                 }
-            },
-            None => {
-                AST::Formals {
-                    parameters: vec![formal],
-                    at_identifier: None,
-                    ellipsis: false,
-                }
+            }
+            None => AST::Formals {
+                parameters: vec![formal],
+                at_identifier: None,
+                ellipsis: false,
             },
             _ => panic!(),
         }
@@ -345,19 +369,15 @@ impl<'a> ASTVisitor<'a, AST<'a>> for ASTBuilder {
         ellipsis: bool,
     ) -> AST<'a> {
         match formals {
-            Some(AST::Formals { parameters, .. }) => {
-                AST::Formals {
-                    parameters,
-                    at_identifier,
-                    ellipsis,
-                }
+            Some(AST::Formals { parameters, .. }) => AST::Formals {
+                parameters,
+                at_identifier,
+                ellipsis,
             },
-            None => {
-                AST::Formals {
-                    parameters: vec![],
-                    at_identifier,
-                    ellipsis,
-                }
+            None => AST::Formals {
+                parameters: vec![],
+                at_identifier,
+                ellipsis,
             },
             _ => panic!(),
         }
@@ -366,6 +386,4 @@ impl<'a> ASTVisitor<'a, AST<'a>> for ASTBuilder {
 
 // cargo test ast::test_java_transpiler -- --nocapture
 #[test]
-fn test_ast() {
-
-}
+fn test_ast() {}
