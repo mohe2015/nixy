@@ -1,5 +1,5 @@
 use crate::{
-    ast::ASTVisitor,
+    ast::{ASTVisitor, AST},
     lexer::{NixToken, NixTokenType},
 };
 use core::fmt;
