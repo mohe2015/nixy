@@ -1,5 +1,4 @@
-use crate::{parser::BindType, lexer::NixTokenType};
-
+use crate::{lexer::NixTokenType, parser::BindType};
 
 pub trait ASTVisitor<'a, R: std::fmt::Debug> {
     fn visit_file_start(&mut self) {}
@@ -85,5 +84,10 @@ pub trait ASTVisitor<'a, R: std::fmt::Debug> {
 
     fn visit_formal(&mut self, formals: Option<R>, identifier: &'a [u8], default: Option<R>) -> R;
 
-    fn visit_formals(&mut self, formals: Option<R>, at_identifier: Option<&'a [u8]>, ellipsis: bool) -> R;
+    fn visit_formals(
+        &mut self,
+        formals: Option<R>,
+        at_identifier: Option<&'a [u8]>,
+        ellipsis: bool,
+    ) -> R;
 }

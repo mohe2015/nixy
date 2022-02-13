@@ -1,6 +1,7 @@
 use crate::{
-    ast::{AST},
-    lexer::{NixToken, NixTokenType}, visitor::ASTVisitor,
+    ast::AST,
+    lexer::{NixToken, NixTokenType},
+    visitor::ASTVisitor,
 };
 use core::fmt;
 use itertools::MultiPeek;
@@ -273,7 +274,9 @@ impl<
                     self.expect(NixTokenType::CurlyClose);
                     accum = Some(self.visitor.visit_string_concatenate(accum, expr));
                 }
-                Some(NixToken { token_type: _end }) => break Some(self.visitor.visit_string_concatenate_end(accum)),
+                Some(NixToken { token_type: _end }) => {
+                    break Some(self.visitor.visit_string_concatenate_end(accum))
+                }
                 v => panic!("unexpected {:?}", v),
             }
         }
@@ -685,11 +688,14 @@ impl<
                                 parsed_first = true;
                             }
                             match self.lexer.next() {
-                                Some(NixToken { token_type: NixTokenType::Identifier(_a) }) => {
+                                Some(NixToken {
+                                    token_type: NixTokenType::Identifier(_a),
+                                }) => {
                                     self.expect(NixTokenType::QuestionMark);
                                     let expr = self.parse_expr().unwrap();
-                                    formals = Some(self.visitor.visit_formal(formals, _a, Some(expr)));
-                                },
+                                    formals =
+                                        Some(self.visitor.visit_formal(formals, _a, Some(expr)));
+                                }
                                 _ => todo!(),
                             }
                         } else if let Some(NixToken {
@@ -701,10 +707,12 @@ impl<
                                 parsed_first = true;
                             }
                             match self.lexer.next() {
-                                Some(NixToken { token_type: NixTokenType::Identifier(_a) }) => {
+                                Some(NixToken {
+                                    token_type: NixTokenType::Identifier(_a),
+                                }) => {
                                     self.expect(NixTokenType::Comma);
                                     formals = Some(self.visitor.visit_formal(formals, _a, None));
-                                },
+                                }
                                 _ => todo!(),
                             }
                         } else if let Some(NixToken {
@@ -716,10 +724,12 @@ impl<
                                 parsed_first = true;
                             }
                             match self.lexer.next() {
-                                Some(NixToken { token_type: NixTokenType::Identifier(_a) }) => {
+                                Some(NixToken {
+                                    token_type: NixTokenType::Identifier(_a),
+                                }) => {
                                     self.expect(NixTokenType::CurlyClose);
                                     formals = Some(self.visitor.visit_formal(formals, _a, None));
-                                },
+                                }
                                 _ => todo!(),
                             }
                         } else {
@@ -767,7 +777,7 @@ impl<
                                     self.expect(NixTokenType::CurlyOpen);
                                     self.expect(NixTokenType::CurlyClose);
                                     self.lexer.reset_peek();
-                                    
+
                                     return Some(self.visitor.visit_formals(None, None, false));
                                 }
                                 Some(NixToken {
@@ -778,10 +788,16 @@ impl<
                                     self.expect(NixTokenType::CurlyClose);
                                     self.expect(NixTokenType::AtSign);
                                     match self.lexer.next() {
-                                        Some(NixToken { token_type: NixTokenType::Identifier(_a) }) => {
+                                        Some(NixToken {
+                                            token_type: NixTokenType::Identifier(_a),
+                                        }) => {
                                             self.lexer.reset_peek();
-                                            return Some(self.visitor.visit_formals(None, Some(_a), false));
-                                        },
+                                            return Some(self.visitor.visit_formals(
+                                                None,
+                                                Some(_a),
+                                                false,
+                                            ));
+                                        }
                                         _ => todo!(),
                                     }
                                 }

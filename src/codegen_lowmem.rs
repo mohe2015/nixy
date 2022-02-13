@@ -1,7 +1,10 @@
 use std::{io::Write, marker::PhantomData};
 
-use crate::{lexer::NixTokenType, parser::{BindType, Parser}, visitor::ASTVisitor};
-
+use crate::{
+    lexer::NixTokenType,
+    parser::{BindType, Parser},
+    visitor::ASTVisitor,
+};
 
 pub struct ASTJavaTranspiler<'a, W: Write> {
     writer: &'a mut W,
@@ -18,10 +21,10 @@ pub fn test_java_transpiler() {
     // because then I have to implement variable capturing etc
 
     /*test_java_transpiler_code(
-        br#" (let y = x + "b";
-    x = "a"; in
- y + "c")"#,
-    );*/
+           br#" (let y = x + "b";
+       x = "a"; in
+    y + "c")"#,
+       );*/
     test_java_transpiler_code(br#"with builtins; (length [1 2 3 "x"])"#);
     test_java_transpiler_code(
         br#"(let a = 1; in
@@ -398,11 +401,21 @@ public class MainClosure extends NixLazyBase {{
         write!(self.writer, r#"}}}})"#,).unwrap();
     }
 
-    fn visit_formal(&mut self, formals: Option<()>, identifier: &'a [u8], default: Option<()>) -> () {
+    fn visit_formal(
+        &mut self,
+        formals: Option<()>,
+        identifier: &'a [u8],
+        default: Option<()>,
+    ) -> () {
         todo!()
     }
 
-    fn visit_formals(&mut self, formals: Option<()>, at_identifier: Option<&'a [u8]>, ellipsis: bool) -> () {
+    fn visit_formals(
+        &mut self,
+        formals: Option<()>,
+        at_identifier: Option<&'a [u8]>,
+        ellipsis: bool,
+    ) -> () {
         todo!()
     }
 }

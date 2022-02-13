@@ -1,15 +1,15 @@
+use core::fmt::Debug;
 use std::io::Write;
 use std::{io::BufWriter, marker::PhantomData};
-use core::fmt::Debug;
 
 use crate::{
-    lexer::{NixTokenType, NixToken},
+    lexer::{NixToken, NixTokenType},
     parser::{
         BindType, Parser, BUILTIN_IF, BUILTIN_PATH_CONCATENATE, BUILTIN_SELECT,
         BUILTIN_UNARY_MINUS, BUILTIN_UNARY_NOT,
-    }, visitor::ASTVisitor,
+    },
+    visitor::ASTVisitor,
 };
-
 
 #[derive(PartialEq)]
 pub enum AST<'a> {
@@ -266,11 +266,9 @@ impl<'a> ASTVisitor<'a, AST<'a>> for ASTBuilder {
         todo!()
     }
 
-    fn visit_call_maybe(&mut self, expr: &Option<AST<'a>>) {
-    }
+    fn visit_call_maybe(&mut self, expr: &Option<AST<'a>>) {}
 
-    fn visit_call_maybe_not(&mut self) {
-    }
+    fn visit_call_maybe_not(&mut self) {}
 
     fn visit_bind_before(&mut self, bind_type: BindType) {
         todo!()
@@ -317,11 +315,21 @@ impl<'a> ASTVisitor<'a, AST<'a>> for ASTBuilder {
         todo!()
     }
 
-    fn visit_formal(&mut self, formals: Option<AST<'a>>, identifier: &'a [u8], default: Option<AST<'a>>) -> AST<'a> {
+    fn visit_formal(
+        &mut self,
+        formals: Option<AST<'a>>,
+        identifier: &'a [u8],
+        default: Option<AST<'a>>,
+    ) -> AST<'a> {
         todo!()
     }
 
-    fn visit_formals(&mut self, formals: Option<AST<'a>>, at_identifier: Option<&'a [u8]>, ellipsis: bool) -> AST<'a> {
+    fn visit_formals(
+        &mut self,
+        formals: Option<AST<'a>>,
+        at_identifier: Option<&'a [u8]>,
+        ellipsis: bool,
+    ) -> AST<'a> {
         todo!()
     }
 }
