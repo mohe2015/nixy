@@ -667,18 +667,7 @@ impl<
     pub fn parse_formals(&mut self) -> Option<R> {
         // destructured function parameters
 
-        // we need quite some peekahead here do differentiate between attrsets
-        // this is probably the most complicated function in here
-
-        // this looks way to complicated. what about peeking first to check what it is and then use a normal algorithm afterwards for actual parsing?
-        // formals:
-        // { a }:
-        // { a }@jo:
-        // { a ? jo }:
-        // {a, b}:
-
-        // no formals:
-        // {a=1;}
+        // this first part here checks whether this is a formal or an attrset
         if let Some(NixToken {
             token_type: NixTokenType::CurlyOpen,
         }) = self.lexer.peek()
@@ -689,48 +678,24 @@ impl<
                 }) => {
                     match self.lexer.peek() {
                         Some(NixToken {
-                            token_type: NixTokenType::QuestionMark,
-                        }) => match self.lexer.next() {
-                            Some(NixToken {
-                                token_type: NixTokenType::Identifier(_a),
-                            }) => {}
-                            _ => todo!(),
-                        },
+                            token_type: NixTokenType::QuestionMark, // { a ? jo }:
+
+                        }) => {}
                         Some(NixToken {
-                            token_type: NixTokenType::Comma,
-                        }) => match self.lexer.next() {
-                            Some(NixToken {
-                                token_type: NixTokenType::Identifier(_a),
-                            }) => {}
-                            _ => todo!(),
-                        },
+                            token_type: NixTokenType::Comma, // {a, b}:
+                        }) => {},
                         Some(NixToken {
                             token_type: NixTokenType::CurlyClose,
-                        }) => match self.lexer.next() {
-                            Some(NixToken {
-                                token_type: NixTokenType::Identifier(_a),
-                            }) => {}
-                            _ => todo!(),
+                        }) => {
+                            // { a }:
+                                // { a }@jo:
                         },
-                        _ => {
+                        _ => { // {a=1;}
                             // probably an attrset
                             self.lexer.reset_peek();
                             return None;
                         }
                     }
-                }
-                Some(NixToken {
-                    token_type: NixTokenType::Inherit, // {inherit a;}
-                })
-                | Some(NixToken {
-                    token_type: NixTokenType::StringStart, // {"a"=1;}
-                })
-                | Some(NixToken {
-                    token_type: NixTokenType::InterpolateStart, // {${"a"} = 1;}
-                }) => {
-                    // attrset
-                    self.lexer.reset_peek();
-                    return None;
                 }
                 Some(NixToken {
                     token_type: NixTokenType::CurlyClose,
@@ -764,12 +729,27 @@ impl<
                         }
                     }
                 }
+                Some(NixToken {
+                    token_type: NixTokenType::Inherit, // {inherit a;}
+                })
+                | Some(NixToken {
+                    token_type: NixTokenType::StringStart, // {"a"=1;}
+                })
+                | Some(NixToken {
+                    token_type: NixTokenType::InterpolateStart, // {${"a"} = 1;}
+                }) | _ => {
+                    // attrset
+                    self.lexer.reset_peek();
+                    return None;
+                }
             }
         } else {
             self.lexer.reset_peek();
             return None;
         }
 
+
+        // this second part here actually parses these formals
         let mut formals: Option<R> = None;
 
         loop {
