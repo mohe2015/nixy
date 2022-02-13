@@ -1,27 +1,27 @@
 import java.util.Objects;
 
-public class NixBoolean implements NixValue, NixToString {
+public class NixFloat implements NixValue, NixNumber, NixToString {
 
-	boolean value;
+	float value;
 
-	private NixBoolean(boolean value) {
+	private NixFloat(float value) {
 		this.value = value;
 	}
 
-	public static NixLazy create(boolean value) {
-		return () -> new NixBoolean(value);
+	public static NixLazy create(float value) {
+		return () -> new NixFloat(value);
 	}
 
 	@Override
 	public NixValue call(NixLazy arg) {
-		throw new IllegalStateException("can't call a boolean");
+		throw new IllegalStateException("can't call a float");
 	}
 
 	@Override
 	public boolean equals(Object o) {
 		if (this == o) return true;
 		if (o == null || getClass() != o.getClass()) return false;
-		NixBoolean that = (NixBoolean) o;
+		NixFloat that = (NixFloat) o;
 		return value == that.value;
 	}
 
@@ -32,13 +32,18 @@ public class NixBoolean implements NixValue, NixToString {
 
 	@Override
 	public String toString() {
-		return "NixBoolean{" +
+		return "NixFloat{" +
 				"value=" + value +
 				'}';
 	}
 
 	@Override
+	public NixFloat toNixFloat() {
+		return this;
+	}
+
+	@Override
 	public NixString toNixString() {
-		return (NixString) NixString.create(Boolean.toString(value)).force();
+		return (NixString) NixString.create(Float.toString(value)).force();
 	}
 }

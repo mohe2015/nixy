@@ -1,6 +1,6 @@
 import java.util.Objects;
 
-public class NixInteger implements NixObject {
+public class NixInteger implements NixValue, NixNumber, NixToString {
 
 	int value;
 
@@ -8,16 +8,13 @@ public class NixInteger implements NixObject {
 		this.value = value;
 	}
 
-	public static NixObject create(int value) {
-		return (arg) -> {
-			NixObject.ensureLazy(arg);
-			return new NixInteger(value);
-		};
+	public static NixLazy create(int value) {
+		return () -> new NixInteger(value);
 	}
 
 	@Override
-	public NixObject call(NixObject arg) {
-		throw new IllegalStateException("This is already a forced value");
+	public NixValue call(NixLazy arg) {
+		throw new IllegalStateException("can't call an integer");
 	}
 
 	@Override
@@ -38,5 +35,15 @@ public class NixInteger implements NixObject {
 		return "NixInteger{" +
 				"value=" + value +
 				'}';
+	}
+
+	@Override
+	public NixFloat toNixFloat() {
+		return (NixFloat) NixFloat.create(this.value).force();
+	}
+
+	@Override
+	public NixString toNixString() {
+		return (NixString) NixString.create(Integer.toString(value)).force();
 	}
 }

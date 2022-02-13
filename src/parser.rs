@@ -21,7 +21,6 @@ pub const BUILTIN_STRING_CONCATENATE: &[u8] = b"__builtin_string_concatenate";
 pub const BUILTIN_UNARY_MINUS: &[u8] = b"__builtin_unary_minus";
 pub const BUILTIN_SELECT: &[u8] = b"__builtin_select";
 
-
 #[derive(PartialEq)]
 pub enum AST<'a> {
     Identifier(&'a [u8]),
@@ -75,6 +74,12 @@ pub struct Parser<
     pub lexer: MultiPeek<I>,
     pub visitor: A,
     pub phantom: PhantomData<R>, // https://github.com/rust-lang/rust/issues/23246
+}
+
+#[derive(Copy, Clone)]
+pub enum BindType {
+    Let,
+    Attrset,
 }
 
 impl<
@@ -152,7 +157,7 @@ impl<
     }
 
     #[cfg_attr(debug_assertions, instrument(name = "bind", skip_all, ret))]
-    pub fn parse_bind(&mut self) -> R {
+    pub fn parse_bind(&mut self, bind_type: BindType) -> R {
         match self.lexer.peek() {
             Some(NixToken {
                 token_type: NixTokenType::Inherit,
@@ -191,19 +196,20 @@ impl<
             }
             _other => {
                 self.lexer.reset_peek();
-                let _attrpath = self.parse_attrpath();
+
+                self.visitor.visit_bind_before(bind_type);
+
+                let attrpath = self.parse_attrpath().unwrap();
                 self.expect(NixTokenType::Assign);
 
-                //println!("TEST {:?}", lexer.peek());
-                //lexer.reset_peek();
+                self.visitor.visit_bind_between(bind_type, &attrpath);
 
-                let _expr = self
+                let expr = self
                     .parse_expr()
                     .expect("expected expression in binding at");
                 self.expect(NixTokenType::Semicolon);
 
-                //(Box::new(attrpath.unwrap()), Box::new(expr))
-                self.visitor.visit_todo()
+                self.visitor.visit_bind_after(bind_type, attrpath, expr)
             }
         }
     }
@@ -212,8 +218,10 @@ impl<
     pub fn parse_let(&mut self) -> Option<R> {
         self.expect(NixTokenType::Let);
 
+        self.visitor.visit_let_before();
+
         // maybe do this like the method after? so the let has a third parameter which is the body and which we can then concatenate afterwards
-        let _binds: Option<R> = None;
+        let mut binds: Option<R> = None;
         loop {
             match self.lexer.peek() {
                 Some(NixToken {
@@ -221,19 +229,19 @@ impl<
                 }) => {
                     self.lexer.next();
 
-                    let _body = self
+                    self.visitor.visit_let_before_body(&binds);
+
+                    let body = self
                         .parse_expr_function()
                         .expect("failed to parse body of let binding");
 
-                    break Some(self.visitor.visit_todo()); /*Some(binds.into_iter().fold(body, |accum, item| {
-                                                               AST::Let(item.0, item.1, Box::new(accum))
-                                                           }));*/
+                    return Some(self.visitor.visit_let(binds, body));
                 }
                 _ => {
                     self.lexer.reset_peek();
-                    let _bind = self.parse_bind();
+                    let bind = self.parse_bind(BindType::Let);
 
-                    //binds.push(bind);
+                    binds = Some(self.visitor.visit_let_push_bind(binds, bind));
                 }
             }
         }
@@ -268,11 +276,7 @@ impl<
                 }) => match result {
                     Some(a) => {
                         let segment = self.visitor.visit_path_segment(segment);
-                        result =
-                            Some(self.visitor.visit_path_concatenate(
-                                a,
-                                segment
-                            ));
+                        result = Some(self.visitor.visit_path_concatenate(a, segment));
                     }
                     None => result = Some(self.visitor.visit_path_segment(segment)),
                 },
@@ -295,47 +299,24 @@ impl<
             match self.lexer.next() {
                 Some(NixToken {
                     token_type: NixTokenType::String(string),
-                }) => match accum {
-                    Some(v) => {
-                        let string = self.visitor.visit_string(string);
-                        accum = Some(
-                            self.visitor
-                                .visit_string_concatenate(v, string),
-                        );
-                    }
-                    None => {
-                        accum = Some(self.visitor.visit_string(string));
-                    }
-                },
+                }) => {
+                    let string = self.visitor.visit_string(string);
+                    accum = Some(self.visitor.visit_string_concatenate(accum, string));
+                }
                 Some(NixToken {
                     token_type: NixTokenType::IndentedString(string),
-                }) => match accum {
-                    Some(v) => {
-                        let string = self.visitor.visit_string(string);
-                        accum = Some(
-                            self.visitor
-                                .visit_string_concatenate(v, string),
-                        );
-                    }
-                    None => {
-                        accum = Some(self.visitor.visit_string(string));
-                    }
-                },
+                }) => {
+                    let string = self.visitor.visit_string(string);
+                    accum = Some(self.visitor.visit_string_concatenate(accum, string));
+                }
                 Some(NixToken {
                     token_type: NixTokenType::InterpolateStart,
                 }) => {
                     let expr = self.parse_expr().unwrap();
                     self.expect(NixTokenType::CurlyClose);
-                    match accum {
-                        Some(v) => {
-                            accum = Some(self.visitor.visit_string_concatenate(v, expr));
-                        }
-                        None => {
-                            accum = Some(expr);
-                        }
-                    }
+                    accum = Some(self.visitor.visit_string_concatenate(accum, expr));
                 }
-                Some(NixToken { token_type: _end }) => break accum,
+                Some(NixToken { token_type: _end }) => break Some(self.visitor.visit_string_concatenate_end(accum)),
                 v => panic!("unexpected {:?}", v),
             }
         }
@@ -347,17 +328,18 @@ impl<
 
         let mut binds: Option<R> = None;
         loop {
+            self.visitor.visit_attrset_before(&binds);
             match self.lexer.peek() {
                 Some(NixToken {
                     token_type: NixTokenType::CurlyClose,
                 }) => {
                     self.expect(NixTokenType::CurlyClose);
 
-                    break binds;
+                    break Some(self.visitor.visit_attrset(binds));
                 }
                 _ => {
                     self.lexer.reset_peek();
-                    let bind = self.parse_bind();
+                    let bind = self.parse_bind(BindType::Attrset);
 
                     binds = Some(self.visitor.visit_attrset_bind_push(binds, bind));
                 }
@@ -394,8 +376,7 @@ impl<
                 token_type: NixTokenType::PathStart,
             }) => {
                 self.lexer.reset_peek();
-                self.parse_path();
-                Some(self.visitor.visit_todo())
+                self.parse_path()
             }
             Some(NixToken {
                 token_type: NixTokenType::IndentedStringStart,
@@ -404,15 +385,13 @@ impl<
                 self.parse_some_string(
                     NixTokenType::IndentedStringStart,
                     NixTokenType::IndentedStringEnd,
-                );
-                Some(self.visitor.visit_todo())
+                )
             }
             Some(NixToken {
                 token_type: NixTokenType::StringStart,
             }) => {
                 self.lexer.reset_peek();
-                self.parse_some_string(NixTokenType::StringStart, NixTokenType::StringEnd);
-                Some(self.visitor.visit_todo())
+                self.parse_some_string(NixTokenType::StringStart, NixTokenType::StringEnd)
             }
             Some(NixToken {
                 token_type: NixTokenType::ParenOpen,
@@ -420,20 +399,17 @@ impl<
                 self.expect(NixTokenType::ParenOpen);
                 let expr = self.parse_expr();
                 self.expect(NixTokenType::ParenClose);
-                drop(expr);
-                Some(self.visitor.visit_todo())
+                expr
             }
             Some(NixToken {
                 token_type: NixTokenType::CurlyOpen,
-            }) => {
-                self.parse_attrset();
-                Some(self.visitor.visit_todo())
-            }
+            }) => self.parse_attrset(),
             Some(NixToken {
                 token_type: NixTokenType::BracketOpen,
             }) => {
                 // array
                 self.expect(NixTokenType::BracketOpen);
+                self.visitor.visit_array_start();
                 let mut array = None;
                 loop {
                     match self.lexer.peek() {
@@ -446,6 +422,7 @@ impl<
                         _tokens => {
                             self.lexer.reset_peek();
 
+                            self.visitor.visit_array_push_before(&array);
                             let last = self.parse_expr_select().unwrap();
                             array = Some(self.visitor.visit_array_push(array, last))
                         }
@@ -554,6 +531,7 @@ impl<
     pub fn parse_expr_app(&mut self) -> Option<R> {
         let mut result: Option<R> = None;
         loop {
+            self.visitor.visit_call_maybe(&result);
             let jo = self.parse_expr_select();
             match jo {
                 Some(expr) => {
@@ -563,10 +541,10 @@ impl<
                         }
                         None => result = Some(expr),
                     }
-
                     //lexer.next();
                 }
                 None => {
+                    self.visitor.visit_call_maybe_not();
                     break;
                 }
             }
@@ -709,7 +687,8 @@ impl<
                 self.visitor.visit_if_after_condition(&condition);
                 self.expect(NixTokenType::Then);
                 let true_case = self.parse_expr().expect("failed to parse if true case");
-                self.visitor.visit_if_after_true_case(&condition, &true_case);
+                self.visitor
+                    .visit_if_after_true_case(&condition, &true_case);
                 self.expect(NixTokenType::Else);
                 let false_case = self.parse_expr().expect("failed to parse if false case");
                 Some(self.visitor.visit_if(condition, true_case, false_case))
@@ -894,19 +873,21 @@ impl<
                         // function call
                         let ident = self.lexer.next().unwrap();
                         match ident {
-                            NixToken { token_type: NixTokenType::Identifier(ident) } => {
+                            NixToken {
+                                token_type: NixTokenType::Identifier(ident),
+                            } => {
                                 self.visitor.visit_function_before();
 
                                 let arg = self.visitor.visit_identifier(ident);
-                        
+
                                 self.visitor.visit_function_enter(&arg);
-        
+
                                 self.expect(NixTokenType::Colon);
                                 let body = self.parse_expr_function().unwrap();
-        
+
                                 Some(self.visitor.visit_function_exit(arg, body))
                             }
-                            _ => todo!()
+                            _ => todo!(),
                         }
                     }
                     Some(NixToken {
