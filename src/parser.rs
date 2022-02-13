@@ -21,50 +21,6 @@ pub const BUILTIN_STRING_CONCATENATE: &[u8] = b"__builtin_string_concatenate";
 pub const BUILTIN_UNARY_MINUS: &[u8] = b"__builtin_unary_minus";
 pub const BUILTIN_SELECT: &[u8] = b"__builtin_select";
 
-#[derive(PartialEq)]
-pub enum AST<'a> {
-    Identifier(&'a [u8]),
-    String(&'a [u8]),
-    PathSegment(&'a [u8]), // merge into String
-    Integer(i64),
-    Float(f64),
-    Let(Box<AST<'a>>, Box<AST<'a>>, Box<AST<'a>>),
-    Call(Box<AST<'a>>, Box<AST<'a>>),
-}
-
-impl<'a> Debug for AST<'a> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        if !f.alternate() {
-            // ugly hack for tracing macros
-            write!(f, "{:#?}", self)
-        } else {
-            match self {
-                Self::Identifier(arg0) => f
-                    .debug_tuple("Identifier")
-                    .field(&std::str::from_utf8(arg0).unwrap())
-                    .finish(),
-                Self::String(arg0) => f
-                    .debug_tuple("String")
-                    .field(&std::str::from_utf8(arg0).unwrap())
-                    .finish(),
-                Self::PathSegment(arg0) => f
-                    .debug_tuple("PathSegment")
-                    .field(&std::str::from_utf8(arg0).unwrap())
-                    .finish(),
-                Self::Integer(arg0) => f.debug_tuple("Integer").field(arg0).finish(),
-                Self::Float(arg0) => f.debug_tuple("Float").field(arg0).finish(),
-                Self::Let(arg0, arg1, arg2) => f
-                    .debug_tuple("Let")
-                    .field(arg0)
-                    .field(arg1)
-                    .field(arg2)
-                    .finish(),
-                Self::Call(arg0, arg1) => f.debug_tuple("Call").field(arg0).field(arg1).finish(),
-            }
-        }
-    }
-}
-
 pub struct Parser<
     'a,
     I: Iterator<Item = NixToken<'a>> + std::fmt::Debug,
