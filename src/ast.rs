@@ -781,11 +781,9 @@ impl<'a> ASTVisitor<'a, AST<'a>> for ASTBuilder {
     }
 
     fn visit_call_maybe(&mut self, expr: &Option<AST<'a>>) {
-        todo!()
     }
 
     fn visit_call_maybe_not(&mut self) {
-        todo!()
     }
 
     fn visit_bind_before(&mut self, bind_type: BindType) {
