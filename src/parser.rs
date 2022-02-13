@@ -667,6 +667,18 @@ impl<
         // this is probably the most complicated function in here
 
         // this looks way to complicated. what about peeking first to check what it is and then use a normal algorithm afterwards for actual parsing?
+        // formals:
+        // { a }:
+        // {}:
+        // {}@jo:
+        // { a }@jo:
+        // { a ? jo }:
+        // {a, b}:
+        // no formals:
+        // {a=1;}
+        // {inherit a;}
+        // {"a"=1;}
+        // {${"a"} = 1;}
 
         let mut formals: Option<R> = None;
         let mut parsed_first = false;
