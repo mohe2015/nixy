@@ -687,7 +687,37 @@ impl<
                 Some(NixToken {
                     token_type: NixTokenType::Identifier(_a),
                 }) => {
-                    
+                    match self.lexer.peek() {
+                        Some(NixToken {
+                            token_type: NixTokenType::QuestionMark,
+                        }) => match self.lexer.next() {
+                            Some(NixToken {
+                                token_type: NixTokenType::Identifier(_a),
+                            }) => {}
+                            _ => todo!(),
+                        },
+                        Some(NixToken {
+                            token_type: NixTokenType::Comma,
+                        }) => match self.lexer.next() {
+                            Some(NixToken {
+                                token_type: NixTokenType::Identifier(_a),
+                            }) => {}
+                            _ => todo!(),
+                        },
+                        Some(NixToken {
+                            token_type: NixTokenType::CurlyClose,
+                        }) => match self.lexer.next() {
+                            Some(NixToken {
+                                token_type: NixTokenType::Identifier(_a),
+                            }) => {}
+                            _ => todo!(),
+                        },
+                        _ => {
+                            // probably an attrset
+                            self.lexer.reset_peek();
+                            return None;
+                        }
+                    }
                 }
                 Some(NixToken {
                     token_type: NixTokenType::Inherit, // {inherit a;}
@@ -708,8 +738,7 @@ impl<
                     match self.lexer.peek() {
                         Some(NixToken {
                             token_type: NixTokenType::Colon, // {}:
-                        }) => {
-                        }
+                        }) => {}
                         Some(NixToken {
                             token_type: NixTokenType::AtSign, // {}@jo:
                         }) => {
@@ -727,7 +756,8 @@ impl<
                                 _ => todo!(),
                             }
                         }
-                        _ => { // {}
+                        _ => {
+                            // {}
                             // potentially empty attrset
                             self.lexer.reset_peek();
                             return None;
