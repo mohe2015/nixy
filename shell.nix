@@ -7,6 +7,7 @@ stdenv.mkDerivation {
     cargo
     rust-analyzer
     rustfmt
+    clippy
     google-java-format
     openjdk17
   ];
