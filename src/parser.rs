@@ -673,8 +673,6 @@ impl<
         // this looks way to complicated. what about peeking first to check what it is and then use a normal algorithm afterwards for actual parsing?
         // formals:
         // { a }:
-        // {}:
-        // {}@jo:
         // { a }@jo:
         // { a ? jo }:
         // {a, b}:
@@ -688,7 +686,9 @@ impl<
             match self.lexer.peek() {
                 Some(NixToken {
                     token_type: NixTokenType::Identifier(_a),
-                }) => {}
+                }) => {
+                    
+                }
                 Some(NixToken {
                     token_type: NixTokenType::Inherit, // {inherit a;}
                 })
@@ -707,17 +707,11 @@ impl<
                 }) => {
                     match self.lexer.peek() {
                         Some(NixToken {
-                            token_type: NixTokenType::Colon,
+                            token_type: NixTokenType::Colon, // {}:
                         }) => {
-                            // empty function
-                            self.expect(NixTokenType::CurlyOpen);
-                            self.expect(NixTokenType::CurlyClose);
-                            self.lexer.reset_peek();
-
-                            return Some(self.visitor.visit_formals(None, None, false));
                         }
                         Some(NixToken {
-                            token_type: NixTokenType::AtSign,
+                            token_type: NixTokenType::AtSign, // {}@jo:
                         }) => {
                             // empty function in stupid
                             self.expect(NixTokenType::CurlyOpen);
@@ -733,7 +727,7 @@ impl<
                                 _ => todo!(),
                             }
                         }
-                        _ => {
+                        _ => { // {}
                             // potentially empty attrset
                             self.lexer.reset_peek();
                             return None;
