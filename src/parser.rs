@@ -708,7 +708,7 @@ impl<
 
         // we need quite some peekahead here do differentiate between attrsets
         // this is probably the most complicated function in here
-        let formals: Option<R> = None;
+        let mut formals: Option<R> = None;
         let mut parsed_first = false;
         if let Some(NixToken {
             token_type: NixTokenType::CurlyOpen,
@@ -728,10 +728,14 @@ impl<
                                 self.expect(NixTokenType::CurlyOpen);
                                 parsed_first = true;
                             }
-                            let identifier = self.expect(NixTokenType::Identifier(b""));
-                            self.expect(NixTokenType::QuestionMark);
-                            let expr = self.parse_expr();
-                            formals = self.visitor.visit_formal(formals, identifier, expr);
+                            match self.lexer.next() {
+                                Some(NixToken { token_type: NixTokenType::Identifier(_a) }) => {
+                                    self.expect(NixTokenType::QuestionMark);
+                                    let expr = self.parse_expr().unwrap();
+                                    formals = Some(self.visitor.visit_formal(formals, _a, Some(expr)));
+                                },
+                                _ => todo!(),
+                            }
                         } else if let Some(NixToken {
                             token_type: NixTokenType::Comma,
                         }) = token
@@ -740,9 +744,13 @@ impl<
                                 self.expect(NixTokenType::CurlyOpen);
                                 parsed_first = true;
                             }
-                            let identifier = self.expect(NixTokenType::Identifier(b""));
-                            self.expect(NixTokenType::Comma);
-                            formals = self.visitor.visit_formal(formals, identifier);
+                            match self.lexer.next() {
+                                Some(NixToken { token_type: NixTokenType::Identifier(_a) }) => {
+                                    self.expect(NixTokenType::Comma);
+                                    formals = Some(self.visitor.visit_formal(formals, _a, None));
+                                },
+                                _ => todo!(),
+                            }
                         } else if let Some(NixToken {
                             token_type: NixTokenType::CurlyClose,
                         }) = token
@@ -751,9 +759,13 @@ impl<
                                 self.expect(NixTokenType::CurlyOpen);
                                 parsed_first = true;
                             }
-                            let identifier = self.expect(NixTokenType::Identifier(b""));
-                            self.expect(NixTokenType::CurlyClose);
-                            formals = self.visitor.visit_formal(formals, identifier);
+                            match self.lexer.next() {
+                                Some(NixToken { token_type: NixTokenType::Identifier(_a) }) => {
+                                    self.expect(NixTokenType::CurlyClose);
+                                    formals = Some(self.visitor.visit_formal(formals, _a, None));
+                                },
+                                _ => todo!(),
+                            }
                         } else {
                             // probably an attrset
                             self.lexer.reset_peek();
@@ -785,7 +797,7 @@ impl<
                         }
                         self.expect(NixTokenType::Ellipsis);
 
-                        return self.visitor.visit_formals(None, None, true);
+                        return Some(self.visitor.visit_formals(None, None, true));
                     }
                     Some(NixToken {
                         token_type: NixTokenType::CurlyClose,
@@ -800,7 +812,7 @@ impl<
                                     self.expect(NixTokenType::CurlyClose);
                                     self.lexer.reset_peek();
                                     
-                                    return self.visitor.visit_formals(None);
+                                    return Some(self.visitor.visit_formals(None, None, false));
                                 }
                                 Some(NixToken {
                                     token_type: NixTokenType::AtSign,
@@ -809,10 +821,13 @@ impl<
                                     self.expect(NixTokenType::CurlyOpen);
                                     self.expect(NixTokenType::CurlyClose);
                                     self.expect(NixTokenType::AtSign);
-                                    let at_identifier = self.expect(NixTokenType::Identifier(b""));
-                                    self.lexer.reset_peek();
-                                    
-                                    return self.visitor.visit_formals(None, at_identifier);
+                                    match self.lexer.next() {
+                                        Some(NixToken { token_type: NixTokenType::Identifier(_a) }) => {
+                                            self.lexer.reset_peek();
+                                            return Some(self.visitor.visit_formals(None, Some(_a), false));
+                                        },
+                                        _ => todo!(),
+                                    }
                                 }
                                 _ => {
                                     // potentially empty attrset

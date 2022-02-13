@@ -2,7 +2,7 @@ use std::io::Write;
 use std::{io::BufWriter, marker::PhantomData};
 
 use crate::{
-    lexer::NixTokenType,
+    lexer::{NixTokenType, NixToken},
     parser::{
         BindType, Parser, AST, BUILTIN_IF, BUILTIN_PATH_CONCATENATE, BUILTIN_SELECT,
         BUILTIN_UNARY_MINUS, BUILTIN_UNARY_NOT,
@@ -90,6 +90,10 @@ pub trait ASTVisitor<'a, R: std::fmt::Debug> {
     fn visit_attrset_bind_push(&mut self, begin: Option<R>, last: R) -> R;
 
     fn visit_attrset(&mut self, binds: Option<R>) -> R;
+
+    fn visit_formal(&mut self, formals: Option<R>, identifier: &'a [u8], default: Option<R>) -> R;
+
+    fn visit_formals(&mut self, formals: Option<R>, at_identifier: Option<&'a [u8]>, ellipsis: bool) -> R;
 }
 
 pub struct ASTJavaTranspiler<'a, W: Write> {
@@ -486,6 +490,14 @@ public class MainClosure extends NixLazyBase {{
     fn visit_attrset(&mut self, binds: Option<()>) -> () {
         write!(self.writer, r#"}}}})"#,).unwrap();
     }
+
+    fn visit_formal(&mut self, formals: Option<()>, identifier: &'a [u8], default: Option<()>) -> () {
+        todo!()
+    }
+
+    fn visit_formals(&mut self, formals: Option<()>, at_identifier: Option<&'a [u8]>, ellipsis: bool) -> () {
+        todo!()
+    }
 }
 
 fn test_java_transpiler_code(code: &[u8]) {
@@ -828,6 +840,14 @@ impl<'a> ASTVisitor<'a, AST<'a>> for ASTBuilder {
     }
 
     fn visit_string_concatenate_end(&mut self, result: Option<AST<'a>>) -> AST<'a> {
+        todo!()
+    }
+
+    fn visit_formal(&mut self, formals: Option<AST<'a>>, identifier: &'a [u8], default: Option<AST<'a>>) -> AST<'a> {
+        todo!()
+    }
+
+    fn visit_formals(&mut self, formals: Option<AST<'a>>, at_identifier: Option<&'a [u8]>, ellipsis: bool) -> AST<'a> {
         todo!()
     }
 }
