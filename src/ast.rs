@@ -1,10 +1,11 @@
 use std::io::Write;
 use std::{io::BufWriter, marker::PhantomData};
+use core::fmt::Debug;
 
 use crate::{
     lexer::{NixTokenType, NixToken},
     parser::{
-        BindType, Parser, AST, BUILTIN_IF, BUILTIN_PATH_CONCATENATE, BUILTIN_SELECT,
+        BindType, Parser, BUILTIN_IF, BUILTIN_PATH_CONCATENATE, BUILTIN_SELECT,
         BUILTIN_UNARY_MINUS, BUILTIN_UNARY_NOT,
     },
 };
@@ -578,6 +579,51 @@ fn test_java_transpiler_code(code: &[u8]) {
 
     if !run_cmd.status.success() {
         panic!("failed to run java program");
+    }
+}
+
+
+#[derive(PartialEq)]
+pub enum AST<'a> {
+    Identifier(&'a [u8]),
+    String(&'a [u8]),
+    PathSegment(&'a [u8]), // merge into String
+    Integer(i64),
+    Float(f64),
+    Let(Box<AST<'a>>, Box<AST<'a>>, Box<AST<'a>>),
+    Call(Box<AST<'a>>, Box<AST<'a>>),
+}
+
+impl<'a> Debug for AST<'a> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        if !f.alternate() {
+            // ugly hack for tracing macros
+            write!(f, "{:#?}", self)
+        } else {
+            match self {
+                Self::Identifier(arg0) => f
+                    .debug_tuple("Identifier")
+                    .field(&std::str::from_utf8(arg0).unwrap())
+                    .finish(),
+                Self::String(arg0) => f
+                    .debug_tuple("String")
+                    .field(&std::str::from_utf8(arg0).unwrap())
+                    .finish(),
+                Self::PathSegment(arg0) => f
+                    .debug_tuple("PathSegment")
+                    .field(&std::str::from_utf8(arg0).unwrap())
+                    .finish(),
+                Self::Integer(arg0) => f.debug_tuple("Integer").field(arg0).finish(),
+                Self::Float(arg0) => f.debug_tuple("Float").field(arg0).finish(),
+                Self::Let(arg0, arg1, arg2) => f
+                    .debug_tuple("Let")
+                    .field(arg0)
+                    .field(arg1)
+                    .field(arg2)
+                    .finish(),
+                Self::Call(arg0, arg1) => f.debug_tuple("Call").field(arg0).field(arg1).finish(),
+            }
+        }
     }
 }
 
