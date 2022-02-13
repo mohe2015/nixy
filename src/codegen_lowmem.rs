@@ -1,6 +1,6 @@
 use std::{io::Write, marker::PhantomData};
 
-use crate::{ast::ASTVisitor, lexer::NixTokenType, parser::{BindType, Parser}};
+use crate::{lexer::NixTokenType, parser::{BindType, Parser}, visitor::ASTVisitor};
 
 
 pub struct ASTJavaTranspiler<'a, W: Write> {

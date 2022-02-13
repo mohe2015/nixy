@@ -1,6 +1,6 @@
 use crate::{
-    ast::{ASTVisitor, AST},
-    lexer::{NixToken, NixTokenType},
+    ast::{AST},
+    lexer::{NixToken, NixTokenType}, visitor::ASTVisitor,
 };
 use core::fmt;
 use itertools::MultiPeek;
