@@ -978,6 +978,7 @@ fn can_parse(code: &str) {
     let _result = parser.parse();
 }
 
+// cargo test parser::test_operators -- --nocapture
 #[test]
 fn test_operators() {
     let subscriber = tracing_subscriber::fmt()
