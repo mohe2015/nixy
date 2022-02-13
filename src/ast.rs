@@ -100,6 +100,12 @@ pub struct ASTJavaTranspiler<'a, W: Write> {
 #[test]
 pub fn test_java_transpiler() {
     // https://learnxinyminutes.com/docs/nix/
+
+    // probably use the ast to codegen
+    // then this should be easy using the proxy implementation
+    // using a Map to store all variables will get extremely annoying
+    // because then I have to implement variable capturing etc
+
     /*test_java_transpiler_code(
         br#" (let y = x + "b";
     x = "a"; in
