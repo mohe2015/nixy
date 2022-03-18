@@ -65,14 +65,14 @@ fn main() -> Result<()> {
 
             let mut parser = Parser {
                 lexer: multipeek(lexer.map(|f| {
-                    println!("{:?}", f);
+                    //println!("{:?}", f);
                     f
                 })),
                 visitor: ASTBuilder,
                 phantom: PhantomData,
             };
 
-            parser.parse();
+            println!("{:?}", parser.parse());
         };
         /* }) {
             Ok(_) => success += 1,

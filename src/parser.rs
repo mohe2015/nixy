@@ -363,9 +363,7 @@ impl<
             }
             Some(NixToken {
                 token_type: NixTokenType::CurlyOpen,
-            }) => {
-                self.parse_attrset()
-            }
+            }) => self.parse_attrset(),
             Some(NixToken {
                 token_type: NixTokenType::BracketOpen,
             }) => {
@@ -803,9 +801,7 @@ impl<
         match self.lexer.next() {
             Some(NixToken {
                 token_type: NixTokenType::Colon,
-            }) => {
-
-            }
+            }) => {}
             Some(NixToken {
                 token_type: NixTokenType::AtSign,
             }) => {
