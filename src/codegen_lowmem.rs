@@ -20,11 +20,17 @@ pub fn test_java_transpiler() {
     // using a Map to store all variables will get extremely annoying
     // because then I have to implement variable capturing etc
 
-    /*test_java_transpiler_code(
+    /*    
+    currentVars.put("a", () -> currentVars.get("b"));
+    currentVars.put("b", () -> 5);
+    */
+    test_java_transpiler_code(br#"let ${"hi"} = 1; in hi"#);
+    test_java_transpiler_code(br#"let a.b = 5; a.c = 3; a.d.e = 3; in a"#);
+    test_java_transpiler_code(
            br#" (let y = x + "b";
        x = "a"; in
     y + "c")"#,
-       );*/
+       );
     test_java_transpiler_code(br#"with builtins; (length [1 2 3 "x"])"#);
     test_java_transpiler_code(
         br#"(let a = 1; in
