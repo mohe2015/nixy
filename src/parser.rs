@@ -761,39 +761,23 @@ impl<
         let mut formals: Option<R> = None;
     
         loop {
-            match self.lexer.peek() {
+            match self.lexer.next() {
                 Some(NixToken {
                     token_type: NixTokenType::Identifier(_a),
                 }) => {
-                    let token = self.lexer.peek();
+                    let token = self.lexer.next();
                     if let Some(NixToken {
                         token_type: NixTokenType::QuestionMark,
                     }) = token
                     {
-                        match self.lexer.next() {
-                            Some(NixToken {
-                                token_type: NixTokenType::Identifier(_a),
-                            }) => {
-                                self.expect(NixTokenType::QuestionMark);
-                                let expr = self.parse_expr().unwrap();
-                                formals =
-                                    Some(self.visitor.visit_formal(formals, _a, Some(expr)));
-                            }
-                            _ => todo!(),
-                        }
+                        let expr = self.parse_expr().unwrap();
+                        formals =
+                            Some(self.visitor.visit_formal(formals, _a, Some(expr)));
                     } else if let Some(NixToken {
                         token_type: NixTokenType::Comma,
                     }) = token
                     {
-                        match self.lexer.next() {
-                            Some(NixToken {
-                                token_type: NixTokenType::Identifier(_a),
-                            }) => {
-                                self.expect(NixTokenType::Comma);
-                                formals = Some(self.visitor.visit_formal(formals, _a, None));
-                            }
-                            _ => todo!(),
-                        }
+                        formals = Some(self.visitor.visit_formal(formals, _a, None));
                     } else if let Some(NixToken {
                         token_type: NixTokenType::CurlyClose,
                     }) = token
@@ -802,7 +786,6 @@ impl<
                             Some(NixToken {
                                 token_type: NixTokenType::Identifier(_a),
                             }) => {
-                                self.expect(NixTokenType::CurlyClose);
                                 formals = Some(self.visitor.visit_formal(formals, _a, None));
                             }
                             _ => todo!(),
@@ -813,56 +796,15 @@ impl<
                 }
                 Some(NixToken {
                     token_type: NixTokenType::Comma,
-                }) => {
-                    self.expect(NixTokenType::Comma);
-                }
+                }) => { }
                 Some(NixToken {
                     token_type: NixTokenType::Ellipsis,
                 }) => {
-                    self.expect(NixTokenType::Ellipsis);
-
                     return Some(self.visitor.visit_formals(None, None, true));
                 }
                 Some(NixToken {
                     token_type: NixTokenType::CurlyClose,
                 }) => {
-                    if !parsed_first {
-                        match self.lexer.peek() {
-                            Some(NixToken {
-                                token_type: NixTokenType::Colon,
-                            }) => {
-                                // empty function
-                                self.expect(NixTokenType::CurlyOpen);
-                                self.expect(NixTokenType::CurlyClose);
-                                self.lexer.reset_peek();
-
-                                return Some(self.visitor.visit_formals(None, None, false));
-                            }
-                            Some(NixToken {
-                                token_type: NixTokenType::AtSign,
-                            }) => {
-                                // empty function in stupid
-                                self.expect(NixTokenType::CurlyOpen);
-                                self.expect(NixTokenType::CurlyClose);
-                                self.expect(NixTokenType::AtSign);
-                                match self.lexer.next() {
-                                    Some(NixToken {
-                                        token_type: NixTokenType::Identifier(_a),
-                                    }) => {
-                                        self.lexer.reset_peek();
-                                        return Some(self.visitor.visit_formals(
-                                            None,
-                                            Some(_a),
-                                            false,
-                                        ));
-                                    }
-                                    _ => todo!(),
-                                }
-                            }
-                            _ => todo!()
-                        }
-                    }
-                    self.expect(NixTokenType::CurlyClose);
                     return Some(self.visitor.visit_todo()); //return Some(AST::Identifier(b"TODO formals")); // TODO FIXME
                 }
                 token => panic!("{:?}", token),
