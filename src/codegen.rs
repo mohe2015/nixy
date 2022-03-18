@@ -1,13 +1,19 @@
 use crate::{
     ast::{ASTBuilder, AST},
-    codegen_lowmem::ASTJavaTranspiler,
     lexer::NixTokenType,
     parser::Parser,
 };
 use std::{io::Write, marker::PhantomData};
 
-impl<'a, W: Write> ASTJavaTranspiler<'a, W> {
-    fn codegen_expr(&mut self, expr: &AST<'a>) {
+pub struct JavaCodegen<'a, W: Write> {
+    pub writer: &'a mut W,
+    pub withs: Vec<&'a AST<'a>>,
+}
+
+// TODO FIXME in java, memorize forced values
+
+impl<'a, W: Write> JavaCodegen<'a, W> {
+    fn codegen_expr(&mut self, expr: &'a AST<'a>) {
         match expr {
             AST::Identifier(value) => write!(self.writer, "{}", value).unwrap(),
             AST::Integer(value) => write!(self.writer, "NixInteger.create({})", value).unwrap(),
@@ -35,13 +41,14 @@ impl<'a, W: Write> ASTJavaTranspiler<'a, W> {
                 write!(self.writer, r#"))"#,).unwrap();
             }
             AST::With(with_expr, expr) => {
-                
+                self.withs.push(with_expr);
+                self.codegen_expr(expr);
             }
             ast => panic!("{:?}", ast),
         }
     }
 
-    fn codegen(&mut self, expr: AST<'a>) {
+    fn codegen(&mut self, expr: &'a AST<'a>) {
         write!(
             self.writer,
             r#"
@@ -52,7 +59,7 @@ public class MainClosure extends NixLazyBase {{
         )
         .unwrap();
 
-        self.codegen_expr(&expr);
+        self.codegen_expr(expr);
 
         write!(
             self.writer,
@@ -71,7 +78,7 @@ public class MainClosure extends NixLazyBase {{
 
 fn test_codegen<'a>(code: &'a [u8]) {
     let mut data = Vec::new();
-    let mut transpiler = ASTJavaTranspiler { writer: &mut data };
+    let mut transpiler = JavaCodegen { writer: &mut data, withs: Vec::new() };
     let ast_builder = ASTBuilder {};
 
     let lexer = crate::lexer::NixLexer::new(code).filter(|t| {
@@ -91,7 +98,7 @@ fn test_codegen<'a>(code: &'a [u8]) {
 
     let expr = parser.parse().unwrap();
 
-    transpiler.codegen(expr);
+    transpiler.codegen(&expr);
 
     std::fs::write("/tmp/MainClosure.java", data).expect("Unable to write file");
 
