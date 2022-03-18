@@ -1,5 +1,5 @@
-use std::io::Write;
-use crate::{codegen_lowmem::ASTJavaTranspiler, ast::AST};
+use std::{io::Write, marker::PhantomData};
+use crate::{codegen_lowmem::ASTJavaTranspiler, ast::{AST, ASTBuilder}, lexer::NixTokenType, parser::Parser};
 
 
 impl<'a, W: Write> ASTJavaTranspiler<'a, W> {
@@ -42,9 +42,31 @@ public class MainClosure extends NixLazyBase {{
 }
 
 
-fn test_codegen<'a>(expr: AST<'a>) {
+fn test_codegen<'a>(code: &'a [u8]) {
     let mut data = Vec::new();
     let mut transpiler = ASTJavaTranspiler { writer: &mut data };
+    let ast_builder = ASTBuilder {};
+
+    let lexer = crate::lexer::NixLexer::new(code).filter(|t| {
+        !matches!(
+            t.token_type,
+            NixTokenType::Whitespace(_)
+                | NixTokenType::SingleLineComment(_)
+                | NixTokenType::MultiLineComment(_)
+        )
+    });
+
+    for token in lexer.clone() {
+        println!("{:?}", token.token_type);
+    }
+
+    let mut parser = Parser {
+        lexer: itertools::multipeek(lexer),
+        visitor: ast_builder,
+        phantom: PhantomData,
+    };
+
+    let expr = parser.parse().unwrap();
 
     transpiler.codegen(expr);
 
@@ -88,9 +110,8 @@ fn test_codegen<'a>(expr: AST<'a>) {
 
 #[test]
 fn test_codegen_basic() {
-    test_codegen(AST::Integer(1));
+    test_codegen(b"1");
 
 
-    //test_codegen(AST::Identifier("hi"));
     
 }
