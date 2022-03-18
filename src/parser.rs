@@ -404,8 +404,7 @@ impl<
                 token_type: NixTokenType::Rec,
             }) => {
                 self.expect(NixTokenType::Rec);
-                self.parse_attrset();
-                Some(self.visitor.visit_todo())
+                self.parse_attrset()
             }
             _ => {
                 self.lexer.reset_peek();
@@ -745,6 +744,12 @@ impl<
                                 return self.parse_expr_if();
                             }
                         }
+                    }
+                    Some(NixToken {
+                        token_type: NixTokenType::Ellipsis,
+                    }) => {
+                        // {...}
+                        self.lexer.reset_peek();
                     }
                     // {inherit a;}
                     // {"a"=1;}
