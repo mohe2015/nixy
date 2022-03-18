@@ -797,7 +797,9 @@ impl<
                 Some(NixToken {
                     token_type: NixTokenType::Ellipsis,
                 }) => {
-                    return Some(self.visitor.visit_formals(None, None, true));
+                    self.expect(NixTokenType::CurlyClose);
+                    break;
+                    // return Some(self.visitor.visit_formals(None, None, true));
                 }
                 Some(NixToken {
                     token_type: NixTokenType::CurlyClose,
@@ -906,6 +908,7 @@ impl<
     pub fn parse(&mut self) -> Option<R> {
         self.visitor.visit_file_start();
         let result = self.parse_expr();
+        println!("{:?}", result);
         assert_eq!(None, self.lexer.next());
         self.visitor.visit_file_end();
         result
