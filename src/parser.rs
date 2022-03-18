@@ -284,7 +284,8 @@ impl<
 
     #[cfg_attr(debug_assertions, instrument(name = "attrs", skip_all, ret))]
     pub fn parse_attrset(&mut self) -> Option<R> {
-        self.expect(NixTokenType::CurlyOpen);
+        // caller needs to do
+        // self.expect(NixTokenType::CurlyOpen);
 
         let mut binds: Option<R> = None;
         loop {
@@ -363,7 +364,10 @@ impl<
             }
             Some(NixToken {
                 token_type: NixTokenType::CurlyOpen,
-            }) => self.parse_attrset(),
+            }) => {
+                self.expect(NixTokenType::CurlyOpen);
+                self.parse_attrset()
+            },
             Some(NixToken {
                 token_type: NixTokenType::BracketOpen,
             }) => {
@@ -394,6 +398,7 @@ impl<
                 token_type: NixTokenType::Let,
             }) => {
                 self.expect(NixTokenType::Let);
+                self.expect(NixTokenType::CurlyOpen);
                 self.parse_attrset();
                 Some(self.visitor.visit_todo())
             }
@@ -401,6 +406,7 @@ impl<
                 token_type: NixTokenType::Rec,
             }) => {
                 self.expect(NixTokenType::Rec);
+                self.expect(NixTokenType::CurlyOpen);
                 self.parse_attrset();
                 Some(self.visitor.visit_todo())
             }
@@ -667,10 +673,12 @@ impl<
     pub fn parse_formals(&mut self) -> Option<R> {
         // destructured function parameters
 
+        // TODO FIXME call parse_attrset directly (I think we can prove that this does the same.)
+
         // this first part here checks whether this is a formal or an attrset
         if let Some(NixToken {
             token_type: NixTokenType::CurlyOpen,
-        }) = self.lexer.peek()
+        }) = self.lexer.next()
         {
             match self.lexer.peek() {
                 Some(NixToken {
@@ -699,7 +707,7 @@ impl<
                         _ => { // {a=1;}
                             // probably an attrset
                             self.lexer.reset_peek();
-                            return None;
+                            return self.parse_attrset();
                         }
                     }
                 }
@@ -735,7 +743,7 @@ impl<
                             // {}
                             // potentially empty attrset
                             self.lexer.reset_peek();
-                            return None;
+                            return self.parse_attrset();
                         }
                     }
                 }
@@ -750,14 +758,12 @@ impl<
                 }) | _ => {
                     // attrset
                     self.lexer.reset_peek();
-                    return None;
+                    return self.parse_attrset();
                 }
             }
         } else {
-            self.lexer.reset_peek();
-            return None;
+            panic!();
         }
-
 
         // this second part here actually parses these formals
         let mut formals: Option<R> = None;
