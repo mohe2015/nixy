@@ -5,7 +5,7 @@ use crate::{
     lexer::NixTokenType,
     parser::{
         BindType, BUILTIN_IF, BUILTIN_PATH_CONCATENATE, BUILTIN_SELECT, BUILTIN_UNARY_MINUS,
-        BUILTIN_UNARY_NOT,
+        BUILTIN_UNARY_NOT, BUILTIN_STRING_CONCATENATE,
     },
     visitor::ASTVisitor,
 };
@@ -81,7 +81,6 @@ impl<'a> ASTVisitor<'a, AST<'a>> for ASTBuilder {
     }
 
     fn visit_infix_lhs(&mut self, _operator: NixTokenType<'a>, _left: &AST<'a>) {
-        todo!()
     }
 
     fn visit_infix_operation(
@@ -186,8 +185,18 @@ impl<'a> ASTVisitor<'a, AST<'a>> for ASTBuilder {
         AST::String(string)
     }
 
-    fn visit_string_concatenate(&mut self, _begin: Option<AST<'a>>, _last: AST<'a>) -> AST<'a> {
-        todo!()
+    fn visit_string_concatenate(&mut self, begin: Option<AST<'a>>, last: AST<'a>) -> AST<'a> {
+        match begin {
+            Some(begin) =>AST::Call(
+                Box::new(AST::Call(
+                    Box::new(AST::Identifier(BUILTIN_STRING_CONCATENATE)),
+                    Box::new(begin),
+                )),
+                Box::new(last),
+            ),
+            None => last
+        }
+        
     }
     fn visit_array_start(&mut self) {
         todo!()
@@ -233,15 +242,12 @@ impl<'a> ASTVisitor<'a, AST<'a>> for ASTBuilder {
     }
 
     fn visit_if_before(&mut self) {
-        todo!()
     }
 
     fn visit_if_after_condition(&mut self, _condition: &AST<'a>) {
-        todo!()
     }
 
     fn visit_if_after_true_case(&mut self, _condition: &AST<'a>, _true_case: &AST<'a>) {
-        todo!()
     }
 
     fn visit_call_maybe(&mut self, _expr: &Option<AST<'a>>) {}
@@ -270,24 +276,22 @@ impl<'a> ASTVisitor<'a, AST<'a>> for ASTBuilder {
         bind
     }
 
-    fn visit_let(&mut self, _binds: Vec<AST<'a>>, _body: AST<'a>) -> AST<'a> {
-        todo!()
+    fn visit_let(&mut self, binds: Vec<AST<'a>>, body: AST<'a>) -> AST<'a> {
+        AST::Let(binds, Box::new(body))
     }
 
     fn visit_let_before_body(&mut self, _binds: &Vec<AST<'a>>) {
-        todo!()
     }
 
     fn visit_attrset_before(&mut self, _binds: &Option<AST<'a>>) {
-        todo!()
     }
 
     fn visit_attrset(&mut self, _binds: Option<AST<'a>>) -> AST<'a> {
         todo!()
     }
 
-    fn visit_string_concatenate_end(&mut self, _result: Option<AST<'a>>) -> AST<'a> {
-        todo!()
+    fn visit_string_concatenate_end(&mut self, result: Option<AST<'a>>) -> AST<'a> {
+        result.unwrap()
     }
 
     fn visit_formal(
