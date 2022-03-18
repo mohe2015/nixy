@@ -8,7 +8,7 @@ public abstract class NixLazyBase implements NixLazy {
 		return NixInteger.create(1).force();
 	});
 	protected static NixLazy builtins_ = NixAttrset.create(new java.util.IdentityHashMap<String, NixLazy>() {{
-		this.put("length", NixLambda.createFunction(array -> NixInteger.create(((NixArray) array).array.size()).force()));
+		this.put("length", NixLambda.createFunction(array -> NixInteger.create(((NixArray) array.force()).array.size()).force()));
 	}});
 
 	// nix repl <TAB>

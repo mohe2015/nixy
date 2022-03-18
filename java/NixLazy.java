@@ -137,4 +137,8 @@ public interface NixLazy {
 	default NixLazy createCall() {
 		return this;
 	}
+
+	default NixLazy get(String name) {
+		return () -> ((NixAttrset)this.force()).value.get(name).force();
+	}
 }

@@ -1,3 +1,6 @@
+use itertools::Itertools;
+use rand::thread_rng;
+
 use crate::{
     ast::{ASTBuilder, AST},
     lexer::NixTokenType,
@@ -7,7 +10,8 @@ use std::{io::Write, marker::PhantomData};
 
 pub struct JavaCodegen<'a, W: Write> {
     pub writer: &'a mut W,
-    pub withs: Vec<&'a AST<'a>>,
+    pub withs: Vec<(String, &'a AST<'a>)>,
+    pub variables: Vec<(&'a str, &'a AST<'a>)>, // TODO FIXME hashmap and stack
 }
 
 // TODO FIXME in java, memorize forced values
@@ -15,15 +19,20 @@ pub struct JavaCodegen<'a, W: Write> {
 impl<'a, W: Write> JavaCodegen<'a, W> {
     fn codegen_expr(&mut self, expr: &'a AST<'a>) {
         match expr {
-            AST::Identifier(value) => write!(self.writer, "{}", value).unwrap(),
+            AST::Identifier(value) => {
+                if self.variables.iter().any(|f| f.0 == *value) {
+                    write!(self.writer, "{}_", value).unwrap()
+                } else {
+                    for (ident, with) in self.withs.clone().iter().rev() {
+                        write!(self.writer, r#"{}.get("{}")"#, ident, value).unwrap()
+                    }
+                }
+            }
             AST::Integer(value) => write!(self.writer, "NixInteger.create({})", value).unwrap(),
             AST::Float(value) => write!(self.writer, "NixFloat.create({}f)", value).unwrap(),
-            AST::String(value) => write!(
-                self.writer,
-                "NixString.create(\"\"\"\n{}\"\"\")",
-                value
-            )
-            .unwrap(),
+            AST::String(value) => {
+                write!(self.writer, "NixString.create(\"\"\"\n{}\"\"\")", value).unwrap()
+            }
             AST::Call(function, param) => {
                 self.codegen_expr(function);
                 write!(self.writer, r#".createCall("#,).unwrap();
@@ -41,8 +50,30 @@ impl<'a, W: Write> JavaCodegen<'a, W> {
                 write!(self.writer, r#"))"#,).unwrap();
             }
             AST::With(with_expr, expr) => {
-                self.withs.push(with_expr);
+                // in theory I think we could run the with_expr and then from the results get all local variables so with could be handled completely statically
+                use rand::Rng;
+                const CHARSET: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+                let mut rng = rand::thread_rng();
+
+                let random_identifer: String = (0..10)
+                    .map(|_| {
+                        let idx = rng.gen_range(0..CHARSET.len());
+                        CHARSET[idx] as char
+                    })
+                    .collect();
+
+                write!(self.writer, r#"((NixLazy) () -> {{
+                    NixLazy {} = "#, random_identifer).unwrap();
+                self.codegen_expr(with_expr);
+                self.withs.push((random_identifer, with_expr));
+                write!(self.writer, r#";
+                  
+                return 
+    "#).unwrap();
                 self.codegen_expr(expr);
+                write!(self.writer, r#".force();
+        }})"#).unwrap();
+                self.withs.pop();
             }
             ast => panic!("{:?}", ast),
         }
@@ -78,7 +109,11 @@ public class MainClosure extends NixLazyBase {{
 
 fn test_codegen<'a>(code: &'a [u8]) {
     let mut data = Vec::new();
-    let mut transpiler = JavaCodegen { writer: &mut data, withs: Vec::new() };
+    let mut transpiler = JavaCodegen {
+        writer: &mut data,
+        withs: Vec::new(),
+        variables: vec![("builtins", &AST::Builtins)],
+    };
     let ast_builder = ASTBuilder {};
 
     let lexer = crate::lexer::NixLexer::new(code).filter(|t| {
