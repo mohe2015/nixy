@@ -15,12 +15,12 @@ use tracing::instrument;
 
 // https://matklad.github.io/2020/03/22/fast-simple-rust-interner.html
 
-pub const BUILTIN_UNARY_NOT: &[u8] = b"__builtin_unary_not";
-pub const BUILTIN_PATH_CONCATENATE: &[u8] = b"__builtin_path_concatenate";
-pub const BUILTIN_IF: &[u8] = b"__builtin_if";
-pub const BUILTIN_STRING_CONCATENATE: &[u8] = b"__builtin_string_concatenate";
-pub const BUILTIN_UNARY_MINUS: &[u8] = b"__builtin_unary_minus";
-pub const BUILTIN_SELECT: &[u8] = b"__builtin_select";
+pub const BUILTIN_UNARY_NOT: &str = "__builtin_unary_not";
+pub const BUILTIN_PATH_CONCATENATE: &str = "__builtin_path_concatenate";
+pub const BUILTIN_IF: &str = "__builtin_if";
+pub const BUILTIN_STRING_CONCATENATE: &str = "__builtin_string_concatenate";
+pub const BUILTIN_UNARY_MINUS: &str = "__builtin_unary_minus";
+pub const BUILTIN_SELECT: &str = "__builtin_select";
 
 pub struct Parser<
     'a,
@@ -163,8 +163,9 @@ impl<
                 self.visitor.visit_bind_between(bind_type, &attrpath);
 
                 let expr = self
-                    .parse_expr()
+                    .parse_expr() // here
                     .expect("expected expression in binding at");
+                println!("{:?}", expr);
                 self.expect(NixTokenType::Semicolon);
 
                 self.visitor.visit_bind_after(bind_type, attrpath, expr)
@@ -284,8 +285,7 @@ impl<
 
     #[cfg_attr(debug_assertions, instrument(name = "attrs", skip_all, ret))]
     pub fn parse_attrset(&mut self) -> Option<R> {
-        // caller needs to do
-        // self.expect(NixTokenType::CurlyOpen);
+        self.expect(NixTokenType::CurlyOpen);
 
         let mut binds: Vec<R> = Vec::new();
         loop {
@@ -365,7 +365,6 @@ impl<
             Some(NixToken {
                 token_type: NixTokenType::CurlyOpen,
             }) => {
-                self.expect(NixTokenType::CurlyOpen);
                 self.parse_attrset()
             }
             Some(NixToken {
@@ -398,7 +397,6 @@ impl<
                 token_type: NixTokenType::Let,
             }) => {
                 self.expect(NixTokenType::Let);
-                self.expect(NixTokenType::CurlyOpen);
                 self.parse_attrset();
                 Some(self.visitor.visit_todo())
             }
@@ -406,7 +404,6 @@ impl<
                 token_type: NixTokenType::Rec,
             }) => {
                 self.expect(NixTokenType::Rec);
-                self.expect(NixTokenType::CurlyOpen);
                 self.parse_attrset();
                 Some(self.visitor.visit_todo())
             }
@@ -673,88 +670,99 @@ impl<
     pub fn parse_formals(&mut self) -> Option<R> {
         // destructured function parameters
 
-        self.expect(NixTokenType::CurlyOpen);
-
         // check whether this is a formal or attrset
         match self.lexer.peek() {
             Some(NixToken {
-                token_type: NixTokenType::Identifier(_a),
+                token_type: NixTokenType::CurlyOpen,
             }) => {
                 match self.lexer.peek() {
                     Some(NixToken {
-                        token_type: NixTokenType::QuestionMark,
+                        token_type: NixTokenType::Identifier(_a),
                     }) => {
-                        // { a ? jo }:
-                        self.lexer.reset_peek();
-                    }
-                    Some(NixToken {
-                        token_type: NixTokenType::Comma,
-                    }) => {
-                        // {a, b}:
-                        self.lexer.reset_peek();
+                        match self.lexer.peek() {
+                            Some(NixToken {
+                                token_type: NixTokenType::QuestionMark,
+                            }) => {
+                                // { a ? jo }:
+                                self.lexer.reset_peek();
+                            }
+                            Some(NixToken {
+                                token_type: NixTokenType::Comma,
+                            }) => {
+                                // {a, b}:
+                                self.lexer.reset_peek();
+                            }
+                            Some(NixToken {
+                                token_type: NixTokenType::CurlyClose,
+                            }) => {
+                                // { a }:
+                                // { a }@jo:
+                                self.lexer.reset_peek();
+                            }
+                            _ => {
+                                // {a=1;}
+                                // probably an attrset
+                                self.lexer.reset_peek();
+                                return self.parse_expr_if();
+                            }
+                        }
                     }
                     Some(NixToken {
                         token_type: NixTokenType::CurlyClose,
                     }) => {
-                        // { a }:
-                        // { a }@jo:
-                        self.lexer.reset_peek();
-                    }
-                    _ => {
-                        // {a=1;}
-                        // probably an attrset
-                        self.lexer.reset_peek();
-                        return self.parse_attrset();
-                    }
-                }
-            }
-            Some(NixToken {
-                token_type: NixTokenType::CurlyClose,
-            }) => {
-                match self.lexer.peek() {
-                    Some(NixToken {
-                        token_type: NixTokenType::Colon,
-                    }) => {
-                        // {}:
-                        self.lexer.reset_peek();
-                    }
-                    Some(NixToken {
-                        token_type: NixTokenType::AtSign,
-                    }) => {
-                        // {}@jo:
-                        // empty function in stupid
-                        self.expect(NixTokenType::CurlyClose);
-                        self.expect(NixTokenType::AtSign);
-                        match self.lexer.next() {
+                        match self.lexer.peek() {
                             Some(NixToken {
-                                token_type: NixTokenType::Identifier(_a),
+                                token_type: NixTokenType::Colon,
                             }) => {
+                                // {}:
                                 self.lexer.reset_peek();
-                                return Some(self.visitor.visit_formals(None, Some(_a), false));
                             }
-                            _ => todo!(),
+                            Some(NixToken {
+                                token_type: NixTokenType::AtSign,
+                            }) => {
+                                // {}@jo:
+                                // empty function in stupid
+                                self.expect(NixTokenType::CurlyClose);
+                                self.expect(NixTokenType::AtSign);
+                                match self.lexer.next() {
+                                    Some(NixToken {
+                                        token_type: NixTokenType::Identifier(_a),
+                                    }) => {
+                                        self.lexer.reset_peek();
+                                        return Some(self.visitor.visit_formals(
+                                            None,
+                                            Some(_a),
+                                            false,
+                                        ));
+                                    }
+                                    _ => todo!(),
+                                }
+                            }
+                            _ => {
+                                // {}
+                                // potentially empty attrset
+                                self.lexer.reset_peek();
+                                return self.parse_expr_if();
+                            }
                         }
                     }
+                    // {inherit a;}
+                    // {"a"=1;}
+                    // {${"a"} = 1;}
                     _ => {
-                        // {}
-                        // potentially empty attrset
+                        // attrset
                         self.lexer.reset_peek();
-                        return self.parse_attrset();
+                        return self.parse_expr_if();
                     }
                 }
             }
-            // {inherit a;}
-            // {"a"=1;}
-            // {${"a"} = 1;}
-            _ => {
-                // attrset
-                self.lexer.reset_peek();
-                return self.parse_attrset();
-            }
+            _ => panic!(),
         }
 
         // this second part here actually parses these formals
         let mut formals: Option<R> = None;
+
+        self.expect(NixTokenType::CurlyOpen);
 
         loop {
             match self.lexer.next() {
@@ -1051,7 +1059,7 @@ fn test_operators() {
     assert_eq!(
         AST::Call(
             Box::new(AST::Call(
-                Box::new(AST::Identifier(b"addition")),
+                Box::new(AST::Identifier("addition")),
                 Box::new(AST::Integer(1))
             )),
             Box::new(AST::Integer(41))

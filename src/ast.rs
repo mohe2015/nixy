@@ -18,9 +18,9 @@ pub struct NixFunctionParameter<'a> {
 
 #[derive(PartialEq, Debug)]
 pub enum AST<'a> {
-    Identifier(&'a [u8]),
-    String(&'a [u8]),
-    PathSegment(&'a [u8]),
+    Identifier(&'a str),
+    String(&'a str),
+    PathSegment(&'a str),
     Integer(i64),
     Float(f64),
     Let(Vec<AST<'a>>, Box<AST<'a>>),
@@ -32,7 +32,7 @@ pub enum AST<'a> {
     Function(Box<AST<'a>>, Box<AST<'a>>),
     Formals {
         parameters: Vec<NixFunctionParameter<'a>>,
-        at_identifier: Option<&'a [u8]>,
+        at_identifier: Option<&'a str>,
         ellipsis: bool,
     },
 }
@@ -41,7 +41,7 @@ pub struct ASTBuilder;
 
 impl<'a> ASTVisitor<'a, AST<'a>> for ASTBuilder {
     fn visit_identifier(&mut self, id: &'a [u8]) -> AST<'a> {
-        AST::Identifier(id)
+        AST::Identifier(std::str::from_utf8(id).unwrap())
     }
 
     fn visit_integer(&mut self, integer: i64) -> AST<'a> {
@@ -72,13 +72,13 @@ impl<'a> ASTVisitor<'a, AST<'a>> for ASTBuilder {
         match default {
             Some(default) => AST::Call(
                 Box::new(AST::Call(
-                    Box::new(AST::Identifier(b"__value_or_default")),
+                    Box::new(AST::Identifier("__value_or_default")),
                     Box::new(value),
                 )),
                 Box::new(default),
             ),
             None => AST::Call(
-                Box::new(AST::Identifier(b"__abort_invalid_attrpath")),
+                Box::new(AST::Identifier("__abort_invalid_attrpath")),
                 Box::new(value),
             ),
         }
@@ -95,39 +95,39 @@ impl<'a> ASTVisitor<'a, AST<'a>> for ASTBuilder {
         AST::Call(
             Box::new(AST::Call(
                 Box::new(AST::Identifier(match operator {
-                    NixTokenType::If => b"if",
-                    NixTokenType::Then => b"then",
-                    NixTokenType::Else => b"else",
-                    NixTokenType::Assert => b"assert",
-                    NixTokenType::With => b"with",
-                    NixTokenType::Let => b"let",
-                    NixTokenType::In => b"in",
-                    NixTokenType::Rec => b"rec",
-                    NixTokenType::Inherit => b"inherit",
-                    NixTokenType::Or => b"or",
-                    NixTokenType::Ellipsis => b"ellipsis",
-                    NixTokenType::Equals => b"equals",
-                    NixTokenType::NotEquals => b"notequals",
-                    NixTokenType::LessThanOrEqual => b"lessthanorequal",
-                    NixTokenType::GreaterThanOrEqual => b"greaterthanorequal",
-                    NixTokenType::LessThan => b"lessthan",
-                    NixTokenType::GreaterThan => b"greaterthan",
-                    NixTokenType::And => b"and",
-                    NixTokenType::Implies => b"implies",
-                    NixTokenType::Update => b"update",
-                    NixTokenType::Concatenate => b"concatenate",
-                    NixTokenType::Assign => b"assign",
-                    NixTokenType::Semicolon => b"semicolon",
-                    NixTokenType::Colon => b"colon",
-                    NixTokenType::Select => b"select",
-                    NixTokenType::Comma => b"comman",
-                    NixTokenType::AtSign => b"atsign",
-                    NixTokenType::QuestionMark => b"questionmark",
-                    NixTokenType::ExclamationMark => b"exclamationmark",
-                    NixTokenType::Addition => b"addition",
-                    NixTokenType::Subtraction => b"subtractoin",
-                    NixTokenType::Multiplication => b"multiplication",
-                    NixTokenType::Division => b"division",
+                    NixTokenType::If => "if",
+                    NixTokenType::Then => "then",
+                    NixTokenType::Else => "else",
+                    NixTokenType::Assert => "assert",
+                    NixTokenType::With => "with",
+                    NixTokenType::Let => "let",
+                    NixTokenType::In => "in",
+                    NixTokenType::Rec => "rec",
+                    NixTokenType::Inherit => "inherit",
+                    NixTokenType::Or => "or",
+                    NixTokenType::Ellipsis => "ellipsis",
+                    NixTokenType::Equals => "equals",
+                    NixTokenType::NotEquals => "notequals",
+                    NixTokenType::LessThanOrEqual => "lessthanorequal",
+                    NixTokenType::GreaterThanOrEqual => "greaterthanorequal",
+                    NixTokenType::LessThan => "lessthan",
+                    NixTokenType::GreaterThan => "greaterthan",
+                    NixTokenType::And => "and",
+                    NixTokenType::Implies => "implies",
+                    NixTokenType::Update => "update",
+                    NixTokenType::Concatenate => "concatenate",
+                    NixTokenType::Assign => "assign",
+                    NixTokenType::Semicolon => "semicolon",
+                    NixTokenType::Colon => "colon",
+                    NixTokenType::Select => "select",
+                    NixTokenType::Comma => "comman",
+                    NixTokenType::AtSign => "atsign",
+                    NixTokenType::QuestionMark => "questionmark",
+                    NixTokenType::ExclamationMark => "exclamationmark",
+                    NixTokenType::Addition => "addition",
+                    NixTokenType::Subtraction => "subtractoin",
+                    NixTokenType::Multiplication => "multiplication",
+                    NixTokenType::Division => "division",
                     _ => todo!(),
                 })),
                 Box::new(left),
@@ -181,11 +181,11 @@ impl<'a> ASTVisitor<'a, AST<'a>> for ASTBuilder {
     }
 
     fn visit_path_segment(&mut self, segment: &'a [u8]) -> AST<'a> {
-        AST::PathSegment(segment)
+        AST::PathSegment(std::str::from_utf8(segment).unwrap())
     }
 
     fn visit_string(&mut self, string: &'a [u8]) -> AST<'a> {
-        AST::String(string)
+        AST::String(std::str::from_utf8(string).unwrap())
     }
 
     fn visit_string_concatenate(&mut self, begin: Option<AST<'a>>, last: AST<'a>) -> AST<'a> {
@@ -200,11 +200,9 @@ impl<'a> ASTVisitor<'a, AST<'a>> for ASTBuilder {
             None => last,
         }
     }
-    fn visit_array_start(&mut self) {
-    }
+    fn visit_array_start(&mut self) {}
 
-    fn visit_array_push_before(&mut self, _begin: &[AST<'a>]) {
-    }
+    fn visit_array_push_before(&mut self, _begin: &[AST<'a>]) {}
 
     fn visit_array_push(&mut self, _begin: &[AST<'a>], last: AST<'a>) -> AST<'a> {
         /*match begin {
@@ -230,15 +228,13 @@ impl<'a> ASTVisitor<'a, AST<'a>> for ASTBuilder {
         bind
     }
 
-    fn visit_function_enter(&mut self, _arg: &AST<'a>) {
-    }
+    fn visit_function_enter(&mut self, _arg: &AST<'a>) {}
 
     fn visit_function_exit(&mut self, arg: AST<'a>, body: AST<'a>) -> AST<'a> {
         AST::Function(Box::new(arg), Box::new(body))
     }
 
-    fn visit_function_before(&mut self) {
-    }
+    fn visit_function_before(&mut self) {}
 
     fn visit_if_before(&mut self) {}
 
@@ -284,7 +280,7 @@ impl<'a> ASTVisitor<'a, AST<'a>> for ASTBuilder {
     fn visit_string_concatenate_end(&mut self, result: Option<AST<'a>>) -> AST<'a> {
         match result {
             Some(result) => result,
-            None => AST::String(b""),
+            None => AST::String(""),
         }
     }
 
@@ -329,12 +325,12 @@ impl<'a> ASTVisitor<'a, AST<'a>> for ASTBuilder {
         match formals {
             Some(AST::Formals { parameters, .. }) => AST::Formals {
                 parameters,
-                at_identifier,
+                at_identifier: at_identifier.map(|s| std::str::from_utf8(s).unwrap()),
                 ellipsis,
             },
             None => AST::Formals {
                 parameters: vec![],
-                at_identifier,
+                at_identifier: at_identifier.map(|s| std::str::from_utf8(s).unwrap()),
                 ellipsis,
             },
             _ => panic!(),
