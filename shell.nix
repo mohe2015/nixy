@@ -3,11 +3,7 @@ with import <nixpkgs> {};
 stdenv.mkDerivation {
   name = "rust-env";
   nativeBuildInputs = [
-    rustc.all
-    cargo
-    rust-analyzer
-    rustfmt
-    clippy
+    rustup
     google-java-format
     openjdk17
   ];

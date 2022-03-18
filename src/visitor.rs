@@ -43,12 +43,12 @@ pub trait ASTVisitor<'a, R: std::fmt::Debug> {
 
     fn visit_array_start(&mut self);
 
-    fn visit_array_push_before(&mut self, begin: &Option<R>);
+    fn visit_array_push_before(&mut self, begin: &[R]);
 
-    fn visit_array_push(&mut self, begin: Option<R>, last: R) -> R;
+    fn visit_array_push(&mut self, begin: &[R], last: R) -> R;
 
     /// This is always called after `visit_array_push` and may help some implementations.
-    fn visit_array_end(&mut self, array: R) -> R;
+    fn visit_array_end(&mut self, array: Vec<R>) -> R;
 
     fn visit_call_maybe(&mut self, expr: &Option<R>);
 

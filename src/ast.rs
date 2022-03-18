@@ -25,6 +25,7 @@ pub enum AST<'a> {
     Float(f64),
     Let(Vec<AST<'a>>, Box<AST<'a>>),
     Attrset(Vec<AST<'a>>),
+    Array(Vec<AST<'a>>),
     Bind(Box<AST<'a>>, Box<AST<'a>>),
     Call(Box<AST<'a>>, Box<AST<'a>>),
     Formals {
@@ -200,21 +201,23 @@ impl<'a> ASTVisitor<'a, AST<'a>> for ASTBuilder {
     fn visit_array_start(&mut self) {
     }
 
-    fn visit_array_push_before(&mut self, _begin: &Option<AST<'a>>) {
+    fn visit_array_push_before(&mut self, _begin: &[AST<'a>]) {
     }
 
-    fn visit_array_push(&mut self, begin: Option<AST<'a>>, last: AST<'a>) -> AST<'a> {
-        match begin {
+    fn visit_array_push(&mut self, _begin: &[AST<'a>], last: AST<'a>) -> AST<'a> {
+        /*match begin {
             Some(begin) => AST::Call(
                 Box::new(AST::Identifier(b"cons")),
                 Box::new(AST::Call(Box::new(begin), Box::new(last))),
             ),
             None => AST::Call(Box::new(AST::Identifier(b"cons")), Box::new(last)),
-        }
+        }*/
+        last
     }
 
-    fn visit_array_end(&mut self, array: AST<'a>) -> AST<'a> {
-        AST::Call(Box::new(array), Box::new(AST::Identifier(b"nil")))
+    fn visit_array_end(&mut self, array: Vec<AST<'a>>) -> AST<'a> {
+        //AST::Call(Box::new(array), Box::new(AST::Identifier(b"nil")))
+        AST::Array(array)
     }
 
     fn visit_call(&mut self, function: AST<'a>, parameter: AST<'a>) -> AST<'a> {
@@ -234,7 +237,6 @@ impl<'a> ASTVisitor<'a, AST<'a>> for ASTBuilder {
     }
 
     fn visit_function_before(&mut self) {
-        todo!()
     }
 
     fn visit_if_before(&mut self) {}

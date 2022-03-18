@@ -311,15 +311,15 @@ public class MainClosure extends NixLazyBase {{
         write!(self.writer, r#"NixArray.create(java.util.Arrays.asList("#,).unwrap();
     }
 
-    fn visit_array_push_before(&mut self, begin: &Option<()>) {
-        if begin.is_some() {
+    fn visit_array_push_before(&mut self, begin: &[()]) {
+        if !begin.is_empty() {
             write!(self.writer, r#","#,).unwrap();
         }
     }
 
-    fn visit_array_push(&mut self, _begin: Option<()>, _last: ()) {}
+    fn visit_array_push(&mut self, _begin: &[()], _last: ()) {}
 
-    fn visit_array_end(&mut self, _array: ()) {
+    fn visit_array_end(&mut self, _array: Vec<()>) {
         write!(self.writer, r#"))"#,).unwrap();
     }
 

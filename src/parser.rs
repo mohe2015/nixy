@@ -373,8 +373,8 @@ impl<
             }) => {
                 // array
                 self.expect(NixTokenType::BracketOpen);
+                let mut array = Vec::new();
                 self.visitor.visit_array_start();
-                let mut array = None;
                 loop {
                     match self.lexer.peek() {
                         Some(NixToken {
@@ -388,11 +388,11 @@ impl<
 
                             self.visitor.visit_array_push_before(&array);
                             let last = self.parse_expr_select().unwrap();
-                            array = Some(self.visitor.visit_array_push(array, last))
+                            array.push(self.visitor.visit_array_push(&array, last))
                         }
                     }
                 }
-                Some(self.visitor.visit_array_end(array.unwrap()))
+                Some(self.visitor.visit_array_end(array))
             }
             Some(NixToken {
                 token_type: NixTokenType::Let,
