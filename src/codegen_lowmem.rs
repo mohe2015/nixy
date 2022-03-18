@@ -414,7 +414,7 @@ public class MainClosure extends NixLazyBase {{
         todo!()
     }
 
-    fn visit_inherit(&mut self, attrs: Vec<()>) -> () {
+    fn visit_inherit(&mut self, _attrs: Vec<()>) {
         todo!()
     }
 }

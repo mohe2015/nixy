@@ -1,5 +1,4 @@
 use crate::{
-    ast::AST,
     lexer::{NixToken, NixTokenType},
     visitor::ASTVisitor,
 };

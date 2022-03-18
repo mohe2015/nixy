@@ -224,7 +224,7 @@ impl<'a> ASTVisitor<'a, AST<'a>> for ASTBuilder {
         AST::Call(Box::new(function), Box::new(parameter))
     }
 
-    fn visit_attrset_bind_push(&mut self, binds: &[AST<'a>], bind: AST<'a>) -> AST<'a> {
+    fn visit_attrset_bind_push(&mut self, _binds: &[AST<'a>], bind: AST<'a>) -> AST<'a> {
         bind
     }
 
