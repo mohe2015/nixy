@@ -743,16 +743,10 @@ impl<
                     }
                 }
             }
-            Some(NixToken {
-                token_type: NixTokenType::Inherit, // {inherit a;}
-            })
-            | Some(NixToken {
-                token_type: NixTokenType::StringStart, // {"a"=1;}
-            })
-            | Some(NixToken {
-                token_type: NixTokenType::InterpolateStart, // {${"a"} = 1;}
-            })
-            | _ => {
+            // {inherit a;}
+            // {"a"=1;}
+            // {${"a"} = 1;}
+            _ => {
                 // attrset
                 self.lexer.reset_peek();
                 return self.parse_attrset();
@@ -935,11 +929,13 @@ fn can_parse(code: &str) {
         panic!("invalid expr (according to the official nix evaluator)");
     }
 
-    let lexer = crate::lexer::NixLexer::new(code.as_bytes()).filter(|t| match t.token_type {
-        NixTokenType::Whitespace(_)
-        | NixTokenType::SingleLineComment(_)
-        | NixTokenType::MultiLineComment(_) => false,
-        _ => true,
+    let lexer = crate::lexer::NixLexer::new(code.as_bytes()).filter(|t| {
+        !matches!(
+            t.token_type,
+            NixTokenType::Whitespace(_)
+                | NixTokenType::SingleLineComment(_)
+                | NixTokenType::MultiLineComment(_)
+        )
     });
 
     for token in lexer.clone() {

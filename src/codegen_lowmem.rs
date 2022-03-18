@@ -419,11 +419,13 @@ fn test_java_transpiler_code(code: &[u8]) {
     let mut data = Vec::new();
     let transpiler = ASTJavaTranspiler { writer: &mut data };
 
-    let lexer = crate::lexer::NixLexer::new(code).filter(|t| match t.token_type {
-        NixTokenType::Whitespace(_)
-        | NixTokenType::SingleLineComment(_)
-        | NixTokenType::MultiLineComment(_) => false,
-        _ => true,
+    let lexer = crate::lexer::NixLexer::new(code).filter(|t| {
+        !matches!(
+            t.token_type,
+            NixTokenType::Whitespace(_)
+                | NixTokenType::SingleLineComment(_)
+                | NixTokenType::MultiLineComment(_)
+        )
     });
 
     for token in lexer.clone() {

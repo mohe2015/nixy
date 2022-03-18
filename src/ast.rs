@@ -1,5 +1,5 @@
 use core::fmt::Debug;
-use std::{vec};
+use std::vec;
 
 use crate::{
     lexer::NixTokenType,

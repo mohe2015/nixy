@@ -765,7 +765,6 @@ impl<'a> Iterator for NixLexer<'a> {
                                 });
                             }
                         }
-                        _ => todo!(),
                     }
                 }
             }
