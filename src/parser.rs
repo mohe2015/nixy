@@ -757,6 +757,7 @@ impl<
                     _ => {
                         // attrset
                         self.lexer.reset_peek();
+                        // TODO FIXME return None instead again
                         return self.parse_expr_if();
                     }
                 }
@@ -818,7 +819,9 @@ impl<
         match self.lexer.next() {
             Some(NixToken {
                 token_type: NixTokenType::Colon,
-            }) => {}
+            }) => {
+
+            }
             Some(NixToken {
                 token_type: NixTokenType::AtSign,
             }) => {
@@ -827,6 +830,8 @@ impl<
             }
             token => panic!("{:?}", token),
         }
+        // TODO FIXME
+        // Some(self.visitor.visit_formals(None, None, true));
         self.parse_expr_function()
     }
 
@@ -873,9 +878,7 @@ impl<
                         // function call
                         let _ident = self.lexer.next();
                         self.expect(NixTokenType::AtSign);
-                        let _formals = self.parse_formals().unwrap();
-                        self.expect(NixTokenType::Colon);
-                        self.parse_expr_function()
+                        self.parse_formals()
                     }
                     _ => {
                         self.lexer.reset_peek();
