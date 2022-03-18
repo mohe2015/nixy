@@ -7,7 +7,7 @@ use crate::{
 };
 
 pub struct ASTJavaTranspiler<'a, W: Write> {
-    writer: &'a mut W,
+    pub writer: &'a mut W,
 }
 
 // cargo test ast::test_java_transpiler -- --nocapture

@@ -15,6 +15,7 @@ pub mod codegen_lowmem;
 pub mod lexer;
 pub mod parser;
 pub mod visitor;
+pub mod codegen;
 
 // cargo run --release |& sort | uniq -c | sort -n
 
@@ -69,7 +70,7 @@ fn main() -> Result<()> {
                 phantom: PhantomData,
             };
 
-            println!("{:?}", parser.parse());
+            println!("{:#?}", parser.parse());
             break;
         };
         /* }) {
