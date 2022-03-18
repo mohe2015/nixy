@@ -208,6 +208,7 @@ fn test_codegen<'a>(code: &'a [u8]) {
 #[test]
 fn test_codegen_basic() {
     test_codegen(br#"let ${"hi"} = 1; in hi"#);
+    test_codegen(br#"let a.b = 5; a.c = 3; a.d.e = 3; in a"#);
     test_codegen(br"1");
     test_codegen(br#"with builtins; (length [1 2 3 "x"])"#);
     test_codegen(
