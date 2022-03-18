@@ -62,17 +62,30 @@ impl<'a, W: Write> JavaCodegen<'a, W> {
                     })
                     .collect();
 
-                write!(self.writer, r#"((NixLazy) () -> {{
-                    NixLazy {} = "#, random_identifer).unwrap();
+                write!(
+                    self.writer,
+                    r#"((NixLazy) () -> {{
+                    NixLazy {} = "#,
+                    random_identifer
+                )
+                .unwrap();
                 self.codegen_expr(with_expr);
                 self.withs.push((random_identifer, with_expr));
-                write!(self.writer, r#";
+                write!(
+                    self.writer,
+                    r#";
                   
                 return 
-    "#).unwrap();
+    "#
+                )
+                .unwrap();
                 self.codegen_expr(expr);
-                write!(self.writer, r#".force();
-        }})"#).unwrap();
+                write!(
+                    self.writer,
+                    r#".force();
+        }})"#
+                )
+                .unwrap();
                 self.withs.pop();
             }
             ast => panic!("{:?}", ast),
@@ -177,4 +190,107 @@ fn test_codegen<'a>(code: &'a [u8]) {
 fn test_codegen_basic() {
     test_codegen(br"1");
     test_codegen(br#"with builtins; (length [1 2 3 "x"])"#);
+    test_codegen(
+        br#" (let y = x + "b";
+       x = "a"; in
+    y + "c")"#,
+    );
+    test_codegen(br#"with builtins; (length [1 2 3 "x"])"#);
+    test_codegen(
+        br#"(let a = 1; in
+           let a = 2; in
+             a)"#,
+    );
+    test_codegen(br#"(import /tmp/foo.nix)"#);
+    test_codegen(br#"/tmp/tutorials/learn.nix"#);
+    test_codegen(br#"("Your home directory is ${1} ${1}")"#);
+    test_codegen(b"(true && false)");
+    test_codegen(b"(true || false)");
+    test_codegen(br#"(if 3 < 4 then "a" else "b")"#);
+    test_codegen(br#"(4 + 6 + 12 - 2)"#);
+    test_codegen(br#"(4 - 2.5)"#);
+    test_codegen(br#"(7 / 2)"#);
+    test_codegen(br#"(7 / 2.0)"#);
+    test_codegen(br#""Strings literals are in double quotes.""#);
+    test_codegen(
+        br#""
+       String literals can span
+       multiple lines.
+     ""#,
+    );
+    test_codegen(
+        br#"''
+       This is called an "indented string" literal.
+       It intelligently strips leading whitespace.
+     ''"#,
+    );
+    test_codegen(
+        br#"''
+       a
+         b
+     ''"#,
+    );
+    test_codegen(br#"("ab" + "cd")"#);
+    test_codegen(br#"7/2"#);
+    test_codegen(br#"(7 / 2)"#);
+    test_codegen(
+        br#"(let x = "a"; in
+       x + x + x)"#,
+    );
+    test_codegen(br#"(n: n + 1)"#);
+    test_codegen(br#"((n: n + 1) 5)"#);
+    test_codegen(br#"(let succ = (n: n + 1); in succ 5)"#);
+    test_codegen(br#"((x: y: x + "-" + y) "a" "b")"#);
+    test_codegen(br#"([1 2 3] ++ [4 5])"#);
+    test_codegen(br#"(concatLists [[1 2] [3 4] [5]])"#);
+    test_codegen(br#"(head [1 2 3])"#);
+    test_codegen(br#"(tail [1 2 3])"#);
+    test_codegen(br#"(elemAt ["a" "b" "c" "d"] 2)"#);
+    test_codegen(br#"(elem 2 [1 2 3])"#);
+    test_codegen(br#"(elem 5 [1 2 3])"#);
+    test_codegen(br#"(filter (n: n < 3) [1 2 3 4])"#);
+    test_codegen(br#"{ foo = [1 2]; bar = "x"; }"#);
+    test_codegen(br#"{ a = 1; b = 2; }.a"#);
+    test_codegen(br#"({ a = 1; b = 2; } ? a)"#);
+    test_codegen(br#"({ a = 1; b = 2; } ? c)"#);
+    test_codegen(br#"({ a = 1; } // { b = 2; })"#);
+    test_codegen(br#"({ a = 1; b = 2; } // { a = 3; c = 4; })"#);
+    test_codegen(br#"(let a = 1; in { a = 2; b = a; }.b)"#);
+    test_codegen(br#"(let a = 1; in rec { a = 2; b = a; }.b)"#);
+    test_codegen(
+        br#"{
+           a.b = 1;
+           a.c.d = 2;
+           a.c.e = 3;
+         }.a.c"#,
+    );
+    test_codegen(
+        br#"{
+           a = { b = 1; };
+           a.c = 2;
+         }"#,
+    );
+    test_codegen(
+        br#"(with { a = 1; b = 2; };
+           a + b)"#,
+    );
+    test_codegen(
+        br#"(with { a = 1; b = 2; };
+           (with { a = 5; };
+             a + b))"#,
+    );
+    test_codegen(br#"(args: args.x + "-" + args.y) { x = "a"; y = "b"; }"#);
+    test_codegen(br#"({x, y}: x + "-" + y) { x = "a"; y = "b"; }"#);
+    test_codegen(br#"({x, y, ...}: x + "-" + y) { x = "a"; y = "b"; z = "c"; }"#);
+    test_codegen(br#"(assert 1 < 2; 42)"#);
+    test_codegen(br#"(tryEval 42)"#);
+
+    test_codegen(b"{ a = 1; b = 10; }");
+    test_codegen(b"let a = 5; b = 7; in a + b");
+    test_codegen(b"(a: a + 1) 2");
+    test_codegen(br#"["1" "true" "yes"]"#);
+    test_codegen(b"1");
+    test_codegen(b"1 + 1");
+    test_codegen(b"if 1 == 1 then 1 + 1 else 2 + 2");
+    test_codegen(b"a: a + 1");
 }

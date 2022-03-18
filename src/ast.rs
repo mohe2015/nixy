@@ -36,7 +36,7 @@ pub enum AST<'a> {
         ellipsis: bool,
     },
     With(Box<AST<'a>>, Box<AST<'a>>),
-    Builtins
+    Builtins,
 }
 
 pub struct ASTBuilder;
