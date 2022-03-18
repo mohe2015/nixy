@@ -24,6 +24,7 @@ pub enum AST<'a> {
     Integer(i64),
     Float(f64),
     Let(Vec<AST<'a>>, Box<AST<'a>>),
+    Attrset(Vec<AST<'a>>),
     Bind(Box<AST<'a>>, Box<AST<'a>>),
     Call(Box<AST<'a>>, Box<AST<'a>>),
     Formals {
@@ -273,8 +274,8 @@ impl<'a> ASTVisitor<'a, AST<'a>> for ASTBuilder {
 
     fn visit_attrset_before(&mut self, _binds: &[AST<'a>]) {}
 
-    fn visit_attrset(&mut self, _binds: Vec<AST<'a>>) -> AST<'a> {
-        todo!()
+    fn visit_attrset(&mut self, binds: Vec<AST<'a>>) -> AST<'a> {
+        AST::Attrset(binds)
     }
 
     fn visit_string_concatenate_end(&mut self, result: Option<AST<'a>>) -> AST<'a> {

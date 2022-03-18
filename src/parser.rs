@@ -777,7 +777,8 @@ impl<
                         token_type: NixTokenType::CurlyClose,
                     }) = token
                     {
-                        return Some(self.visitor.visit_formal(formals, _a, None));
+                        break;
+                        // return Some(self.visitor.visit_formal(formals, _a, None));
                     } else {
                         panic!();
                     }
@@ -793,11 +794,25 @@ impl<
                 Some(NixToken {
                     token_type: NixTokenType::CurlyClose,
                 }) => {
-                    return Some(self.visitor.visit_todo()); //return Some(AST::Identifier(b"TODO formals")); // TODO FIXME
+                    break;
                 }
                 token => panic!("{:?}", token),
             }
         }
+
+        match self.lexer.next() {
+            Some(NixToken {
+                token_type: NixTokenType::Colon,
+            }) => {}
+            Some(NixToken {
+                token_type: NixTokenType::AtSign,
+            }) => {
+                let _ident = self.expect(NixTokenType::Identifier(b""));
+                self.expect(NixTokenType::Colon);
+            }
+            token => panic!("{:?}", token),
+        }
+        self.parse_expr_function()
     }
 
     #[cfg_attr(debug_assertions, instrument(name = "fn", skip_all, ret))]
@@ -810,24 +825,7 @@ impl<
             }
             Some(NixTokenType::CurlyOpen) => {
                 self.lexer.reset_peek();
-                let formals = self.parse_formals();
-                if formals.is_none() {
-                    // not a function, probably an attrset
-                    return self.parse_expr_if();
-                }
-                match self.lexer.next() {
-                    Some(NixToken {
-                        token_type: NixTokenType::Colon,
-                    }) => {}
-                    Some(NixToken {
-                        token_type: NixTokenType::AtSign,
-                    }) => {
-                        let _ident = self.expect(NixTokenType::Identifier(b""));
-                        self.expect(NixTokenType::Colon);
-                    }
-                    _ => todo!(),
-                }
-                self.parse_expr_function()
+                self.parse_formals()
             }
             Some(NixTokenType::Identifier(_ident)) => {
                 match self.lexer.peek() {
