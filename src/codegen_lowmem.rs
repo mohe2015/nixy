@@ -375,7 +375,7 @@ public class MainClosure extends NixLazyBase {{
         .unwrap();
     }
 
-    fn visit_let_push_bind(&mut self, _binds: &[()], _bind: ()) {}
+    fn visit_let_bind_push(&mut self, _binds: &[()], _bind: ()) {}
 
     fn visit_let_before_body(&mut self, _binds: &[()]) {
         write!(self.writer, "\n/* body */ \nreturn ",).unwrap();
@@ -385,8 +385,8 @@ public class MainClosure extends NixLazyBase {{
         write!(self.writer, ".force(); }}}})",).unwrap();
     }
 
-    fn visit_attrset_before(&mut self, binds: &Option<()>) {
-        if binds.is_none() {
+    fn visit_attrset_before(&mut self, binds: &[()]) {
+        if binds.is_empty() {
             writeln!(
                 self.writer,
                 "NixAttrset.create(new java.util.IdentityHashMap<String, NixLazy>() {{{{",
@@ -395,9 +395,9 @@ public class MainClosure extends NixLazyBase {{
         }
     }
 
-    fn visit_attrset_bind_push(&mut self, _begin: Option<()>, _last: ()) {}
+    fn visit_attrset_bind_push(&mut self, _begin: &[()], _last: ()) {}
 
-    fn visit_attrset(&mut self, _binds: Option<()>) {
+    fn visit_attrset(&mut self, _binds: Vec<()>) {
         write!(self.writer, r#"}}}})"#,).unwrap();
     }
 

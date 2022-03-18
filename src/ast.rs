@@ -197,11 +197,9 @@ impl<'a> ASTVisitor<'a, AST<'a>> for ASTBuilder {
         }
     }
     fn visit_array_start(&mut self) {
-        todo!()
     }
 
     fn visit_array_push_before(&mut self, _begin: &Option<AST<'a>>) {
-        todo!()
     }
 
     fn visit_array_push(&mut self, begin: Option<AST<'a>>, last: AST<'a>) -> AST<'a> {
@@ -222,9 +220,8 @@ impl<'a> ASTVisitor<'a, AST<'a>> for ASTBuilder {
         AST::Call(Box::new(function), Box::new(parameter))
     }
 
-    fn visit_attrset_bind_push(&mut self, _begin: Option<AST<'a>>, _last: AST<'a>) -> AST<'a> {
-        //AST::Let(item.0, item.1, Box::new(accum))
-        todo!()
+    fn visit_attrset_bind_push(&mut self, binds: &[AST<'a>], bind: AST<'a>) -> AST<'a> {
+        bind
     }
 
     fn visit_function_enter(&mut self, _arg: &AST<'a>) {
@@ -264,7 +261,7 @@ impl<'a> ASTVisitor<'a, AST<'a>> for ASTBuilder {
 
     fn visit_let_before(&mut self) {}
 
-    fn visit_let_push_bind(&mut self, _binds: &[AST<'a>], bind: AST<'a>) -> AST<'a> {
+    fn visit_let_bind_push(&mut self, _binds: &[AST<'a>], bind: AST<'a>) -> AST<'a> {
         bind
     }
 
@@ -274,9 +271,9 @@ impl<'a> ASTVisitor<'a, AST<'a>> for ASTBuilder {
 
     fn visit_let_before_body(&mut self, _binds: &[AST<'a>]) {}
 
-    fn visit_attrset_before(&mut self, _binds: &Option<AST<'a>>) {}
+    fn visit_attrset_before(&mut self, _binds: &[AST<'a>]) {}
 
-    fn visit_attrset(&mut self, _binds: Option<AST<'a>>) -> AST<'a> {
+    fn visit_attrset(&mut self, _binds: Vec<AST<'a>>) -> AST<'a> {
         todo!()
     }
 

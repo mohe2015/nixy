@@ -199,7 +199,7 @@ impl<
                     self.lexer.reset_peek();
                     let bind = self.parse_bind(BindType::Let);
 
-                    binds.push(self.visitor.visit_let_push_bind(&binds, bind));
+                    binds.push(self.visitor.visit_let_bind_push(&binds, bind));
                 }
             }
         }
@@ -287,7 +287,7 @@ impl<
         // caller needs to do
         // self.expect(NixTokenType::CurlyOpen);
 
-        let mut binds: Option<R> = None;
+        let mut binds: Vec<R> = Vec::new();
         loop {
             self.visitor.visit_attrset_before(&binds);
             match self.lexer.peek() {
@@ -302,7 +302,7 @@ impl<
                     self.lexer.reset_peek();
                     let bind = self.parse_bind(BindType::Attrset);
 
-                    binds = Some(self.visitor.visit_attrset_bind_push(binds, bind));
+                    binds.push(self.visitor.visit_attrset_bind_push(&binds, bind));
                 }
             }
         }
