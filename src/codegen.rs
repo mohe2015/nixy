@@ -1,15 +1,40 @@
+use crate::{
+    ast::{ASTBuilder, AST},
+    codegen_lowmem::ASTJavaTranspiler,
+    lexer::NixTokenType,
+    parser::Parser,
+};
 use std::{io::Write, marker::PhantomData};
-use crate::{codegen_lowmem::ASTJavaTranspiler, ast::{AST, ASTBuilder}, lexer::NixTokenType, parser::Parser};
-
 
 impl<'a, W: Write> ASTJavaTranspiler<'a, W> {
-
-    fn codegen_expr(&mut self, expr: AST<'a>) {
+    fn codegen_expr(&mut self, expr: &AST<'a>) {
         match expr {
             AST::Identifier(value) => write!(self.writer, "{}", value).unwrap(),
             AST::Integer(value) => write!(self.writer, "NixInteger.create({})", value).unwrap(),
             AST::Float(value) => write!(self.writer, "NixFloat.create({}f)", value).unwrap(),
-            ast => panic!("{:?}", ast)
+            AST::String(value) => write!(
+                self.writer,
+                "NixString.create(\"\"\"\n{}\"\"\")",
+                value
+            )
+            .unwrap(),
+            AST::Call(function, param) => {
+                self.codegen_expr(function);
+                write!(self.writer, r#".createCall("#,).unwrap();
+                self.codegen_expr(param);
+                write!(self.writer, r#")"#,).unwrap();
+            }
+            AST::Array(array) => {
+                write!(self.writer, r#"NixArray.create(java.util.Arrays.asList("#,).unwrap();
+                for (i, x) in array.iter().enumerate() {
+                    if i != 0 {
+                        write!(self.writer, r#","#,).unwrap();
+                    }
+                    self.codegen_expr(x);
+                }
+                write!(self.writer, r#"))"#,).unwrap();
+            }
+            ast => panic!("{:?}", ast),
         }
     }
 
@@ -24,7 +49,7 @@ public class MainClosure extends NixLazyBase {{
         )
         .unwrap();
 
-        self.codegen_expr(expr);
+        self.codegen_expr(&expr);
 
         write!(
             self.writer,
@@ -41,7 +66,6 @@ public class MainClosure extends NixLazyBase {{
     }
 }
 
-
 fn test_codegen<'a>(code: &'a [u8]) {
     let mut data = Vec::new();
     let mut transpiler = ASTJavaTranspiler { writer: &mut data };
@@ -55,10 +79,6 @@ fn test_codegen<'a>(code: &'a [u8]) {
                 | NixTokenType::MultiLineComment(_)
         )
     });
-
-    for token in lexer.clone() {
-        println!("{:?}", token.token_type);
-    }
 
     let mut parser = Parser {
         lexer: itertools::multipeek(lexer),
@@ -110,8 +130,6 @@ fn test_codegen<'a>(code: &'a [u8]) {
 
 #[test]
 fn test_codegen_basic() {
-    test_codegen(b"1");
-
-
-    
+    test_codegen(br"1");
+    test_codegen(br#"with builtins; (length [1 2 3 "x"])"#);
 }

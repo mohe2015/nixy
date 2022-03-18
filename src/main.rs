@@ -11,11 +11,11 @@ use crate::{
 };
 
 pub mod ast;
+pub mod codegen;
 pub mod codegen_lowmem;
 pub mod lexer;
 pub mod parser;
 pub mod visitor;
-pub mod codegen;
 
 // cargo run --release |& sort | uniq -c | sort -n
 
