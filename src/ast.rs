@@ -4,8 +4,8 @@ use std::{io::Write, vec};
 use crate::{
     lexer::NixTokenType,
     parser::{
-        BindType, BUILTIN_IF, BUILTIN_PATH_CONCATENATE, BUILTIN_SELECT, BUILTIN_UNARY_MINUS,
-        BUILTIN_UNARY_NOT, BUILTIN_STRING_CONCATENATE,
+        BindType, BUILTIN_IF, BUILTIN_PATH_CONCATENATE, BUILTIN_SELECT, BUILTIN_STRING_CONCATENATE,
+        BUILTIN_UNARY_MINUS, BUILTIN_UNARY_NOT,
     },
     visitor::ASTVisitor,
 };
@@ -80,8 +80,7 @@ impl<'a> ASTVisitor<'a, AST<'a>> for ASTBuilder {
         }
     }
 
-    fn visit_infix_lhs(&mut self, _operator: NixTokenType<'a>, _left: &AST<'a>) {
-    }
+    fn visit_infix_lhs(&mut self, _operator: NixTokenType<'a>, _left: &AST<'a>) {}
 
     fn visit_infix_operation(
         &mut self,
@@ -187,16 +186,15 @@ impl<'a> ASTVisitor<'a, AST<'a>> for ASTBuilder {
 
     fn visit_string_concatenate(&mut self, begin: Option<AST<'a>>, last: AST<'a>) -> AST<'a> {
         match begin {
-            Some(begin) =>AST::Call(
+            Some(begin) => AST::Call(
                 Box::new(AST::Call(
                     Box::new(AST::Identifier(BUILTIN_STRING_CONCATENATE)),
                     Box::new(begin),
                 )),
                 Box::new(last),
             ),
-            None => last
+            None => last,
         }
-        
     }
     fn visit_array_start(&mut self) {
         todo!()
@@ -241,24 +239,19 @@ impl<'a> ASTVisitor<'a, AST<'a>> for ASTBuilder {
         todo!()
     }
 
-    fn visit_if_before(&mut self) {
-    }
+    fn visit_if_before(&mut self) {}
 
-    fn visit_if_after_condition(&mut self, _condition: &AST<'a>) {
-    }
+    fn visit_if_after_condition(&mut self, _condition: &AST<'a>) {}
 
-    fn visit_if_after_true_case(&mut self, _condition: &AST<'a>, _true_case: &AST<'a>) {
-    }
+    fn visit_if_after_true_case(&mut self, _condition: &AST<'a>, _true_case: &AST<'a>) {}
 
     fn visit_call_maybe(&mut self, _expr: &Option<AST<'a>>) {}
 
     fn visit_call_maybe_not(&mut self) {}
 
-    fn visit_bind_before(&mut self, _bind_type: BindType) {
-    }
+    fn visit_bind_before(&mut self, _bind_type: BindType) {}
 
-    fn visit_bind_between(&mut self, _bind_type: BindType, _attrpath: &AST<'a>) {
-    }
+    fn visit_bind_between(&mut self, _bind_type: BindType, _attrpath: &AST<'a>) {}
 
     fn visit_bind_after(
         &mut self,
@@ -269,8 +262,7 @@ impl<'a> ASTVisitor<'a, AST<'a>> for ASTBuilder {
         AST::Bind(Box::new(attrpath), Box::new(expr))
     }
 
-    fn visit_let_before(&mut self) {
-    }
+    fn visit_let_before(&mut self) {}
 
     fn visit_let_push_bind(&mut self, binds: &Vec<AST<'a>>, bind: AST<'a>) -> AST<'a> {
         bind
@@ -280,11 +272,9 @@ impl<'a> ASTVisitor<'a, AST<'a>> for ASTBuilder {
         AST::Let(binds, Box::new(body))
     }
 
-    fn visit_let_before_body(&mut self, _binds: &Vec<AST<'a>>) {
-    }
+    fn visit_let_before_body(&mut self, _binds: &Vec<AST<'a>>) {}
 
-    fn visit_attrset_before(&mut self, _binds: &Option<AST<'a>>) {
-    }
+    fn visit_attrset_before(&mut self, _binds: &Option<AST<'a>>) {}
 
     fn visit_attrset(&mut self, _binds: Option<AST<'a>>) -> AST<'a> {
         todo!()

@@ -367,7 +367,7 @@ impl<
             }) => {
                 self.expect(NixTokenType::CurlyOpen);
                 self.parse_attrset()
-            },
+            }
             Some(NixToken {
                 token_type: NixTokenType::BracketOpen,
             }) => {
@@ -674,7 +674,7 @@ impl<
         // destructured function parameters
 
         self.expect(NixTokenType::CurlyOpen);
-       
+
         // check whether this is a formal or attrset
         match self.lexer.peek() {
             Some(NixToken {
@@ -684,23 +684,24 @@ impl<
                     Some(NixToken {
                         token_type: NixTokenType::QuestionMark,
                     }) => {
-                            // { a ? jo }:
-                            self.lexer.reset_peek();
+                        // { a ? jo }:
+                        self.lexer.reset_peek();
                     }
                     Some(NixToken {
                         token_type: NixTokenType::Comma,
                     }) => {
                         // {a, b}:
                         self.lexer.reset_peek();
-                    },
+                    }
                     Some(NixToken {
                         token_type: NixTokenType::CurlyClose,
                     }) => {
                         // { a }:
                         // { a }@jo:
                         self.lexer.reset_peek();
-                    },
-                    _ => { // {a=1;}
+                    }
+                    _ => {
+                        // {a=1;}
                         // probably an attrset
                         self.lexer.reset_peek();
                         return self.parse_attrset();
@@ -750,7 +751,8 @@ impl<
             })
             | Some(NixToken {
                 token_type: NixTokenType::InterpolateStart, // {${"a"} = 1;}
-            }) | _ => {
+            })
+            | _ => {
                 // attrset
                 self.lexer.reset_peek();
                 return self.parse_attrset();
@@ -759,7 +761,7 @@ impl<
 
         // this second part here actually parses these formals
         let mut formals: Option<R> = None;
-    
+
         loop {
             match self.lexer.next() {
                 Some(NixToken {
@@ -771,8 +773,7 @@ impl<
                     }) = token
                     {
                         let expr = self.parse_expr().unwrap();
-                        formals =
-                            Some(self.visitor.visit_formal(formals, _a, Some(expr)));
+                        formals = Some(self.visitor.visit_formal(formals, _a, Some(expr)));
                     } else if let Some(NixToken {
                         token_type: NixTokenType::Comma,
                     }) = token
@@ -796,7 +797,7 @@ impl<
                 }
                 Some(NixToken {
                     token_type: NixTokenType::Comma,
-                }) => { }
+                }) => {}
                 Some(NixToken {
                     token_type: NixTokenType::Ellipsis,
                 }) => {
@@ -810,7 +811,6 @@ impl<
                 token => panic!("{:?}", token),
             }
         }
-       
     }
 
     #[cfg_attr(debug_assertions, instrument(name = "fn", skip_all, ret))]
