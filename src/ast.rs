@@ -264,7 +264,7 @@ impl<'a> ASTVisitor<'a, AST<'a>> for ASTBuilder {
 
     fn visit_let_before(&mut self) {}
 
-    fn visit_let_push_bind(&mut self, _binds: &Vec<AST<'a>>, bind: AST<'a>) -> AST<'a> {
+    fn visit_let_push_bind(&mut self, _binds: &[AST<'a>], bind: AST<'a>) -> AST<'a> {
         bind
     }
 
@@ -272,7 +272,7 @@ impl<'a> ASTVisitor<'a, AST<'a>> for ASTBuilder {
         AST::Let(binds, Box::new(body))
     }
 
-    fn visit_let_before_body(&mut self, _binds: &Vec<AST<'a>>) {}
+    fn visit_let_before_body(&mut self, _binds: &[AST<'a>]) {}
 
     fn visit_attrset_before(&mut self, _binds: &Option<AST<'a>>) {}
 
