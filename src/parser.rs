@@ -783,14 +783,7 @@ impl<
                         token_type: NixTokenType::CurlyClose,
                     }) = token
                     {
-                        match self.lexer.next() {
-                            Some(NixToken {
-                                token_type: NixTokenType::Identifier(_a),
-                            }) => {
-                                formals = Some(self.visitor.visit_formal(formals, _a, None));
-                            }
-                            _ => todo!(),
-                        }
+                        return Some(self.visitor.visit_formal(formals, _a, None));
                     } else {
                         panic!();
                     }
