@@ -28,6 +28,7 @@ pub enum AST<'a> {
     Array(Vec<AST<'a>>),
     Bind(Box<AST<'a>>, Box<AST<'a>>),
     Call(Box<AST<'a>>, Box<AST<'a>>),
+    Function(Box<AST<'a>>, Box<AST<'a>>),
     Formals {
         parameters: Vec<NixFunctionParameter<'a>>,
         at_identifier: Option<&'a [u8]>,
@@ -229,11 +230,10 @@ impl<'a> ASTVisitor<'a, AST<'a>> for ASTBuilder {
     }
 
     fn visit_function_enter(&mut self, _arg: &AST<'a>) {
-        todo!()
     }
 
-    fn visit_function_exit(&mut self, _arg: AST<'a>, _body: AST<'a>) -> AST<'a> {
-        todo!()
+    fn visit_function_exit(&mut self, arg: AST<'a>, body: AST<'a>) -> AST<'a> {
+        AST::Function(Box::new(arg), Box::new(body))
     }
 
     fn visit_function_before(&mut self) {
@@ -281,7 +281,10 @@ impl<'a> ASTVisitor<'a, AST<'a>> for ASTBuilder {
     }
 
     fn visit_string_concatenate_end(&mut self, result: Option<AST<'a>>) -> AST<'a> {
-        result.unwrap()
+        match result {
+            Some(result) => result,
+            None => AST::String(b""),
+        }
     }
 
     fn visit_formal(

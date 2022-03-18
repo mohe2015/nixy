@@ -65,7 +65,7 @@ fn main() -> Result<()> {
 
             let mut parser = Parser {
                 lexer: multipeek(lexer.map(|f| {
-                    //println!("{:?}", f);
+                    println!("{:?}", f);
                     f
                 })),
                 visitor: ASTBuilder,
