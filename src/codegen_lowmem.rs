@@ -375,13 +375,13 @@ public class MainClosure extends NixLazyBase {{
         .unwrap();
     }
 
-    fn visit_let_push_bind(&mut self, _binds: Option<()>, _bind: ()) {}
+    fn visit_let_push_bind(&mut self, _binds: &Vec<()>, _bind: ()) {}
 
-    fn visit_let_before_body(&mut self, _binds: &Option<()>) {
+    fn visit_let_before_body(&mut self, _binds: &Vec<()>) {
         write!(self.writer, "\n/* body */ \nreturn ",).unwrap();
     }
 
-    fn visit_let(&mut self, _binds: Option<()>, _body: ()) {
+    fn visit_let(&mut self, _binds: Vec<()>, _body: ()) {
         write!(self.writer, ".force(); }}}})",).unwrap();
     }
 

@@ -70,11 +70,11 @@ pub trait ASTVisitor<'a, R: std::fmt::Debug> {
 
     fn visit_let_before(&mut self);
 
-    fn visit_let_push_bind(&mut self, binds: Option<R>, bind: R) -> R;
+    fn visit_let_push_bind(&mut self, binds: &Vec<R>, bind: R) -> R;
 
-    fn visit_let_before_body(&mut self, binds: &Option<R>);
+    fn visit_let_before_body(&mut self, binds: &Vec<R>);
 
-    fn visit_let(&mut self, binds: Option<R>, body: R) -> R;
+    fn visit_let(&mut self, binds: Vec<R>, body: R) -> R;
 
     fn visit_attrset_before(&mut self, binds: &Option<R>);
 

@@ -16,58 +16,21 @@ pub struct NixFunctionParameter<'a> {
     default: Option<AST<'a>>,
 }
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Debug)]
 pub enum AST<'a> {
     Identifier(&'a [u8]),
     String(&'a [u8]),
     PathSegment(&'a [u8]),
     Integer(i64),
     Float(f64),
-    Let(Box<AST<'a>>, Box<AST<'a>>, Box<AST<'a>>),
+    Let(Vec<AST<'a>>, Box<AST<'a>>),
+    Bind(Box<AST<'a>>, Box<AST<'a>>),
     Call(Box<AST<'a>>, Box<AST<'a>>),
     Formals {
         parameters: Vec<NixFunctionParameter<'a>>,
         at_identifier: Option<&'a [u8]>,
         ellipsis: bool,
     },
-}
-
-impl<'a> Debug for AST<'a> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::Identifier(arg0) => f
-                .debug_tuple("Identifier")
-                .field(&std::str::from_utf8(arg0).unwrap())
-                .finish(),
-            Self::String(arg0) => f
-                .debug_tuple("String")
-                .field(&std::str::from_utf8(arg0).unwrap())
-                .finish(),
-            Self::PathSegment(arg0) => f
-                .debug_tuple("PathSegment")
-                .field(&std::str::from_utf8(arg0).unwrap())
-                .finish(),
-            Self::Integer(arg0) => f.debug_tuple("Integer").field(arg0).finish(),
-            Self::Float(arg0) => f.debug_tuple("Float").field(arg0).finish(),
-            Self::Let(arg0, arg1, arg2) => f
-                .debug_tuple("Let")
-                .field(arg0)
-                .field(arg1)
-                .field(arg2)
-                .finish(),
-            Self::Call(arg0, arg1) => f.debug_tuple("Call").field(arg0).field(arg1).finish(),
-            Self::Formals {
-                parameters,
-                at_identifier,
-                ellipsis,
-            } => f
-                .debug_struct("Formals")
-                .field("parameters", parameters)
-                .field("at_identifier", at_identifier)
-                .field("ellipsis", ellipsis)
-                .finish(),
-        }
-    }
 }
 
 pub struct ASTBuilder;
@@ -286,35 +249,32 @@ impl<'a> ASTVisitor<'a, AST<'a>> for ASTBuilder {
     fn visit_call_maybe_not(&mut self) {}
 
     fn visit_bind_before(&mut self, _bind_type: BindType) {
-        todo!()
     }
 
     fn visit_bind_between(&mut self, _bind_type: BindType, _attrpath: &AST<'a>) {
-        todo!()
     }
 
     fn visit_bind_after(
         &mut self,
         _bind_type: BindType,
-        _attrpath: AST<'a>,
-        _expr: AST<'a>,
+        attrpath: AST<'a>,
+        expr: AST<'a>,
     ) -> AST<'a> {
-        todo!()
+        AST::Bind(Box::new(attrpath), Box::new(expr))
     }
 
     fn visit_let_before(&mut self) {
+    }
+
+    fn visit_let_push_bind(&mut self, binds: &Vec<AST<'a>>, bind: AST<'a>) -> AST<'a> {
+        bind
+    }
+
+    fn visit_let(&mut self, _binds: Vec<AST<'a>>, _body: AST<'a>) -> AST<'a> {
         todo!()
     }
 
-    fn visit_let_push_bind(&mut self, _binds: Option<AST<'a>>, _bind: AST<'a>) -> AST<'a> {
-        todo!()
-    }
-
-    fn visit_let(&mut self, _binds: Option<AST<'a>>, _body: AST<'a>) -> AST<'a> {
-        todo!()
-    }
-
-    fn visit_let_before_body(&mut self, _binds: &Option<AST<'a>>) {
+    fn visit_let_before_body(&mut self, _binds: &Vec<AST<'a>>) {
         todo!()
     }
 

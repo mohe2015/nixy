@@ -179,7 +179,7 @@ impl<
         self.visitor.visit_let_before();
 
         // maybe do this like the method after? so the let has a third parameter which is the body and which we can then concatenate afterwards
-        let mut binds: Option<R> = None;
+        let mut binds: Vec<R> = Vec::new();
         loop {
             match self.lexer.peek() {
                 Some(NixToken {
@@ -199,7 +199,7 @@ impl<
                     self.lexer.reset_peek();
                     let bind = self.parse_bind(BindType::Let);
 
-                    binds = Some(self.visitor.visit_let_push_bind(binds, bind));
+                    binds.push(self.visitor.visit_let_push_bind(&binds, bind));
                 }
             }
         }
