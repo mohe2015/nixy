@@ -1,5 +1,5 @@
 use core::fmt::Debug;
-use std::{io::Write, vec};
+use std::{vec};
 
 use crate::{
     lexer::NixTokenType,
@@ -264,7 +264,7 @@ impl<'a> ASTVisitor<'a, AST<'a>> for ASTBuilder {
 
     fn visit_let_before(&mut self) {}
 
-    fn visit_let_push_bind(&mut self, binds: &Vec<AST<'a>>, bind: AST<'a>) -> AST<'a> {
+    fn visit_let_push_bind(&mut self, _binds: &Vec<AST<'a>>, bind: AST<'a>) -> AST<'a> {
         bind
     }
 
