@@ -92,4 +92,6 @@ pub trait ASTVisitor<'a, R: std::fmt::Debug> {
     ) -> R;
 
     fn visit_inherit(&mut self, attrs: Vec<R>) -> R;
+
+    fn visit_with(&mut self, with_expr: R, expr: R) -> R;
 }

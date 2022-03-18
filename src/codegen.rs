@@ -34,6 +34,9 @@ impl<'a, W: Write> ASTJavaTranspiler<'a, W> {
                 }
                 write!(self.writer, r#"))"#,).unwrap();
             }
+            AST::With(with_expr, expr) => {
+                
+            }
             ast => panic!("{:?}", ast),
         }
     }
