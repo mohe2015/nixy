@@ -6,7 +6,9 @@ impl<'a, W: Write> ASTJavaTranspiler<'a, W> {
 
     fn codegen_expr(&mut self, expr: AST<'a>) {
         match expr {
-            AST::Identifier(id) => write!(self.writer, "{}", id).unwrap(),
+            AST::Identifier(value) => write!(self.writer, "{}", value).unwrap(),
+            AST::Integer(value) => write!(self.writer, "NixInteger.create({})", value).unwrap(),
+            AST::Float(value) => write!(self.writer, "NixFloat.create({}f)", value).unwrap(),
             ast => panic!("{:?}", ast)
         }
     }
@@ -86,5 +88,9 @@ fn test_codegen<'a>(expr: AST<'a>) {
 
 #[test]
 fn test_codegen_basic() {
-    test_codegen(AST::Identifier("hi"));
+    test_codegen(AST::Integer(1));
+
+
+    //test_codegen(AST::Identifier("hi"));
+    
 }
