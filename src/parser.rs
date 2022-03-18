@@ -678,17 +678,23 @@ impl<
                 }) => {
                     match self.lexer.peek() {
                         Some(NixToken {
-                            token_type: NixTokenType::QuestionMark, // { a ? jo }:
-
-                        }) => {}
+                            token_type: NixTokenType::QuestionMark,
+                        }) => {
+                             // { a ? jo }:
+                             self.lexer.reset_peek();
+                        }
                         Some(NixToken {
-                            token_type: NixTokenType::Comma, // {a, b}:
-                        }) => {},
+                            token_type: NixTokenType::Comma,
+                        }) => {
+                            // {a, b}:
+                            self.lexer.reset_peek();
+                        },
                         Some(NixToken {
                             token_type: NixTokenType::CurlyClose,
                         }) => {
                             // { a }:
-                                // { a }@jo:
+                            // { a }@jo:
+                            self.lexer.reset_peek();
                         },
                         _ => { // {a=1;}
                             // probably an attrset
@@ -702,11 +708,15 @@ impl<
                 }) => {
                     match self.lexer.peek() {
                         Some(NixToken {
-                            token_type: NixTokenType::Colon, // {}:
-                        }) => {}
-                        Some(NixToken {
-                            token_type: NixTokenType::AtSign, // {}@jo:
+                            token_type: NixTokenType::Colon,
                         }) => {
+                             // {}:
+                            self.lexer.reset_peek();
+                        }
+                        Some(NixToken {
+                            token_type: NixTokenType::AtSign,
+                        }) => {
+                            // {}@jo:
                             // empty function in stupid
                             self.expect(NixTokenType::CurlyOpen);
                             self.expect(NixTokenType::CurlyClose);
