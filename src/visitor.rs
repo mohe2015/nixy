@@ -90,4 +90,6 @@ pub trait ASTVisitor<'a, R: std::fmt::Debug> {
         at_identifier: Option<&'a [u8]>,
         ellipsis: bool,
     ) -> R;
+
+    fn visit_inherit(&mut self, attrs: Vec<R>) -> R;
 }

@@ -26,6 +26,7 @@ pub enum AST<'a> {
     Let(Vec<AST<'a>>, Box<AST<'a>>),
     Attrset(Vec<AST<'a>>),
     Array(Vec<AST<'a>>),
+    Inherit(Vec<AST<'a>>),
     Bind(Box<AST<'a>>, Box<AST<'a>>),
     Call(Box<AST<'a>>, Box<AST<'a>>),
     Function(Box<AST<'a>>, Box<AST<'a>>),
@@ -338,6 +339,10 @@ impl<'a> ASTVisitor<'a, AST<'a>> for ASTBuilder {
             },
             _ => panic!(),
         }
+    }
+
+    fn visit_inherit(&mut self, attrs: Vec<AST<'a>>) -> AST<'a> {
+        AST::Inherit(attrs)
     }
 }
 

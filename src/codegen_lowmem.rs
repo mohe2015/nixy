@@ -413,6 +413,10 @@ public class MainClosure extends NixLazyBase {{
     ) {
         todo!()
     }
+
+    fn visit_inherit(&mut self, attrs: Vec<()>) -> () {
+        todo!()
+    }
 }
 
 fn test_java_transpiler_code(code: &[u8]) {

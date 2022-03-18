@@ -139,7 +139,7 @@ impl<
                         Some(NixToken {
                             token_type: NixTokenType::Identifier(attr),
                         }) => {
-                            attrs.push(AST::Identifier(attr));
+                            attrs.push(self.visitor.visit_identifier(attr));
                             self.lexer.next();
                         }
                         _ => {
@@ -150,7 +150,7 @@ impl<
                     }
                 }
                 self.expect(NixTokenType::Semicolon);
-                self.visitor.visit_todo()
+                self.visitor.visit_inherit(attrs)
             }
             _other => {
                 self.lexer.reset_peek();
