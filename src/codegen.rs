@@ -88,6 +88,25 @@ impl<'a, W: Write> JavaCodegen<'a, W> {
                 .unwrap();
                 self.withs.pop();
             }
+            AST::Let(binds, expr) => {
+                write!(self.writer, r#"((NixLazy) () -> {{
+                    "#).unwrap();
+                for bind in binds {
+                    match bind {
+                        // fuck everything is an attrset
+                        AST::Bind(variable, value) => {
+                            write!(self.writer, r#"NixProxy x_ = new NixProxy();
+    "#).unwrap();
+                        }
+                        _ => panic!()
+                    }
+                }
+            
+        write!(self.writer, r#"y_.proxy = "#).unwrap();
+    write!(self.writer, r#"
+            return .force();
+    }}"#).unwrap();
+            }
             ast => panic!("{:?}", ast),
         }
     }
@@ -188,6 +207,7 @@ fn test_codegen<'a>(code: &'a [u8]) {
 
 #[test]
 fn test_codegen_basic() {
+    test_codegen(br#"let ${"hi"} = 1; in hi"#);
     test_codegen(br"1");
     test_codegen(br#"with builtins; (length [1 2 3 "x"])"#);
     test_codegen(
