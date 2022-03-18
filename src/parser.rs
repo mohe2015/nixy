@@ -165,7 +165,6 @@ impl<
                 let expr = self
                     .parse_expr() // here
                     .expect("expected expression in binding at");
-                println!("{:?}", expr);
                 self.expect(NixTokenType::Semicolon);
 
                 self.visitor.visit_bind_after(bind_type, attrpath, expr)
@@ -720,22 +719,7 @@ impl<
                                 token_type: NixTokenType::AtSign,
                             }) => {
                                 // {}@jo:
-                                // empty function in stupid
-                                self.expect(NixTokenType::CurlyClose);
-                                self.expect(NixTokenType::AtSign);
-                                match self.lexer.next() {
-                                    Some(NixToken {
-                                        token_type: NixTokenType::Identifier(_a),
-                                    }) => {
-                                        self.lexer.reset_peek();
-                                        return Some(self.visitor.visit_formals(
-                                            None,
-                                            Some(_a),
-                                            false,
-                                        ));
-                                    }
-                                    _ => todo!(),
-                                }
+                                self.lexer.reset_peek();
                             }
                             _ => {
                                 // {}
@@ -916,7 +900,6 @@ impl<
     pub fn parse(&mut self) -> Option<R> {
         self.visitor.visit_file_start();
         let result = self.parse_expr();
-        println!("{:?}", result);
         assert_eq!(None, self.lexer.next());
         self.visitor.visit_file_end();
         result
