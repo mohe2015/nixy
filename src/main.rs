@@ -48,11 +48,13 @@ fn main() -> Result<()> {
             let file = fs::read(path).unwrap();
             println!("{} {}", file.len(), path.display());
 
-            let lexer = NixLexer::new(&file).filter(|t| match t.token_type {
-                NixTokenType::Whitespace(_)
-                | NixTokenType::SingleLineComment(_)
-                | NixTokenType::MultiLineComment(_) => false,
-                _ => true,
+            let lexer = NixLexer::new(&file).filter(|t| {
+                !matches!(
+                    t.token_type,
+                    NixTokenType::Whitespace(_)
+                        | NixTokenType::SingleLineComment(_)
+                        | NixTokenType::MultiLineComment(_)
+                )
             });
 
             //success += lexer.count();
@@ -62,12 +64,15 @@ fn main() -> Result<()> {
             //}
 
             let mut parser = Parser {
-                lexer: multipeek(lexer),
+                lexer: multipeek(lexer.map(|f| {
+                    //println!("{:?}", f);
+                    f
+                })),
                 visitor: ASTBuilder,
                 phantom: PhantomData,
             };
 
-            parser.parse();
+            println!("{:?}", parser.parse());
         };
         /* }) {
             Ok(_) => success += 1,

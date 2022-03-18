@@ -1,65 +1,47 @@
 use core::fmt::Debug;
-use std::io::Write;
-use std::{io::BufWriter, marker::PhantomData};
+use std::vec;
 
 use crate::{
-    lexer::{NixToken, NixTokenType},
+    lexer::NixTokenType,
     parser::{
-        BindType, Parser, BUILTIN_IF, BUILTIN_PATH_CONCATENATE, BUILTIN_SELECT,
+        BindType, BUILTIN_IF, BUILTIN_PATH_CONCATENATE, BUILTIN_SELECT, BUILTIN_STRING_CONCATENATE,
         BUILTIN_UNARY_MINUS, BUILTIN_UNARY_NOT,
     },
     visitor::ASTVisitor,
 };
 
-#[derive(PartialEq)]
-pub enum AST<'a> {
-    Identifier(&'a [u8]),
-    String(&'a [u8]),
-    PathSegment(&'a [u8]), // merge into String
-    Integer(i64),
-    Float(f64),
-    Let(Box<AST<'a>>, Box<AST<'a>>, Box<AST<'a>>),
-    Call(Box<AST<'a>>, Box<AST<'a>>),
+#[derive(PartialEq, Debug)]
+pub struct NixFunctionParameter<'a> {
+    name: &'a [u8],
+    default: Option<AST<'a>>,
 }
 
-impl<'a> Debug for AST<'a> {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        if !f.alternate() {
-            // ugly hack for tracing macros
-            write!(f, "{:#?}", self)
-        } else {
-            match self {
-                Self::Identifier(arg0) => f
-                    .debug_tuple("Identifier")
-                    .field(&std::str::from_utf8(arg0).unwrap())
-                    .finish(),
-                Self::String(arg0) => f
-                    .debug_tuple("String")
-                    .field(&std::str::from_utf8(arg0).unwrap())
-                    .finish(),
-                Self::PathSegment(arg0) => f
-                    .debug_tuple("PathSegment")
-                    .field(&std::str::from_utf8(arg0).unwrap())
-                    .finish(),
-                Self::Integer(arg0) => f.debug_tuple("Integer").field(arg0).finish(),
-                Self::Float(arg0) => f.debug_tuple("Float").field(arg0).finish(),
-                Self::Let(arg0, arg1, arg2) => f
-                    .debug_tuple("Let")
-                    .field(arg0)
-                    .field(arg1)
-                    .field(arg2)
-                    .finish(),
-                Self::Call(arg0, arg1) => f.debug_tuple("Call").field(arg0).field(arg1).finish(),
-            }
-        }
-    }
+#[derive(PartialEq, Debug)]
+pub enum AST<'a> {
+    Identifier(&'a str),
+    String(&'a str),
+    PathSegment(&'a str),
+    Integer(i64),
+    Float(f64),
+    Let(Vec<AST<'a>>, Box<AST<'a>>),
+    Attrset(Vec<AST<'a>>),
+    Array(Vec<AST<'a>>),
+    Inherit(Vec<AST<'a>>),
+    Bind(Box<AST<'a>>, Box<AST<'a>>),
+    Call(Box<AST<'a>>, Box<AST<'a>>),
+    Function(Box<AST<'a>>, Box<AST<'a>>),
+    Formals {
+        parameters: Vec<NixFunctionParameter<'a>>,
+        at_identifier: Option<&'a str>,
+        ellipsis: bool,
+    },
 }
 
 pub struct ASTBuilder;
 
 impl<'a> ASTVisitor<'a, AST<'a>> for ASTBuilder {
     fn visit_identifier(&mut self, id: &'a [u8]) -> AST<'a> {
-        AST::Identifier(id)
+        AST::Identifier(std::str::from_utf8(id).unwrap())
     }
 
     fn visit_integer(&mut self, integer: i64) -> AST<'a> {
@@ -90,21 +72,19 @@ impl<'a> ASTVisitor<'a, AST<'a>> for ASTBuilder {
         match default {
             Some(default) => AST::Call(
                 Box::new(AST::Call(
-                    Box::new(AST::Identifier(b"__value_or_default")),
+                    Box::new(AST::Identifier("__value_or_default")),
                     Box::new(value),
                 )),
                 Box::new(default),
             ),
             None => AST::Call(
-                Box::new(AST::Identifier(b"__abort_invalid_attrpath")),
+                Box::new(AST::Identifier("__abort_invalid_attrpath")),
                 Box::new(value),
             ),
         }
     }
 
-    fn visit_infix_lhs(&mut self, operator: NixTokenType<'a>, left: &AST<'a>) {
-        todo!()
-    }
+    fn visit_infix_lhs(&mut self, _operator: NixTokenType<'a>, _left: &AST<'a>) {}
 
     fn visit_infix_operation(
         &mut self,
@@ -115,39 +95,39 @@ impl<'a> ASTVisitor<'a, AST<'a>> for ASTBuilder {
         AST::Call(
             Box::new(AST::Call(
                 Box::new(AST::Identifier(match operator {
-                    NixTokenType::If => b"if",
-                    NixTokenType::Then => b"then",
-                    NixTokenType::Else => b"else",
-                    NixTokenType::Assert => b"assert",
-                    NixTokenType::With => b"with",
-                    NixTokenType::Let => b"let",
-                    NixTokenType::In => b"in",
-                    NixTokenType::Rec => b"rec",
-                    NixTokenType::Inherit => b"inherit",
-                    NixTokenType::Or => b"or",
-                    NixTokenType::Ellipsis => b"ellipsis",
-                    NixTokenType::Equals => b"equals",
-                    NixTokenType::NotEquals => b"notequals",
-                    NixTokenType::LessThanOrEqual => b"lessthanorequal",
-                    NixTokenType::GreaterThanOrEqual => b"greaterthanorequal",
-                    NixTokenType::LessThan => b"lessthan",
-                    NixTokenType::GreaterThan => b"greaterthan",
-                    NixTokenType::And => b"and",
-                    NixTokenType::Implies => b"implies",
-                    NixTokenType::Update => b"update",
-                    NixTokenType::Concatenate => b"concatenate",
-                    NixTokenType::Assign => b"assign",
-                    NixTokenType::Semicolon => b"semicolon",
-                    NixTokenType::Colon => b"colon",
-                    NixTokenType::Select => b"select",
-                    NixTokenType::Comma => b"comman",
-                    NixTokenType::AtSign => b"atsign",
-                    NixTokenType::QuestionMark => b"questionmark",
-                    NixTokenType::ExclamationMark => b"exclamationmark",
-                    NixTokenType::Addition => b"addition",
-                    NixTokenType::Subtraction => b"subtractoin",
-                    NixTokenType::Multiplication => b"multiplication",
-                    NixTokenType::Division => b"division",
+                    NixTokenType::If => "if",
+                    NixTokenType::Then => "then",
+                    NixTokenType::Else => "else",
+                    NixTokenType::Assert => "assert",
+                    NixTokenType::With => "with",
+                    NixTokenType::Let => "let",
+                    NixTokenType::In => "in",
+                    NixTokenType::Rec => "rec",
+                    NixTokenType::Inherit => "inherit",
+                    NixTokenType::Or => "or",
+                    NixTokenType::Ellipsis => "ellipsis",
+                    NixTokenType::Equals => "equals",
+                    NixTokenType::NotEquals => "notequals",
+                    NixTokenType::LessThanOrEqual => "lessthanorequal",
+                    NixTokenType::GreaterThanOrEqual => "greaterthanorequal",
+                    NixTokenType::LessThan => "lessthan",
+                    NixTokenType::GreaterThan => "greaterthan",
+                    NixTokenType::And => "and",
+                    NixTokenType::Implies => "implies",
+                    NixTokenType::Update => "update",
+                    NixTokenType::Concatenate => "concatenate",
+                    NixTokenType::Assign => "assign",
+                    NixTokenType::Semicolon => "semicolon",
+                    NixTokenType::Colon => "colon",
+                    NixTokenType::Select => "select",
+                    NixTokenType::Comma => "comman",
+                    NixTokenType::AtSign => "atsign",
+                    NixTokenType::QuestionMark => "questionmark",
+                    NixTokenType::ExclamationMark => "exclamationmark",
+                    NixTokenType::Addition => "addition",
+                    NixTokenType::Subtraction => "subtractoin",
+                    NixTokenType::Multiplication => "multiplication",
+                    NixTokenType::Division => "division",
                     _ => todo!(),
                 })),
                 Box::new(left),
@@ -201,118 +181,107 @@ impl<'a> ASTVisitor<'a, AST<'a>> for ASTBuilder {
     }
 
     fn visit_path_segment(&mut self, segment: &'a [u8]) -> AST<'a> {
-        AST::PathSegment(segment)
+        AST::PathSegment(std::str::from_utf8(segment).unwrap())
     }
 
     fn visit_string(&mut self, string: &'a [u8]) -> AST<'a> {
-        AST::String(string)
+        AST::String(std::str::from_utf8(string).unwrap())
     }
 
-    fn visit_string_concatenate(&mut self, _begin: Option<AST<'a>>, _last: AST<'a>) -> AST<'a> {
-        todo!()
-    }
-    fn visit_array_start(&mut self) {
-        todo!()
-    }
-
-    fn visit_array_push_before(&mut self, begin: &Option<AST<'a>>) {
-        todo!()
-    }
-
-    fn visit_array_push(&mut self, begin: Option<AST<'a>>, last: AST<'a>) -> AST<'a> {
+    fn visit_string_concatenate(&mut self, begin: Option<AST<'a>>, last: AST<'a>) -> AST<'a> {
         match begin {
+            Some(begin) => AST::Call(
+                Box::new(AST::Call(
+                    Box::new(AST::Identifier(BUILTIN_STRING_CONCATENATE)),
+                    Box::new(begin),
+                )),
+                Box::new(last),
+            ),
+            None => last,
+        }
+    }
+    fn visit_array_start(&mut self) {}
+
+    fn visit_array_push_before(&mut self, _begin: &[AST<'a>]) {}
+
+    fn visit_array_push(&mut self, _begin: &[AST<'a>], last: AST<'a>) -> AST<'a> {
+        /*match begin {
             Some(begin) => AST::Call(
                 Box::new(AST::Identifier(b"cons")),
                 Box::new(AST::Call(Box::new(begin), Box::new(last))),
             ),
             None => AST::Call(Box::new(AST::Identifier(b"cons")), Box::new(last)),
-        }
+        }*/
+        last
     }
 
-    fn visit_array_end(&mut self, array: AST<'a>) -> AST<'a> {
-        AST::Call(Box::new(array), Box::new(AST::Identifier(b"nil")))
+    fn visit_array_end(&mut self, array: Vec<AST<'a>>) -> AST<'a> {
+        //AST::Call(Box::new(array), Box::new(AST::Identifier(b"nil")))
+        AST::Array(array)
     }
 
     fn visit_call(&mut self, function: AST<'a>, parameter: AST<'a>) -> AST<'a> {
         AST::Call(Box::new(function), Box::new(parameter))
     }
 
-    fn visit_attrset_bind_push(&mut self, _begin: Option<AST<'a>>, _last: AST<'a>) -> AST<'a> {
-        //AST::Let(item.0, item.1, Box::new(accum))
-        todo!()
+    fn visit_attrset_bind_push(&mut self, binds: &[AST<'a>], bind: AST<'a>) -> AST<'a> {
+        bind
     }
 
-    fn visit_function_enter(&mut self, arg: &AST<'a>) {
-        todo!()
-    }
+    fn visit_function_enter(&mut self, _arg: &AST<'a>) {}
 
     fn visit_function_exit(&mut self, arg: AST<'a>, body: AST<'a>) -> AST<'a> {
-        todo!()
+        AST::Function(Box::new(arg), Box::new(body))
     }
 
-    fn visit_function_before(&mut self) {
-        todo!()
-    }
+    fn visit_function_before(&mut self) {}
 
-    fn visit_if_before(&mut self) {
-        todo!()
-    }
+    fn visit_if_before(&mut self) {}
 
-    fn visit_if_after_condition(&mut self, condition: &AST<'a>) {
-        todo!()
-    }
+    fn visit_if_after_condition(&mut self, _condition: &AST<'a>) {}
 
-    fn visit_if_after_true_case(&mut self, condition: &AST<'a>, true_case: &AST<'a>) {
-        todo!()
-    }
+    fn visit_if_after_true_case(&mut self, _condition: &AST<'a>, _true_case: &AST<'a>) {}
 
-    fn visit_call_maybe(&mut self, expr: &Option<AST<'a>>) {}
+    fn visit_call_maybe(&mut self, _expr: &Option<AST<'a>>) {}
 
     fn visit_call_maybe_not(&mut self) {}
 
-    fn visit_bind_before(&mut self, bind_type: BindType) {
-        todo!()
-    }
+    fn visit_bind_before(&mut self, _bind_type: BindType) {}
 
-    fn visit_bind_between(&mut self, bind_type: BindType, attrpath: &AST<'a>) {
-        todo!()
-    }
+    fn visit_bind_between(&mut self, _bind_type: BindType, _attrpath: &AST<'a>) {}
 
     fn visit_bind_after(
         &mut self,
-        bind_type: BindType,
+        _bind_type: BindType,
         attrpath: AST<'a>,
         expr: AST<'a>,
     ) -> AST<'a> {
-        todo!()
+        AST::Bind(Box::new(attrpath), Box::new(expr))
     }
 
-    fn visit_let_before(&mut self) {
-        todo!()
+    fn visit_let_before(&mut self) {}
+
+    fn visit_let_bind_push(&mut self, _binds: &[AST<'a>], bind: AST<'a>) -> AST<'a> {
+        bind
     }
 
-    fn visit_let_push_bind(&mut self, binds: Option<AST<'a>>, bind: AST<'a>) -> AST<'a> {
-        todo!()
+    fn visit_let(&mut self, binds: Vec<AST<'a>>, body: AST<'a>) -> AST<'a> {
+        AST::Let(binds, Box::new(body))
     }
 
-    fn visit_let(&mut self, binds: Option<AST<'a>>, body: AST<'a>) -> AST<'a> {
-        todo!()
-    }
+    fn visit_let_before_body(&mut self, _binds: &[AST<'a>]) {}
 
-    fn visit_let_before_body(&mut self, binds: &Option<AST<'a>>) {
-        todo!()
-    }
+    fn visit_attrset_before(&mut self, _binds: &[AST<'a>]) {}
 
-    fn visit_attrset_before(&mut self, binds: &Option<AST<'a>>) {
-        todo!()
-    }
-
-    fn visit_attrset(&mut self, binds: Option<AST<'a>>) -> AST<'a> {
-        todo!()
+    fn visit_attrset(&mut self, binds: Vec<AST<'a>>) -> AST<'a> {
+        AST::Attrset(binds)
     }
 
     fn visit_string_concatenate_end(&mut self, result: Option<AST<'a>>) -> AST<'a> {
-        todo!()
+        match result {
+            Some(result) => result,
+            None => AST::String(""),
+        }
     }
 
     fn visit_formal(
@@ -321,7 +290,30 @@ impl<'a> ASTVisitor<'a, AST<'a>> for ASTBuilder {
         identifier: &'a [u8],
         default: Option<AST<'a>>,
     ) -> AST<'a> {
-        todo!()
+        let formal = NixFunctionParameter {
+            name: identifier,
+            default,
+        };
+        match formals {
+            Some(AST::Formals {
+                mut parameters,
+                at_identifier,
+                ellipsis,
+            }) => {
+                parameters.push(formal);
+                AST::Formals {
+                    parameters,
+                    at_identifier,
+                    ellipsis,
+                }
+            }
+            None => AST::Formals {
+                parameters: vec![formal],
+                at_identifier: None,
+                ellipsis: false,
+            },
+            _ => panic!(),
+        }
     }
 
     fn visit_formals(
@@ -330,6 +322,26 @@ impl<'a> ASTVisitor<'a, AST<'a>> for ASTBuilder {
         at_identifier: Option<&'a [u8]>,
         ellipsis: bool,
     ) -> AST<'a> {
-        todo!()
+        match formals {
+            Some(AST::Formals { parameters, .. }) => AST::Formals {
+                parameters,
+                at_identifier: at_identifier.map(|s| std::str::from_utf8(s).unwrap()),
+                ellipsis,
+            },
+            None => AST::Formals {
+                parameters: vec![],
+                at_identifier: at_identifier.map(|s| std::str::from_utf8(s).unwrap()),
+                ellipsis,
+            },
+            _ => panic!(),
+        }
+    }
+
+    fn visit_inherit(&mut self, attrs: Vec<AST<'a>>) -> AST<'a> {
+        AST::Inherit(attrs)
     }
 }
+
+// cargo test ast::test_java_transpiler -- --nocapture
+#[test]
+fn test_ast() {}

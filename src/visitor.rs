@@ -43,12 +43,12 @@ pub trait ASTVisitor<'a, R: std::fmt::Debug> {
 
     fn visit_array_start(&mut self);
 
-    fn visit_array_push_before(&mut self, begin: &Option<R>);
+    fn visit_array_push_before(&mut self, begin: &[R]);
 
-    fn visit_array_push(&mut self, begin: Option<R>, last: R) -> R;
+    fn visit_array_push(&mut self, begin: &[R], last: R) -> R;
 
     /// This is always called after `visit_array_push` and may help some implementations.
-    fn visit_array_end(&mut self, array: R) -> R;
+    fn visit_array_end(&mut self, array: Vec<R>) -> R;
 
     fn visit_call_maybe(&mut self, expr: &Option<R>);
 
@@ -70,17 +70,17 @@ pub trait ASTVisitor<'a, R: std::fmt::Debug> {
 
     fn visit_let_before(&mut self);
 
-    fn visit_let_push_bind(&mut self, binds: Option<R>, bind: R) -> R;
+    fn visit_let_bind_push(&mut self, binds: &[R], bind: R) -> R;
 
-    fn visit_let_before_body(&mut self, binds: &Option<R>);
+    fn visit_let_before_body(&mut self, binds: &[R]);
 
-    fn visit_let(&mut self, binds: Option<R>, body: R) -> R;
+    fn visit_let(&mut self, binds: Vec<R>, body: R) -> R;
 
-    fn visit_attrset_before(&mut self, binds: &Option<R>);
+    fn visit_attrset_before(&mut self, binds: &[R]);
 
-    fn visit_attrset_bind_push(&mut self, begin: Option<R>, last: R) -> R;
+    fn visit_attrset_bind_push(&mut self, binds: &[R], bind: R) -> R;
 
-    fn visit_attrset(&mut self, binds: Option<R>) -> R;
+    fn visit_attrset(&mut self, binds: Vec<R>) -> R;
 
     fn visit_formal(&mut self, formals: Option<R>, identifier: &'a [u8], default: Option<R>) -> R;
 
@@ -90,4 +90,6 @@ pub trait ASTVisitor<'a, R: std::fmt::Debug> {
         at_identifier: Option<&'a [u8]>,
         ellipsis: bool,
     ) -> R;
+
+    fn visit_inherit(&mut self, attrs: Vec<R>) -> R;
 }
