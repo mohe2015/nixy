@@ -138,6 +138,14 @@ impl<'a, W: Write> ASTVisitor<'a, ()> for ASTJavaTranspiler<'a, W> {
             r#"
 public class MainClosure extends NixLazyBase {{
 
+    ArrayDeque<NixAttrset> scopes = new ArrayDeque<>();
+    ArrayDeque<NixAttrset> withs = new ArrayDeque<>();
+
+    MainClosure() {{
+        super();
+        scopes.push((NixAttrset) globals.force());
+    }}
+
     public NixValue force() {{
         return "#
         )

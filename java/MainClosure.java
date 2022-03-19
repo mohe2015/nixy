@@ -9,6 +9,11 @@ public class MainClosure extends NixLazyBase {
 	}
 
 	public NixValue force() {
+		ArrayDeque<NixAttrset> scopes = new ArrayDeque<>();
+		ArrayDeque<NixAttrset> withs = new ArrayDeque<>();
+
+		scopes.push((NixAttrset) globals.force());
+
 		// let binding
 
 		NixAttrset let = (NixAttrset) NixAttrset.create(new HashMap<>()).force();
@@ -16,16 +21,15 @@ public class MainClosure extends NixLazyBase {
 		scopes = scopes.clone();
 		scopes.push(let);
 
-		final ArrayDeque<NixAttrset> scopes = this.scopes;
-		final ArrayDeque<NixAttrset> withs = this.scopes;
-
-		let.value.put("a", () -> findVariable(scopes, withs,"b").force());
+		ArrayDeque<NixAttrset> finalScopes = scopes;
+		let.value.put("a", () -> findVariable(finalScopes, withs,"b").force());
 		let.value.put("b", () -> NixInteger.create(5).force());
 
-		NixValue returnValue = (arg) -> arg.add(findVariable(scopes, withs, "a")).force();
+		ArrayDeque<NixAttrset> finalScopes1 = scopes;
+		NixValue returnValue = (arg) -> arg.add(findVariable(finalScopes1, withs, "a")).force();
 
-		this.scopes = scopes.clone();
-		this.scopes.pop();
+		scopes = scopes.clone();
+		scopes.pop();
 
 		return returnValue;
 	}
