@@ -63,126 +63,195 @@ toString
 
 	public NixLazy add(NixLazy second) {
 		NixLambda.ensureLambda(second);
-		return () -> {
-			NixValue thisForced = this.force();
-			NixValue secondForced = second.force();
-			if (thisForced instanceof NixString || secondForced instanceof NixString) {
-				return NixString.create(((NixToString) thisForced).toNixString().value + ((NixToString) secondForced).toNixString().value).force();
+		return new NixLazy() {
+
+			@Override
+			public NixValue force() {
+				NixValue thisForced = this.force();
+				NixValue secondForced = second.force();
+				if (thisForced instanceof NixString || secondForced instanceof NixString) {
+					return NixString.create(((NixToString) thisForced).toNixString().value + ((NixToString) secondForced).toNixString().value).force();
+				}
+				if (thisForced instanceof NixFloat || secondForced instanceof NixFloat) {
+					return NixFloat.create(((NixNumber) thisForced).toNixFloat().value + ((NixNumber) secondForced).toNixFloat().value).force();
+				}
+				return NixInteger.create(((NixInteger) thisForced).value + ((NixInteger) secondForced).value).force();
 			}
-			if (thisForced instanceof NixFloat || secondForced instanceof NixFloat) {
-				return NixFloat.create(((NixNumber) thisForced).toNixFloat().value + ((NixNumber) secondForced).toNixFloat().value).force();
-			}
-			return NixInteger.create(((NixInteger) thisForced).value + ((NixInteger) secondForced).value).force();
 		};
 	}
 
 	public NixLazy subtract(NixLazy second) {
 		NixLambda.ensureLambda(second);
-		return () -> {
-			NixValue thisForced = this.force();
-			NixValue secondForced = second.force();
-			if (thisForced instanceof NixFloat || secondForced instanceof NixFloat) {
-				return NixFloat.create(((NixNumber) thisForced).toNixFloat().value - ((NixNumber) secondForced).toNixFloat().value).force();
+		return new NixLazy() {
+
+			@Override
+			public NixValue force() {
+
+				NixValue thisForced = this.force();
+				NixValue secondForced = second.force();
+				if (thisForced instanceof NixFloat || secondForced instanceof NixFloat) {
+					return NixFloat.create(((NixNumber) thisForced).toNixFloat().value - ((NixNumber) secondForced).toNixFloat().value).force();
+				}
+				return NixInteger.create(((NixInteger) thisForced).value - ((NixInteger) secondForced).value).force();
 			}
-			return NixInteger.create(((NixInteger) thisForced).value - ((NixInteger) secondForced).value).force();
 		};
 	}
 
 	public NixLazy multiply(NixLazy second) {
 		NixLambda.ensureLambda(second);
-		return () -> {
-			NixValue thisForced = this.force();
-			NixValue secondForced = second.force();
-			if (thisForced instanceof NixFloat || secondForced instanceof NixFloat) {
-				return NixFloat.create(((NixNumber) thisForced).toNixFloat().value * ((NixNumber) secondForced).toNixFloat().value).force();
+		return new NixLazy() {
+
+			@Override
+			public NixValue force() {
+
+				NixValue thisForced = this.force();
+				NixValue secondForced = second.force();
+				if (thisForced instanceof NixFloat || secondForced instanceof NixFloat) {
+					return NixFloat.create(((NixNumber) thisForced).toNixFloat().value * ((NixNumber) secondForced).toNixFloat().value).force();
+				}
+				return NixInteger.create(((NixInteger) thisForced).value * ((NixInteger) secondForced).value).force();
 			}
-			return NixInteger.create(((NixInteger) thisForced).value * ((NixInteger) secondForced).value).force();
 		};
 	}
 
 	public NixLazy divide(NixLazy second) {
 		NixLambda.ensureLambda(second);
-		return () -> {
-			NixValue thisForced = this.force();
-			NixValue secondForced = second.force();
-			if (thisForced instanceof NixFloat || secondForced instanceof NixFloat) {
-				return NixFloat.create(((NixNumber) thisForced).toNixFloat().value / ((NixNumber) secondForced).toNixFloat().value).force();
+		return new NixLazy() {
+
+			@Override
+			public NixValue force() {
+
+				NixValue thisForced = this.force();
+				NixValue secondForced = second.force();
+				if (thisForced instanceof NixFloat || secondForced instanceof NixFloat) {
+					return NixFloat.create(((NixNumber) thisForced).toNixFloat().value / ((NixNumber) secondForced).toNixFloat().value).force();
+				}
+				return NixInteger.create(((NixInteger) thisForced).value / ((NixInteger) secondForced).value).force();
 			}
-			return NixInteger.create(((NixInteger) thisForced).value / ((NixInteger) secondForced).value).force();
 		};
 	}
 
 	public NixLazy lt(NixLazy second) {
 		NixLambda.ensureLambda(second);
-		return () -> {
-			NixValue thisForced = this.force();
-			NixValue secondForced = second.force();
-			if (thisForced instanceof NixFloat || secondForced instanceof NixFloat) {
-				return NixBoolean.create(((NixNumber) thisForced).toNixFloat().value < ((NixNumber) secondForced).toNixFloat().value).force();
+		return new NixLazy() {
+
+			@Override
+			public NixValue force() {
+
+				NixValue thisForced = this.force();
+				NixValue secondForced = second.force();
+				if (thisForced instanceof NixFloat || secondForced instanceof NixFloat) {
+					return NixBoolean.create(((NixNumber) thisForced).toNixFloat().value < ((NixNumber) secondForced).toNixFloat().value).force();
+				}
+				return NixBoolean.create(((NixInteger) thisForced).value < ((NixInteger) secondForced).value).force();
 			}
-			return NixBoolean.create(((NixInteger) thisForced).value < ((NixInteger) secondForced).value).force();
 		};
 	}
 
 	public NixLazy lte(NixLazy second) {
 		NixLambda.ensureLambda(second);
-		return () -> {
-			NixValue thisForced = this.force();
-			NixValue secondForced = second.force();
-			if (thisForced instanceof NixFloat || secondForced instanceof NixFloat) {
-				return NixBoolean.create(((NixNumber) thisForced).toNixFloat().value <= ((NixNumber) secondForced).toNixFloat().value).force();
+		return new NixLazy() {
+
+			@Override
+			public NixValue force() {
+
+				NixValue thisForced = this.force();
+				NixValue secondForced = second.force();
+				if (thisForced instanceof NixFloat || secondForced instanceof NixFloat) {
+					return NixBoolean.create(((NixNumber) thisForced).toNixFloat().value <= ((NixNumber) secondForced).toNixFloat().value).force();
+				}
+				return NixBoolean.create(((NixInteger) thisForced).value <= ((NixInteger) secondForced).value).force();
 			}
-			return NixBoolean.create(((NixInteger) thisForced).value <= ((NixInteger) secondForced).value).force();
 		};
 	}
 
 	public NixLazy gt(NixLazy second) {
 		NixLambda.ensureLambda(second);
-		return () -> {
-			NixValue thisForced = this.force();
-			NixValue secondForced = second.force();
-			if (thisForced instanceof NixFloat || secondForced instanceof NixFloat) {
-				return NixBoolean.create(((NixNumber) thisForced).toNixFloat().value > ((NixNumber) secondForced).toNixFloat().value).force();
+		return new NixLazy() {
+
+			@Override
+			public NixValue force() {
+
+				NixValue thisForced = this.force();
+				NixValue secondForced = second.force();
+				if (thisForced instanceof NixFloat || secondForced instanceof NixFloat) {
+					return NixBoolean.create(((NixNumber) thisForced).toNixFloat().value > ((NixNumber) secondForced).toNixFloat().value).force();
+				}
+				return NixBoolean.create(((NixInteger) thisForced).value > ((NixInteger) secondForced).value).force();
 			}
-			return NixBoolean.create(((NixInteger) thisForced).value > ((NixInteger) secondForced).value).force();
 		};
 	}
 
 	public NixLazy gte(NixLazy second) {
 		NixLambda.ensureLambda(second);
-		return () -> {
-			NixValue thisForced = this.force();
-			NixValue secondForced = second.force();
-			if (thisForced instanceof NixFloat || secondForced instanceof NixFloat) {
-				return NixBoolean.create(((NixNumber) thisForced).toNixFloat().value >= ((NixNumber) secondForced).toNixFloat().value).force();
+		return new NixLazy() {
+
+			@Override
+			public NixValue force() {
+
+				NixValue thisForced = this.force();
+				NixValue secondForced = second.force();
+				if (thisForced instanceof NixFloat || secondForced instanceof NixFloat) {
+					return NixBoolean.create(((NixNumber) thisForced).toNixFloat().value >= ((NixNumber) secondForced).toNixFloat().value).force();
+				}
+				return NixBoolean.create(((NixInteger) thisForced).value >= ((NixInteger) secondForced).value).force();
 			}
-			return NixBoolean.create(((NixInteger) thisForced).value >= ((NixInteger) secondForced).value).force();
 		};
 	}
 
 	public NixLazy land(NixLazy second) {
 		NixLambda.ensureLambda(second);
-		return () -> NixBoolean.create(((NixBoolean) this.force()).value && ((NixBoolean) second.force()).value).force();
+		return new NixLazy() {
+
+			@Override
+			public NixValue force() {
+				return NixBoolean.create(((NixBoolean) this.force()).value && ((NixBoolean) second.force()).value).force();
+			}
+		};
 	}
 
 	public NixLazy lor(NixLazy second) {
 		NixLambda.ensureLambda(second);
-		return () -> NixBoolean.create(((NixBoolean) this.force()).value || ((NixBoolean) second.force()).value).force();
+		return new NixLazy() {
+
+			@Override
+			public NixValue force() {
+				return NixBoolean.create(((NixBoolean) this.force()).value || ((NixBoolean) second.force()).value).force();
+			}
+		};
 	}
 
 	public NixLazy eq(NixLazy second) {
 		NixLambda.ensureLambda(second);
-		return () -> NixBoolean.create(this.force().equals(second.force())).force();
+		return new NixLazy() {
+
+			@Override
+			public NixValue force() {
+				return NixBoolean.create(this.force().equals(second.force())).force();
+			}
+		};
 	}
 
 	public NixLazy neq(NixLazy second) {
 		NixLambda.ensureLambda(second);
-		return () -> NixBoolean.create(!this.force().equals(second.force())).force();
+		return new NixLazy() {
+
+			@Override
+			public NixValue force() {
+				return NixBoolean.create(!this.force().equals(second.force())).force();
+			}
+		};
 	}
 
 	public NixLazy createCall(NixLazy second) {
 		NixLambda.ensureLambda(second);
-		return () -> this.force().call(second);
+		return new NixLazy() {
+
+			@Override
+			public NixValue force() {
+				return this.force().call(second);
+			}
+		};
 	}
 
 	public NixLazy createCall() {
@@ -190,6 +259,12 @@ toString
 	}
 
 	public NixLazy get(String name) {
-		return () -> ((NixAttrset)this.force()).value.get(name).force();
+		return new NixLazy() {
+
+			@Override
+			public NixValue force() {
+				return ((NixAttrset) this.force()).value.get(name).force();
+			}
+		};
 	}
 }
