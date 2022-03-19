@@ -1,3 +1,10 @@
+import java.util.ArrayDeque;
+import java.util.Deque;
+import java.util.IdentityHashMap;
+import java.util.Map;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
+
 public abstract class NixLazyBase implements NixLazy {
 
 	protected static NixLazy true_ = NixBoolean.create(true);
@@ -10,6 +17,29 @@ public abstract class NixLazyBase implements NixLazy {
 	protected static NixLazy builtins_ = NixAttrset.create(new java.util.IdentityHashMap<String, NixLazy>() {{
 		this.put("length", NixLambda.createFunction(array -> NixInteger.create(((NixArray) array.force()).array.size()).force()));
 	}});
+	protected static NixLazy globals = NixAttrset.create(new IdentityHashMap<>() {{
+		this.put("builtins", builtins_);
+		this.put("import", import_);
+		this.put("true", true_);
+		this.put("false", false_);
+	}});
+
+	Deque<NixAttrset> scopes = new ArrayDeque<>();
+	Deque<NixAttrset> withs = new ArrayDeque<>();
+
+	NixLazyBase() {
+		scopes.push((NixAttrset) globals.force());
+	}
+
+	public NixLazy findVariable(String name) {
+		Iterable<NixAttrset> scopesIterable = () -> scopes.descendingIterator();
+		Stream<NixAttrset> scopesStream = StreamSupport.stream(scopesIterable.spliterator(), false);
+
+		Iterable<NixAttrset> withsIterable = () -> withs.descendingIterator();
+		Stream<NixAttrset> withsStream = StreamSupport.stream(withsIterable.spliterator(), false);
+
+		return Stream.concat(scopesStream, withsStream).flatMap(nixAttrset -> nixAttrset.value.entrySet().stream()).filter(entry -> entry.getKey().equals(name)).findFirst().map(Map.Entry::getValue).orElseThrow();
+	}
 
 	// nix repl <TAB>
 	/*
