@@ -22,7 +22,12 @@ public class MainClosure extends NixLazyBase {
 		scopes.push(let);
 
 		ArrayDeque<NixAttrset> finalScopes = scopes;
-		let.value.put("a", () -> findVariable(finalScopes, withs,"b").force());
+		let.value.put("a", new NixLazy() {
+			@Override
+			public NixValue force() {
+				return findVariable(finalScopes, withs, "b").force();
+			}
+		});
 		let.value.put("b", () -> NixInteger.create(5).force());
 
 		ArrayDeque<NixAttrset> finalScopes1 = scopes;

@@ -384,7 +384,14 @@ public class MainClosure extends NixLazyBase {{
 
                 @Override
                 public NixValue force() {{
-			/* head */\n",
+			/* head */\n
+            NixAttrset let = (NixAttrset) NixAttrset.create(new HashMap<>()).force();
+
+            scopes = scopes.clone();
+            scopes.push(let);
+
+            
+            ",
         )
         .unwrap();
     }
