@@ -24,18 +24,18 @@ public abstract class NixLazyBase implements NixLazy {
 		this.put("false", false_);
 	}});
 
-	Deque<NixAttrset> scopes = new ArrayDeque<>();
-	Deque<NixAttrset> withs = new ArrayDeque<>();
+	ArrayDeque<NixAttrset> scopes = new ArrayDeque<>();
+	ArrayDeque<NixAttrset> withs = new ArrayDeque<>();
 
 	NixLazyBase() {
 		scopes.push((NixAttrset) globals.force());
 	}
 
-	public NixLazy findVariable(String name) {
-		Iterable<NixAttrset> scopesIterable = () -> scopes.descendingIterator();
+	public NixLazy findVariable(Deque<NixAttrset> scopes, Deque<NixAttrset> withs, String name) {
+		Iterable<NixAttrset> scopesIterable = scopes::descendingIterator;
 		Stream<NixAttrset> scopesStream = StreamSupport.stream(scopesIterable.spliterator(), false);
 
-		Iterable<NixAttrset> withsIterable = () -> withs.descendingIterator();
+		Iterable<NixAttrset> withsIterable = withs::descendingIterator;
 		Stream<NixAttrset> withsStream = StreamSupport.stream(withsIterable.spliterator(), false);
 
 		return Stream

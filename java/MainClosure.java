@@ -13,14 +13,19 @@ public class MainClosure extends NixLazyBase {
 
 		NixAttrset let = (NixAttrset) NixAttrset.create(new HashMap<>()).force();
 
-		let.value.put("a", () -> findVariable("b").force());
-		let.value.put("b", () -> NixInteger.create(5).force());
-
+		scopes = scopes.clone();
 		scopes.push(let);
 
-		NixValue returnValue = (arg) -> arg.add(findVariable("a")).force();
+		final ArrayDeque<NixAttrset> scopes = this.scopes;
+		final ArrayDeque<NixAttrset> withs = this.scopes;
 
-		scopes.pop();
+		let.value.put("a", () -> findVariable(scopes, withs,"b").force());
+		let.value.put("b", () -> NixInteger.create(5).force());
+
+		NixValue returnValue = (arg) -> arg.add(findVariable(scopes, withs, "a")).force();
+
+		this.scopes = scopes.clone();
+		this.scopes.pop();
 
 		return returnValue;
 	}
