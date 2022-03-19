@@ -2,32 +2,44 @@ import java.util.*;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
-public class MainClosure implements NixLazy {
+public class MainClosure extends NixLazy {
 
 	public static void main(String[] args) {
 		System.out.println(new MainClosure().force().call(NixInteger.create(5)));
 	}
 
 	public NixValue force() {
-		//scopes.push((NixAttrset) globals.force());
+		ArrayDeque<NixAttrset> scopes = new ArrayDeque<>();
+		ArrayDeque<NixAttrset> withs = new ArrayDeque<>();
+		scopes.push((NixAttrset) globals.force()); // do this only in the root
 
 		// let binding
 
 		NixAttrset let = (NixAttrset) NixAttrset.create(new HashMap<>()).force();
 
-		let.value.put("a", new NixLazy() {
+		let.value.put("a", new NixLazy(addToScope(scopes, let), withs) {
 			@Override
 			public NixValue force() {
-				return findVariable(finalScopes, withs, "b").force();
+				return findVariable(scopes, withs, "b").force();
 			}
 		});
-		let.value.put("b", () -> NixInteger.create(5).force());
+		let.value.put("b", new NixLazy(addToScope(scopes, let), withs) {
 
-		ArrayDeque<NixAttrset> finalScopes1 = scopes;
-		NixValue returnValue = (arg) -> arg.add(findVariable(finalScopes1, withs, "a")).force();
+					@Override
+					public NixValue force() {
+						return NixInteger.create(5).force();
+					}
+				});
 
+		NixValue returnValue = (arg) -> arg.add(findVariable(addToScope(scopes, let), withs, "a")).force();
 
 		return returnValue;
+	}
+
+	public ArrayDeque<NixAttrset> addToScope(final ArrayDeque<NixAttrset> scopes, NixAttrset value) {
+		ArrayDeque<NixAttrset> newScopes = scopes.clone();
+		newScopes.add(value);
+		return newScopes;
 	}
 
 	public NixLazy findVariable(Deque<NixAttrset> scopes, Deque<NixAttrset> withs, String name) {

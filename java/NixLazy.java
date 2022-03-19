@@ -1,3 +1,4 @@
+import java.util.ArrayDeque;
 import java.util.IdentityHashMap;
 
 public abstract class NixLazy {
@@ -18,6 +19,14 @@ public abstract class NixLazy {
 		this.put("true", true_);
 		this.put("false", false_);
 	}});
+
+	ArrayDeque<NixAttrset> scopes;
+	ArrayDeque<NixAttrset> withs;
+
+	public NixLazy(ArrayDeque<NixAttrset> scopes, ArrayDeque<NixAttrset> withs) {
+		this.scopes = scopes;
+		this.withs = withs;
+	}
 
 	// nix repl <TAB>
 	/*
