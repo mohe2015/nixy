@@ -38,7 +38,16 @@ public abstract class NixLazyBase implements NixLazy {
 		Iterable<NixAttrset> withsIterable = () -> withs.descendingIterator();
 		Stream<NixAttrset> withsStream = StreamSupport.stream(withsIterable.spliterator(), false);
 
-		return Stream.concat(scopesStream, withsStream).flatMap(nixAttrset -> nixAttrset.value.entrySet().stream()).filter(entry -> entry.getKey().equals(name)).findFirst().map(Map.Entry::getValue).orElseThrow();
+		return Stream
+				.concat(scopesStream, withsStream)
+				.flatMap(nixAttrset -> nixAttrset.value.entrySet().stream())
+				.filter(entry -> {
+					System.out.println(entry);
+					return entry.getKey().equals(name);
+				})
+				.findFirst()
+				.map(Map.Entry::getValue)
+				.orElseThrow();
 	}
 
 	// nix repl <TAB>
