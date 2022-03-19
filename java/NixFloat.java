@@ -9,7 +9,13 @@ public class NixFloat implements NixValue, NixNumber, NixToString {
 	}
 
 	public static NixLazy create(float value) {
-		return () -> new NixFloat(value);
+		return new NixLazy() {
+
+			@Override
+			public NixValue force() {
+				return new NixFloat(value);
+			}
+		};
 	}
 
 	@Override

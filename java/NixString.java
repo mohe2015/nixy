@@ -9,7 +9,13 @@ public class NixString implements NixValue, NixToString {
 	}
 
 	public static NixLazy create(String value) {
-		return () -> new NixString(value);
+		return new NixLazy() {
+
+			@Override
+			public NixValue force() {
+				return new NixString(value);
+			}
+		};
 	}
 
 	@Override

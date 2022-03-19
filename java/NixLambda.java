@@ -7,9 +7,15 @@ import java.util.stream.StreamSupport;
 interface NixLambda extends NixValue {
 
 	static NixLazy createFunction(NixLambda function) {
-		return () -> (NixLambda) (arg) -> {
-			NixLambda.ensureLambda(arg);
-			return function.call(arg);
+		return new NixLazy() {
+
+			@Override
+			public NixValue force() {
+				return (NixLambda) (arg) -> {
+					NixLambda.ensureLambda(arg);
+					return function.call(arg);
+				};
+			}
 		};
 	}
 

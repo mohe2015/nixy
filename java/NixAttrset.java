@@ -11,7 +11,13 @@ public class NixAttrset implements NixValue {
 	}
 
 	public static NixLazy create(Map<String, NixLazy> value) {
-		return () -> new NixAttrset(value);
+		return new NixLazy() {
+
+			@Override
+			public NixValue force() {
+				return new NixAttrset(value);
+			}
+		};
 	}
 
 	@Override
