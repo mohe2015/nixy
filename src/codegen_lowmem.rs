@@ -10,7 +10,7 @@ pub struct ASTJavaTranspiler<'a, W: Write> {
     pub writer: &'a mut W,
 }
 
-// cargo test ast::test_java_transpiler -- --nocapture
+// cargo test --package nixy --bin nixy -- codegen_lowmem::test_java_transpiler --exact --nocapture
 #[test]
 pub fn test_java_transpiler() {
     // https://learnxinyminutes.com/docs/nix/
@@ -186,7 +186,7 @@ public class MainClosure extends NixLazyBase {{
     fn visit_identifier(&mut self, id: &'a [u8]) {
         // I think just because of the with statement
         // we need to make this completely dynamic
-        write!(self.writer, "{}_", std::str::from_utf8(id).unwrap()).unwrap();
+        write!(self.writer, "let.get(\"{}\")", std::str::from_utf8(id).unwrap()).unwrap();
     }
 
     fn visit_integer(&mut self, integer: i64) {
@@ -350,21 +350,21 @@ public class MainClosure extends NixLazyBase {{
 
     fn visit_bind_before(&mut self, bind_type: BindType) {
         match bind_type {
-            BindType::Let => write!(self.writer, r#"NixLazy "#,).unwrap(),
+            BindType::Let => write!(self.writer, r#"let.put("#,).unwrap(),
             BindType::Attrset => write!(self.writer, r#"this.put(""#,).unwrap(),
         }
     }
 
     fn visit_bind_between(&mut self, bind_type: BindType, _attrpath: &()) {
         match bind_type {
-            BindType::Let => write!(self.writer, r#" = "#,).unwrap(),
+            BindType::Let => write!(self.writer, r#".intern(), "#,).unwrap(),
             BindType::Attrset => write!(self.writer, r#"".intern(), "#,).unwrap(),
         }
     }
 
     fn visit_bind_after(&mut self, bind_type: BindType, _attrpath: (), _expr: ()) {
         match bind_type {
-            BindType::Let => writeln!(self.writer, ";",).unwrap(),
+            BindType::Let => writeln!(self.writer, ");",).unwrap(),
             BindType::Attrset => write!(self.writer, ");",).unwrap(),
         }
     }

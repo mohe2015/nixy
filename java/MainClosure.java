@@ -1,4 +1,6 @@
 import java.util.*;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 public class MainClosure extends NixLazyBase {
 
@@ -23,18 +25,28 @@ c""").add().createCall()).force(); }).createCall().force();
 
 	IdentityHashMap<String, Deque<NixLazy>> currentVars = new IdentityHashMap<>();
 
-	//Deque<List<String>> stackFrames = new ArrayDeque<>();
+	Deque<NixAttrset> scopes = new ArrayDeque<>();
+	Deque<NixAttrset> withs = new ArrayDeque<>();
+
+	public Optional<NixLazy> findVariable(String name) {
+		Iterable<NixAttrset> scopesIterable = () -> scopes.descendingIterator();
+		Stream<NixAttrset> scopesStream = StreamSupport.stream(scopesIterable.spliterator(), false);
+
+		Iterable<NixAttrset> withsIterable = () -> withs.descendingIterator();
+		Stream<NixAttrset> withsStream = StreamSupport.stream(withsIterable.spliterator(), false);
+
+		 return Stream.concat(scopesStream, withsStream).flatMap(nixAttrset -> nixAttrset.value.entrySet().stream()).filter(entry -> entry.getKey().equals(name)).findFirst().map(Map.Entry::getValue);
+	}
 
 	public NixValue force3() {
 		// let binding
-		/*stackFrames.push(new ArrayList<>());
-		stackFrames.peek().add("a");
-		stackFrames.peek().add("b");*/
-		currentVars.computeIfAbsent("a", (k) -> new ArrayDeque<>()).add(NixInteger.create(1));
 
+		NixAttrset let = (NixAttrset) NixAttrset.create(new HashMap<>()).force();
 
-		currentVars.put("a", () -> currentVars.get("b"));
-		currentVars.put("b", () -> 5);
+		//currentVars.computeIfAbsent("a", (k) -> new ArrayDeque<>()).add(NixInteger.create(1));
+
+		let.value.put("a", () -> scopes.descendingIterator());
+		let.value.put("b", () -> NixInteger.create(5).force());
 
 
 		currentVars.get("a").pop();
