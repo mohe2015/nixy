@@ -136,15 +136,11 @@ impl<'a, W: Write> ASTVisitor<'a, ()> for ASTJavaTranspiler<'a, W> {
         write!(
             self.writer,
             r#"
-public class MainClosure extends NixLazyBase {{
+public class MainClosure extends NixLazyScoped {{
 
-    ArrayDeque<NixAttrset> scopes = new ArrayDeque<>();
-    ArrayDeque<NixAttrset> withs = new ArrayDeque<>();
-
-    MainClosure() {{
-        super();
-        scopes.push((NixAttrset) globals.force());
-    }}
+    public MainClosure(java.util.ArrayDeque<NixAttrset> scopes, java.util.ArrayDeque<NixAttrset> withs) {{
+		super(scopes, withs);
+	}}
 
     public NixValue force() {{
         return "#
@@ -159,7 +155,7 @@ public class MainClosure extends NixLazyBase {{
     }}
 
     public static void main(String[] args) {{
-		System.out.println(new MainClosure().force());
+		System.out.println(new MainClosure(new java.util.ArrayDeque<>(List.of((NixAttrset) globals.force())), new java.util.ArrayDeque<>()).force());
 	}}
 }}
         "#
@@ -192,9 +188,7 @@ public class MainClosure extends NixLazyBase {{
     }
 
     fn visit_identifier(&mut self, id: &'a [u8]) {
-        // I think just because of the with statement
-        // we need to make this completely dynamic
-        write!(self.writer, "let.get(\"{}\")", std::str::from_utf8(id).unwrap()).unwrap();
+        write!(self.writer, "findVariable(scopes, withs, \"{}\")", std::str::from_utf8(id).unwrap()).unwrap();
     }
 
     fn visit_integer(&mut self, integer: i64) {
@@ -358,14 +352,14 @@ public class MainClosure extends NixLazyBase {{
 
     fn visit_bind_before(&mut self, bind_type: BindType) {
         match bind_type {
-            BindType::Let => write!(self.writer, r#"let.put("#,).unwrap(),
+            BindType::Let => write!(self.writer, r#"let.value.put(((NixString)"#,).unwrap(),
             BindType::Attrset => write!(self.writer, r#"this.put(""#,).unwrap(),
         }
     }
 
     fn visit_bind_between(&mut self, bind_type: BindType, _attrpath: &()) {
         match bind_type {
-            BindType::Let => write!(self.writer, r#".intern(), "#,).unwrap(),
+            BindType::Let => write!(self.writer, r#".force()).value.intern(), "#,).unwrap(),
             BindType::Attrset => write!(self.writer, r#"".intern(), "#,).unwrap(),
         }
     }
@@ -385,10 +379,12 @@ public class MainClosure extends NixLazyBase {{
                 @Override
                 public NixValue force() {{
 			/* head */\n
-            NixAttrset let = (NixAttrset) NixAttrset.create(new HashMap<>()).force();
+            NixAttrset let = (NixAttrset) NixAttrset.create(new java.util.IdentityHashMap<>()).force();
 
-            scopes = scopes.clone();
-            scopes.push(let);
+            return new NixLazyScoped(addToScope(scopes, let), withs) {{
+
+                @Override
+                public NixValue force() {{
 
             
             ",
@@ -403,7 +399,7 @@ public class MainClosure extends NixLazyBase {{
     }
 
     fn visit_let(&mut self, _binds: Vec<()>, _body: ()) {
-        write!(self.writer, ".force(); }}}})",).unwrap();
+        write!(self.writer, ".force(); }}}}; }}}})",).unwrap();
     }
 
     fn visit_attrset_before(&mut self, binds: &[()]) {

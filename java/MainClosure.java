@@ -23,6 +23,8 @@ public class MainClosure extends NixLazyScoped {
 
 			@Override
 			public NixValue force() {
+				((NixString)NixString.create("""
+hi""").add().createCall().force()).value.intern()
 				let.value.put("a", new NixLazy() {
 					@Override
 					public NixValue force() {
@@ -46,24 +48,5 @@ public class MainClosure extends NixLazyScoped {
 		ArrayDeque<NixAttrset> newScopes = scopes.clone();
 		newScopes.add(value);
 		return newScopes;
-	}
-
-	public NixLazy findVariable(Deque<NixAttrset> scopes, Deque<NixAttrset> withs, String name) {
-		Iterable<NixAttrset> scopesIterable = scopes::descendingIterator;
-		Stream<NixAttrset> scopesStream = StreamSupport.stream(scopesIterable.spliterator(), false);
-
-		Iterable<NixAttrset> withsIterable = withs::descendingIterator;
-		Stream<NixAttrset> withsStream = StreamSupport.stream(withsIterable.spliterator(), false);
-
-		return Stream
-				.concat(scopesStream, withsStream)
-				.flatMap(nixAttrset -> nixAttrset.value.entrySet().stream())
-				.filter(entry -> {
-					System.out.println(entry);
-					return entry.getKey().equals(name);
-				})
-				.findFirst()
-				.map(Map.Entry::getValue)
-				.orElseThrow();
 	}
 }

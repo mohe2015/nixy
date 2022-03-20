@@ -1,5 +1,9 @@
 import java.util.ArrayDeque;
+import java.util.Deque;
 import java.util.IdentityHashMap;
+import java.util.Map;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 public interface NixLazy {
 
@@ -246,5 +250,24 @@ toString
 				return ((NixAttrset) NixLazy.this.force()).value.get(name).force();
 			}
 		};
+	}
+
+	default NixLazy findVariable(Deque<NixAttrset> scopes, Deque<NixAttrset> withs, String name) {
+		Iterable<NixAttrset> scopesIterable = scopes::descendingIterator;
+		Stream<NixAttrset> scopesStream = StreamSupport.stream(scopesIterable.spliterator(), false);
+
+		Iterable<NixAttrset> withsIterable = withs::descendingIterator;
+		Stream<NixAttrset> withsStream = StreamSupport.stream(withsIterable.spliterator(), false);
+
+		return Stream
+				.concat(scopesStream, withsStream)
+				.flatMap(nixAttrset -> nixAttrset.value.entrySet().stream())
+				.filter(entry -> {
+					System.out.println(entry);
+					return entry.getKey().equals(name);
+				})
+				.findFirst()
+				.map(Map.Entry::getValue)
+				.orElseThrow();
 	}
 }
