@@ -9,7 +9,13 @@ public class NixBoolean implements NixValue, NixToString {
 	}
 
 	public static NixLazy create(boolean value) {
-		return () -> new NixBoolean(value);
+		return new NixLazy() {
+
+			@Override
+			public NixValue force() {
+				return new NixBoolean(value);
+			}
+		};
 	}
 
 	@Override

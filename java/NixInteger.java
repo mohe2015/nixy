@@ -9,7 +9,13 @@ public class NixInteger implements NixValue, NixNumber, NixToString {
 	}
 
 	public static NixLazy create(int value) {
-		return () -> new NixInteger(value);
+		return new NixLazy() {
+
+			@Override
+			public NixValue force() {
+				return new NixInteger(value);
+			}
+		};
 	}
 
 	@Override

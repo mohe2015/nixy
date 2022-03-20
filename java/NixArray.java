@@ -11,7 +11,13 @@ public class NixArray implements NixValue {
 	}
 
 	public static NixLazy create(List<NixLazy> value) {
-		return () -> new NixArray(value);
+		return new NixLazy() {
+
+			@Override
+			public NixValue force() {
+				return new NixArray(value);
+			}
+		};
 	}
 
 	@Override

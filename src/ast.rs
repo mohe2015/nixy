@@ -35,6 +35,8 @@ pub enum AST<'a> {
         at_identifier: Option<&'a str>,
         ellipsis: bool,
     },
+    With(Box<AST<'a>>, Box<AST<'a>>),
+    Builtins,
 }
 
 pub struct ASTBuilder;
@@ -224,7 +226,7 @@ impl<'a> ASTVisitor<'a, AST<'a>> for ASTBuilder {
         AST::Call(Box::new(function), Box::new(parameter))
     }
 
-    fn visit_attrset_bind_push(&mut self, binds: &[AST<'a>], bind: AST<'a>) -> AST<'a> {
+    fn visit_attrset_bind_push(&mut self, _binds: &[AST<'a>], bind: AST<'a>) -> AST<'a> {
         bind
     }
 
@@ -339,6 +341,17 @@ impl<'a> ASTVisitor<'a, AST<'a>> for ASTBuilder {
 
     fn visit_inherit(&mut self, attrs: Vec<AST<'a>>) -> AST<'a> {
         AST::Inherit(attrs)
+    }
+
+    fn visit_with(&mut self, with_expr: AST<'a>, expr: AST<'a>) -> AST<'a> {
+        AST::With(Box::new(with_expr), Box::new(expr))
+    }
+
+    fn visit_attrpath_between(&mut self) {
+        
+    }
+
+    fn visit_select_before(&mut self) {
     }
 }
 

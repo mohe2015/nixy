@@ -6,11 +6,16 @@ use crate::{
     visitor::ASTVisitor,
 };
 
-pub struct ASTJavaTranspiler<'a, W: Write> {
-    writer: &'a mut W,
+pub enum IdentifierState {
+    Lhs, Rhs, Select
 }
 
-// cargo test ast::test_java_transpiler -- --nocapture
+pub struct ASTJavaTranspiler<'a, W: Write> {
+    pub writer: &'a mut W,
+    pub identifier_state: IdentifierState
+}
+
+// cargo test --package nixy --bin nixy -- codegen_lowmem::test_java_transpiler --exact --nocapture
 #[test]
 pub fn test_java_transpiler() {
     // https://learnxinyminutes.com/docs/nix/
@@ -20,11 +25,40 @@ pub fn test_java_transpiler() {
     // using a Map to store all variables will get extremely annoying
     // because then I have to implement variable capturing etc
 
-    /*test_java_transpiler_code(
-           br#" (let y = x + "b";
+    /*
+    currentVars.put("a", () -> currentVars.get("b"));
+    currentVars.put("b", () -> 5);
+    */
+    test_java_transpiler_code(
+        br"rec {
+        a = 1;
+      }",
+    );
+    test_java_transpiler_code(
+        br"rec {
+        a.b = 1;
+      }",
+    );
+
+    // this one is already parsed wrong we need to not create nested objects for that.
+    test_java_transpiler_code(
+        br"rec {
+        a = { f = 1; };
+      }",
+    );
+    test_java_transpiler_code(
+        br"rec {
+        a.b = a.c;
+        a = { c = 1; };
+      }",
+    );
+    test_java_transpiler_code(br#"let ${"hi"} = 1; in hi"#);
+    test_java_transpiler_code(br#"let a.b = 5; a.c = 3; a.d.e = 3; in a"#);
+    test_java_transpiler_code(
+        br#" (let y = x + "b";
        x = "a"; in
     y + "c")"#,
-       );*/
+    );
     test_java_transpiler_code(br#"with builtins; (length [1 2 3 "x"])"#);
     test_java_transpiler_code(
         br#"(let a = 1; in
@@ -130,7 +164,11 @@ impl<'a, W: Write> ASTVisitor<'a, ()> for ASTJavaTranspiler<'a, W> {
         write!(
             self.writer,
             r#"
-public class MainClosure extends NixLazyBase {{
+public class MainClosure extends NixLazyScoped {{
+
+    public MainClosure(java.util.ArrayDeque<NixAttrset> scopes, java.util.ArrayDeque<NixAttrset> withs) {{
+		super(scopes, withs);
+	}}
 
     public NixValue force() {{
         return "#
@@ -145,7 +183,7 @@ public class MainClosure extends NixLazyBase {{
     }}
 
     public static void main(String[] args) {{
-		System.out.println(new MainClosure().force());
+		System.out.println(new MainClosure(new java.util.ArrayDeque<>(java.util.List.of((NixAttrset) globals.force())), new java.util.ArrayDeque<>()).force());
 	}}
 }}
         "#
@@ -178,9 +216,26 @@ public class MainClosure extends NixLazyBase {{
     }
 
     fn visit_identifier(&mut self, id: &'a [u8]) {
-        // I think just because of the with statement
-        // we need to make this completely dynamic
-        write!(self.writer, "{}_", std::str::from_utf8(id).unwrap()).unwrap();
+        match self.identifier_state {
+            IdentifierState::Lhs => write!(
+                self.writer,
+                ".computeIfAbsent(\"{}\", k -> ",
+                std::str::from_utf8(id).unwrap()
+            )
+            .unwrap(),
+            IdentifierState::Rhs => write!(
+                self.writer,
+                "findVariable(scopes, withs, \"{}\")",
+                std::str::from_utf8(id).unwrap()
+            )
+            .unwrap(),
+            IdentifierState::Select => write!(
+                self.writer,
+                ".get(\"{}\")",
+                std::str::from_utf8(id).unwrap()
+            )
+            .unwrap(),
+        }
     }
 
     fn visit_integer(&mut self, integer: i64) {
@@ -196,7 +251,7 @@ public class MainClosure extends NixLazyBase {{
     }
 
     fn visit_select(&mut self, _expr: (), _attrpath: (), _default: Option<()>) {
-        todo!()
+        self.identifier_state = IdentifierState::Rhs;
     }
 
     fn visit_infix_lhs(&mut self, operator: NixTokenType<'a>, _left: &()) {
@@ -266,7 +321,6 @@ public class MainClosure extends NixLazyBase {{
     }
 
     fn visit_attrpath_part(&mut self, _begin: (), _last: ()) {
-        todo!()
     }
 
     fn visit_path_concatenate(&mut self, _begin: (), _last: ()) {
@@ -343,22 +397,24 @@ public class MainClosure extends NixLazyBase {{
     }
 
     fn visit_bind_before(&mut self, bind_type: BindType) {
+        self.identifier_state = IdentifierState::Lhs;
         match bind_type {
-            BindType::Let => write!(self.writer, r#"NixLazy "#,).unwrap(),
-            BindType::Attrset => write!(self.writer, r#"this.put(""#,).unwrap(),
+            BindType::Let => write!(self.writer, r#"let.value.put(((NixString)"#,).unwrap(),
+            BindType::Attrset => write!(self.writer, r#"rec.value"#,).unwrap(),
         }
     }
 
     fn visit_bind_between(&mut self, bind_type: BindType, _attrpath: &()) {
+        self.identifier_state = IdentifierState::Rhs;
         match bind_type {
-            BindType::Let => write!(self.writer, r#" = "#,).unwrap(),
-            BindType::Attrset => write!(self.writer, r#"".intern(), "#,).unwrap(),
+            BindType::Let => write!(self.writer, r#".force()).value.intern(), "#,).unwrap(),
+            BindType::Attrset => write!(self.writer, r#""#,).unwrap(),
         }
     }
 
     fn visit_bind_after(&mut self, bind_type: BindType, _attrpath: (), _expr: ()) {
         match bind_type {
-            BindType::Let => writeln!(self.writer, ";",).unwrap(),
+            BindType::Let => writeln!(self.writer, ");",).unwrap(),
             BindType::Attrset => write!(self.writer, ");",).unwrap(),
         }
     }
@@ -370,7 +426,16 @@ public class MainClosure extends NixLazyBase {{
 
                 @Override
                 public NixValue force() {{
-			/* head */\n",
+			/* head */\n
+            NixAttrset let = (NixAttrset) NixAttrset.create(new java.util.IdentityHashMap<>()).force();
+
+            return new NixLazyScoped(addToScope(scopes, let), withs) {{
+
+                @Override
+                public NixValue force() {{
+
+            
+            ",
         )
         .unwrap();
     }
@@ -382,14 +447,28 @@ public class MainClosure extends NixLazyBase {{
     }
 
     fn visit_let(&mut self, _binds: Vec<()>, _body: ()) {
-        write!(self.writer, ".force(); }}}})",).unwrap();
+        write!(self.writer, ".force(); }}}}.force(); }}}})",).unwrap();
     }
 
     fn visit_attrset_before(&mut self, binds: &[()]) {
         if binds.is_empty() {
             writeln!(
                 self.writer,
-                "NixAttrset.create(new java.util.IdentityHashMap<String, NixLazy>() {{{{",
+                // TODO FIXME merge with visit_let_before
+                "(new NixLazy() {{
+
+                    @Override
+                    public NixValue force() {{
+                /* head */\n
+                NixAttrset rec = (NixAttrset) NixAttrset.create(new java.util.IdentityHashMap<>()).force();
+    
+                return new NixLazyScoped(addToScope(scopes, rec), withs) {{
+    
+                    @Override
+                    public NixValue force() {{
+    
+                
+                ",
             )
             .unwrap();
         }
@@ -398,7 +477,7 @@ public class MainClosure extends NixLazyBase {{
     fn visit_attrset_bind_push(&mut self, _begin: &[()], _last: ()) {}
 
     fn visit_attrset(&mut self, _binds: Vec<()>) {
-        write!(self.writer, r#"}}}})"#,).unwrap();
+        write!(self.writer, r#" return rec; }} }}.force(); }} }})"#,).unwrap();
     }
 
     fn visit_formal(&mut self, _formals: Option<()>, _identifier: &'a [u8], _default: Option<()>) {
@@ -414,14 +493,30 @@ public class MainClosure extends NixLazyBase {{
         todo!()
     }
 
-    fn visit_inherit(&mut self, attrs: Vec<()>) -> () {
+    fn visit_inherit(&mut self, _attrs: Vec<()>) {
         todo!()
+    }
+
+    fn visit_with(&mut self, with_expr: (), expr: ()) -> () {
+        todo!()
+    }
+
+    fn visit_attrpath_between(&mut self) {
+        write!(self.writer, r#"NixAttrset.create(new java.util.IdentityHashMap<>())).castAttrset()"#,).unwrap();
+    }
+
+    fn visit_select_before(&mut self) {
+        self.identifier_state = IdentifierState::Select;
+        write!(self.writer, r#".castAttrset()"#).unwrap()
     }
 }
 
 fn test_java_transpiler_code(code: &[u8]) {
     let mut data = Vec::new();
-    let transpiler = ASTJavaTranspiler { writer: &mut data };
+    let transpiler = ASTJavaTranspiler { 
+        writer: &mut data,
+        identifier_state: IdentifierState::Rhs
+    };
 
     let lexer = crate::lexer::NixLexer::new(code).filter(|t| {
         !matches!(

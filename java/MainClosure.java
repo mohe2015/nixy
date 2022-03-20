@@ -1,43 +1,39 @@
-import java.util.*;
+import java.util.IdentityHashMap;
 
-public class MainClosure extends NixLazyBase {
+public class MainClosure extends NixLazyScoped {
 
-	public static void main(String[] args) {
-		System.out.println(new MainClosure().force().call(NixInteger.create(5)));
+	public MainClosure(java.util.ArrayDeque<NixAttrset> scopes, java.util.ArrayDeque<NixAttrset> withs) {
+		super(scopes, withs);
 	}
 
 	public NixValue force() {
-		return ((NixLazy) () -> {
-			NixProxy x_ = new NixProxy();
-			NixProxy y_ = new NixProxy();
+		/*
+		rec {
+		  a.b = a.c;
+		  a = { c = 1; };
+	  	}.a.b
+		 */
 
-			/* head */y_.proxy = x_.createCall().add(NixString.create("""
-b""").add().createCall());
-			x_.proxy = NixString.create("""
-a""").add().createCall();
+		NixAttrset rec = (NixAttrset) NixAttrset.create(new java.util.IdentityHashMap<>()).force();
 
-			/* body */
-			return y_.createCall().add(NixString.create("""
-c""").add().createCall()).force(); }).createCall().force();
+		return new NixLazyScoped(addToScope(scopes, rec), withs) {
+
+			@Override
+			public NixValue force() {
+				// every identifier should generate
+				// .value.computeIfAbsent("a", k -> NixAttrset.create(new IdentityHashMap<>())).force())
+
+				((NixAttrset)rec.value.computeIfAbsent("a", k -> NixAttrset.create(new IdentityHashMap<>())).force()).value.computeIfAbsent("b", k -> () -> ((NixAttrset)findVariable(scopes, withs, "a").force()).value.get("c").force());
+
+				((NixAttrset)rec.value.computeIfAbsent("a", k -> NixAttrset.create(new IdentityHashMap<>())).force()).value.computeIfAbsent("c", k -> NixInteger.create(1).createCall());
+
+				/* body */
+				return rec;
+			}
+		}.force();
 	}
 
-	IdentityHashMap<String, Deque<NixLazy>> currentVars = new IdentityHashMap<>();
-
-	//Deque<List<String>> stackFrames = new ArrayDeque<>();
-
-	public NixValue force3() {
-		// let binding
-		/*stackFrames.push(new ArrayList<>());
-		stackFrames.peek().add("a");
-		stackFrames.peek().add("b");*/
-		currentVars.computeIfAbsent("a", (k) -> new ArrayDeque<>()).add(NixInteger.create(1));
-
-
-		currentVars.put("a", () -> currentVars.get("b"));
-		currentVars.put("b", () -> 5);
-
-
-		currentVars.get("a").pop();
-		return null;
+	public static void main(String[] args) {
+		System.out.println(new MainClosure(new java.util.ArrayDeque<>(java.util.List.of((NixAttrset) globals.force())), new java.util.ArrayDeque<>()).force());
 	}
 }
