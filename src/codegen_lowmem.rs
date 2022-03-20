@@ -39,6 +39,8 @@ pub fn test_java_transpiler() {
         a.b = 1;
       }",
     );
+
+    // this one is already parsed wrong we need to not create nested objects for that.
     test_java_transpiler_code(
         br"rec {
         a = { f = 1; };
