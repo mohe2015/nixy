@@ -31,6 +31,11 @@ pub fn test_java_transpiler() {
     */
     test_java_transpiler_code(
         br"rec {
+        a = 1;
+      }",
+    );
+    test_java_transpiler_code(
+        br"rec {
         a.b = a.c;
         a = { c = 1; };
       }",
@@ -202,7 +207,7 @@ public class MainClosure extends NixLazyScoped {{
         match self.identifier_state {
             IdentifierState::Lhs => write!(
                 self.writer,
-                ".value.computeIfAbsent(\"{}\", k -> NixAttrset.create(new java.util.IdentityHashMap<>())).force())",
+                ".value.computeIfAbsent(\"{}\", k -> ",
                 std::str::from_utf8(id).unwrap()
             )
             .unwrap(),
@@ -376,7 +381,7 @@ public class MainClosure extends NixLazyScoped {{
         self.identifier_state = IdentifierState::Lhs;
         match bind_type {
             BindType::Let => write!(self.writer, r#"let.value.put(((NixString)"#,).unwrap(),
-            BindType::Attrset => write!(self.writer, r#"((NixAttrset)rec"#,).unwrap(),
+            BindType::Attrset => write!(self.writer, r#"rec"#,).unwrap(),
         }
     }
 
@@ -384,7 +389,7 @@ public class MainClosure extends NixLazyScoped {{
         self.identifier_state = IdentifierState::Rhs;
         match bind_type {
             BindType::Let => write!(self.writer, r#".force()).value.intern(), "#,).unwrap(),
-            BindType::Attrset => write!(self.writer, r#".intern(), "#,).unwrap(),
+            BindType::Attrset => write!(self.writer, r#""#,).unwrap(),
         }
     }
 
@@ -453,7 +458,7 @@ public class MainClosure extends NixLazyScoped {{
     fn visit_attrset_bind_push(&mut self, _begin: &[()], _last: ()) {}
 
     fn visit_attrset(&mut self, _binds: Vec<()>) {
-        write!(self.writer, r#"}}}})"#,).unwrap();
+        write!(self.writer, r#" return rec; }} }}.force(); }} }})"#,).unwrap();
     }
 
     fn visit_formal(&mut self, _formals: Option<()>, _identifier: &'a [u8], _default: Option<()>) {
