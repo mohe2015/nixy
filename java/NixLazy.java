@@ -252,6 +252,10 @@ toString
 		};
 	}
 
+	default Map<String, NixLazy> castAttrset() {
+		return ((NixAttrset) NixLazy.this.force()).value;
+	}
+
 	default NixLazy findVariable(Deque<NixAttrset> scopes, Deque<NixAttrset> withs, String name) {
 		Iterable<NixAttrset> scopesIterable = scopes::descendingIterator;
 		Stream<NixAttrset> scopesStream = StreamSupport.stream(scopesIterable.spliterator(), false);
