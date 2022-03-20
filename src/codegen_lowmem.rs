@@ -6,8 +6,13 @@ use crate::{
     visitor::ASTVisitor,
 };
 
+pub enum IdentifierState {
+    Lhs, Rhs
+}
+
 pub struct ASTJavaTranspiler<'a, W: Write> {
     pub writer: &'a mut W,
+    pub identifier_state: IdentifierState
 }
 
 // cargo test --package nixy --bin nixy -- codegen_lowmem::test_java_transpiler --exact --nocapture
@@ -194,12 +199,20 @@ public class MainClosure extends NixLazyScoped {{
     }
 
     fn visit_identifier(&mut self, id: &'a [u8]) {
-        write!(
-            self.writer,
-            "findVariable(scopes, withs, \"{}\")",
-            std::str::from_utf8(id).unwrap()
-        )
-        .unwrap();
+        match self.identifier_state {
+            IdentifierState::Lhs => write!(
+                self.writer,
+                ".value.computeIfAbsent(\"{}\", k -> NixAttrset.create(new java.util.IdentityHashMap<>())).force())",
+                std::str::from_utf8(id).unwrap()
+            )
+            .unwrap(),
+            IdentifierState::Rhs => write!(
+                self.writer,
+                "findVariable(scopes, withs, \"{}\")",
+                std::str::from_utf8(id).unwrap()
+            )
+            .unwrap(),
+        }
     }
 
     fn visit_integer(&mut self, integer: i64) {
@@ -360,16 +373,18 @@ public class MainClosure extends NixLazyScoped {{
     }
 
     fn visit_bind_before(&mut self, bind_type: BindType) {
+        self.identifier_state = IdentifierState::Lhs;
         match bind_type {
             BindType::Let => write!(self.writer, r#"let.value.put(((NixString)"#,).unwrap(),
-            BindType::Attrset => write!(self.writer, r#"((NixAttrset)rec.value.computeIfAbsent("#,).unwrap(),
+            BindType::Attrset => write!(self.writer, r#"((NixAttrset)rec"#,).unwrap(),
         }
     }
 
     fn visit_bind_between(&mut self, bind_type: BindType, _attrpath: &()) {
+        self.identifier_state = IdentifierState::Rhs;
         match bind_type {
             BindType::Let => write!(self.writer, r#".force()).value.intern(), "#,).unwrap(),
-            BindType::Attrset => write!(self.writer, r#"".intern(), "#,).unwrap(),
+            BindType::Attrset => write!(self.writer, r#".intern(), "#,).unwrap(),
         }
     }
 
@@ -415,7 +430,21 @@ public class MainClosure extends NixLazyScoped {{
         if binds.is_empty() {
             writeln!(
                 self.writer,
-                "NixAttrset.create(new java.util.IdentityHashMap<String, NixLazy>() {{{{",
+                // TODO FIXME merge with visit_let_before
+                "(new NixLazy() {{
+
+                    @Override
+                    public NixValue force() {{
+                /* head */\n
+                NixAttrset rec = (NixAttrset) NixAttrset.create(new java.util.IdentityHashMap<>()).force();
+    
+                return new NixLazyScoped(addToScope(scopes, rec), withs) {{
+    
+                    @Override
+                    public NixValue force() {{
+    
+                
+                ",
             )
             .unwrap();
         }
@@ -451,7 +480,10 @@ public class MainClosure extends NixLazyScoped {{
 
 fn test_java_transpiler_code(code: &[u8]) {
     let mut data = Vec::new();
-    let transpiler = ASTJavaTranspiler { writer: &mut data };
+    let transpiler = ASTJavaTranspiler { 
+        writer: &mut data,
+        identifier_state: IdentifierState::Rhs
+    };
 
     let lexer = crate::lexer::NixLexer::new(code).filter(|t| {
         !matches!(
