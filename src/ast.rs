@@ -350,6 +350,9 @@ impl<'a> ASTVisitor<'a, AST<'a>> for ASTBuilder {
     fn visit_attrpath_between(&mut self) {
         
     }
+
+    fn visit_select_before(&mut self) {
+    }
 }
 
 // cargo test ast::test_java_transpiler -- --nocapture

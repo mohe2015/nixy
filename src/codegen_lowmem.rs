@@ -7,7 +7,7 @@ use crate::{
 };
 
 pub enum IdentifierState {
-    Lhs, Rhs
+    Lhs, Rhs, Select
 }
 
 pub struct ASTJavaTranspiler<'a, W: Write> {
@@ -227,6 +227,12 @@ public class MainClosure extends NixLazyScoped {{
                 std::str::from_utf8(id).unwrap()
             )
             .unwrap(),
+            IdentifierState::Select => write!(
+                self.writer,
+                ".get(\"{}\")",
+                std::str::from_utf8(id).unwrap()
+            )
+            .unwrap(),
         }
     }
 
@@ -243,6 +249,7 @@ public class MainClosure extends NixLazyScoped {{
     }
 
     fn visit_select(&mut self, _expr: (), _attrpath: (), _default: Option<()>) {
+        self.identifier_state = IdentifierState::Rhs;
     }
 
     fn visit_infix_lhs(&mut self, operator: NixTokenType<'a>, _left: &()) {
@@ -497,7 +504,8 @@ public class MainClosure extends NixLazyScoped {{
     }
 
     fn visit_select_before(&mut self) {
-        write!(self.writer, r#"SELECT BEFORE"#).unwrap()
+        self.identifier_state = IdentifierState::Select;
+        write!(self.writer, r#".castAttrset()"#).unwrap()
     }
 }
 
