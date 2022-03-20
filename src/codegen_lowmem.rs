@@ -243,7 +243,6 @@ public class MainClosure extends NixLazyScoped {{
     }
 
     fn visit_select(&mut self, _expr: (), _attrpath: (), _default: Option<()>) {
-        write!(self.writer, " SELECT ").unwrap();
     }
 
     fn visit_infix_lhs(&mut self, operator: NixTokenType<'a>, _left: &()) {
@@ -495,6 +494,10 @@ public class MainClosure extends NixLazyScoped {{
 
     fn visit_attrpath_between(&mut self) {
         write!(self.writer, r#"NixAttrset.create(new java.util.IdentityHashMap<>())).castAttrset()"#,).unwrap();
+    }
+
+    fn visit_select_before(&mut self) {
+        write!(self.writer, r#"SELECT BEFORE"#).unwrap()
     }
 }
 

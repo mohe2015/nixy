@@ -466,6 +466,7 @@ impl<
         }) = peeked
         {
             self.expect(NixTokenType::Select);
+            self.visitor.visit_select_before();
             // TODO FIXME we probably need to fix that method (use a custom one because of function application order)
             let attrpath = self.parse_attrpath().unwrap();
             // we need to parse it specially because evaluation needs to abort if the attrpath does not exist and there is no or
