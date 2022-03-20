@@ -20,7 +20,22 @@ public class MainClosure extends NixLazyScoped {
 
 
 
-						rec.value.computeIfAbsent("a", k -> NixAttrset.create(new java.util.IdentityHashMap<>())).castAttrset().computeIfAbsent("b", k -> NixInteger.create(1).createCall()); return rec; } }.force(); } }).createCall().force();
+						rec.value.computeIfAbsent("a", k -> NixAttrset.create(new java.util.IdentityHashMap<>())).castAttrset().computeIfAbsent("b", k -> findVariable(scopes, withs, "a")findVariable(scopes, withs, "c") SELECT .createCall());rec.value.computeIfAbsent("a", k -> (new NixLazy() {
+
+							@Override
+							public NixValue force() {
+								/* head */
+
+								NixAttrset rec = (NixAttrset) NixAttrset.create(new java.util.IdentityHashMap<>()).force();
+
+								return new NixLazyScoped(addToScope(scopes, rec), withs) {
+
+									@Override
+									public NixValue force() {
+
+
+
+										rec.value.computeIfAbsent("c", k -> NixInteger.create(1).createCall()); return rec; } }.force(); } }).createCall()); return rec; } }.force(); } }).createCall().force();
 	}
 
 	public static void main(String[] args) {

@@ -41,6 +41,11 @@ pub fn test_java_transpiler() {
     );
     test_java_transpiler_code(
         br"rec {
+        a = { f = 1; };
+      }",
+    );
+    test_java_transpiler_code(
+        br"rec {
         a.b = a.c;
         a = { c = 1; };
       }",
