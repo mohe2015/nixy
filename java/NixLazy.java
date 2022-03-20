@@ -270,4 +270,10 @@ toString
 				.map(Map.Entry::getValue)
 				.orElseThrow();
 	}
+
+	default ArrayDeque<NixAttrset> addToScope(final ArrayDeque<NixAttrset> scopes, NixAttrset value) {
+		ArrayDeque<NixAttrset> newScopes = scopes.clone();
+		newScopes.add(value);
+		return newScopes;
+	}
 }

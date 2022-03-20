@@ -155,7 +155,7 @@ public class MainClosure extends NixLazyScoped {{
     }}
 
     public static void main(String[] args) {{
-		System.out.println(new MainClosure(new java.util.ArrayDeque<>(List.of((NixAttrset) globals.force())), new java.util.ArrayDeque<>()).force());
+		System.out.println(new MainClosure(new java.util.ArrayDeque<>(java.util.List.of((NixAttrset) globals.force())), new java.util.ArrayDeque<>()).force());
 	}}
 }}
         "#
@@ -399,7 +399,7 @@ public class MainClosure extends NixLazyScoped {{
     }
 
     fn visit_let(&mut self, _binds: Vec<()>, _body: ()) {
-        write!(self.writer, ".force(); }}}}; }}}})",).unwrap();
+        write!(self.writer, ".force(); }}}}.force(); }}}})",).unwrap();
     }
 
     fn visit_attrset_before(&mut self, binds: &[()]) {
