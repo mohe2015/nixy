@@ -89,23 +89,35 @@ impl<'a, W: Write> JavaCodegen<'a, W> {
                 self.withs.pop();
             }
             AST::Let(binds, expr) => {
-                write!(self.writer, r#"((NixLazy) () -> {{
-                    "#).unwrap();
+                write!(
+                    self.writer,
+                    r#"((NixLazy) () -> {{
+                    "#
+                )
+                .unwrap();
                 for bind in binds {
                     match bind {
                         // fuck everything is an attrset
                         AST::Bind(variable, value) => {
-                            write!(self.writer, r#"NixProxy x_ = new NixProxy();
-    "#).unwrap();
+                            write!(
+                                self.writer,
+                                r#"NixProxy x_ = new NixProxy();
+    "#
+                            )
+                            .unwrap();
                         }
-                        _ => panic!()
+                        _ => panic!(),
                     }
                 }
-            
-        write!(self.writer, r#"y_.proxy = "#).unwrap();
-    write!(self.writer, r#"
+
+                write!(self.writer, r#"y_.proxy = "#).unwrap();
+                write!(
+                    self.writer,
+                    r#"
             return .force();
-    }}"#).unwrap();
+    }}"#
+                )
+                .unwrap();
             }
             ast => panic!("{:?}", ast),
         }

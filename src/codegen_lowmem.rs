@@ -20,17 +20,23 @@ pub fn test_java_transpiler() {
     // using a Map to store all variables will get extremely annoying
     // because then I have to implement variable capturing etc
 
-    /*    
+    /*
     currentVars.put("a", () -> currentVars.get("b"));
     currentVars.put("b", () -> 5);
     */
+    test_java_transpiler_code(
+        br"rec {{
+        a.b = a.c;
+        a = {{ c = 1; }};
+      }}",
+    );
     test_java_transpiler_code(br#"let ${"hi"} = 1; in hi"#);
     test_java_transpiler_code(br#"let a.b = 5; a.c = 3; a.d.e = 3; in a"#);
     test_java_transpiler_code(
-           br#" (let y = x + "b";
+        br#" (let y = x + "b";
        x = "a"; in
     y + "c")"#,
-       );
+    );
     test_java_transpiler_code(br#"with builtins; (length [1 2 3 "x"])"#);
     test_java_transpiler_code(
         br#"(let a = 1; in
@@ -188,7 +194,12 @@ public class MainClosure extends NixLazyScoped {{
     }
 
     fn visit_identifier(&mut self, id: &'a [u8]) {
-        write!(self.writer, "findVariable(scopes, withs, \"{}\")", std::str::from_utf8(id).unwrap()).unwrap();
+        write!(
+            self.writer,
+            "findVariable(scopes, withs, \"{}\")",
+            std::str::from_utf8(id).unwrap()
+        )
+        .unwrap();
     }
 
     fn visit_integer(&mut self, integer: i64) {
@@ -273,8 +284,7 @@ public class MainClosure extends NixLazyScoped {{
         write!(self.writer, r#")"#).unwrap();
     }
 
-    fn visit_attrpath_part(&mut self, _begin: (), _last: ()) {
-    }
+    fn visit_attrpath_part(&mut self, _begin: (), _last: ()) {}
 
     fn visit_path_concatenate(&mut self, _begin: (), _last: ()) {
         todo!()
