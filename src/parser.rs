@@ -76,6 +76,7 @@ impl<
                 Some(NixToken {
                     token_type: NixTokenType::Select,
                 }) => {
+                    self.visitor.visit_attrpath_between();
                     self.expect(NixTokenType::Select);
                 }
                 Some(NixToken {

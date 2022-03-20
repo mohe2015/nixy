@@ -212,7 +212,7 @@ public class MainClosure extends NixLazyScoped {{
         match self.identifier_state {
             IdentifierState::Lhs => write!(
                 self.writer,
-                ".value.computeIfAbsent(\"{}\", k -> ",
+                ".computeIfAbsent(\"{}\", k -> ",
                 std::str::from_utf8(id).unwrap()
             )
             .unwrap(),
@@ -307,7 +307,8 @@ public class MainClosure extends NixLazyScoped {{
         write!(self.writer, r#")"#).unwrap();
     }
 
-    fn visit_attrpath_part(&mut self, _begin: (), _last: ()) {}
+    fn visit_attrpath_part(&mut self, _begin: (), _last: ()) {
+    }
 
     fn visit_path_concatenate(&mut self, _begin: (), _last: ()) {
         todo!()
@@ -386,7 +387,7 @@ public class MainClosure extends NixLazyScoped {{
         self.identifier_state = IdentifierState::Lhs;
         match bind_type {
             BindType::Let => write!(self.writer, r#"let.value.put(((NixString)"#,).unwrap(),
-            BindType::Attrset => write!(self.writer, r#"rec"#,).unwrap(),
+            BindType::Attrset => write!(self.writer, r#"rec.value"#,).unwrap(),
         }
     }
 
@@ -485,6 +486,10 @@ public class MainClosure extends NixLazyScoped {{
 
     fn visit_with(&mut self, with_expr: (), expr: ()) -> () {
         todo!()
+    }
+
+    fn visit_attrpath_between(&mut self) {
+        write!(self.writer, r#"NixAttrset.create(new java.util.IdentityHashMap<>())).castAttrset()"#,).unwrap();
     }
 }
 

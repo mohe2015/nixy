@@ -346,6 +346,10 @@ impl<'a> ASTVisitor<'a, AST<'a>> for ASTBuilder {
     fn visit_with(&mut self, with_expr: AST<'a>, expr: AST<'a>) -> AST<'a> {
         AST::With(Box::new(with_expr), Box::new(expr))
     }
+
+    fn visit_attrpath_between(&mut self) {
+        
+    }
 }
 
 // cargo test ast::test_java_transpiler -- --nocapture

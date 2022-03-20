@@ -31,6 +31,8 @@ pub trait ASTVisitor<'a, R: std::fmt::Debug> {
 
     fn visit_attrpath_part(&mut self, begin: R, last: R) -> R;
 
+    fn visit_attrpath_between(&mut self);
+
     fn visit_path_concatenate(&mut self, begin: R, last: R) -> R;
 
     fn visit_path_segment(&mut self, segment: &'a [u8]) -> R;
