@@ -25,10 +25,10 @@ pub fn test_java_transpiler() {
     currentVars.put("b", () -> 5);
     */
     test_java_transpiler_code(
-        br"rec {{
+        br"rec {
         a.b = a.c;
-        a = {{ c = 1; }};
-      }}",
+        a = { c = 1; };
+      }",
     );
     test_java_transpiler_code(br#"let ${"hi"} = 1; in hi"#);
     test_java_transpiler_code(br#"let a.b = 5; a.c = 3; a.d.e = 3; in a"#);
@@ -215,7 +215,7 @@ public class MainClosure extends NixLazyScoped {{
     }
 
     fn visit_select(&mut self, _expr: (), _attrpath: (), _default: Option<()>) {
-        todo!()
+        write!(self.writer, " SELECT ").unwrap();
     }
 
     fn visit_infix_lhs(&mut self, operator: NixTokenType<'a>, _left: &()) {
@@ -362,7 +362,7 @@ public class MainClosure extends NixLazyScoped {{
     fn visit_bind_before(&mut self, bind_type: BindType) {
         match bind_type {
             BindType::Let => write!(self.writer, r#"let.value.put(((NixString)"#,).unwrap(),
-            BindType::Attrset => write!(self.writer, r#"this.put(""#,).unwrap(),
+            BindType::Attrset => write!(self.writer, r#"((NixAttrset)rec.value.computeIfAbsent("#,).unwrap(),
         }
     }
 

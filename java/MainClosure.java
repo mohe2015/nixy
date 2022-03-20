@@ -20,9 +20,12 @@ public class MainClosure extends NixLazyScoped {
 
 			@Override
 			public NixValue force() {
-				((NixAttrset)rec.value.computeIfAbsent("a", k -> NixAttrset.create(new IdentityHashMap<>())).force()).value.put("b", () -> ((NixAttrset)findVariable(scopes, withs, "a").force()).value.get("c").force());
+				// every identifier should generate
+				// .value.computeIfAbsent("a", k -> NixAttrset.create(new IdentityHashMap<>())).force())
 
-				((NixAttrset)rec.value.computeIfAbsent("a", k -> NixAttrset.create(new IdentityHashMap<>())).force()).value.put("c", NixInteger.create(1).createCall());
+				((NixAttrset)rec.value.computeIfAbsent("a", k -> NixAttrset.create(new IdentityHashMap<>())).force()).value.computeIfAbsent("b", k -> () -> ((NixAttrset)findVariable(scopes, withs, "a").force()).value.get("c").force());
+
+				((NixAttrset)rec.value.computeIfAbsent("a", k -> NixAttrset.create(new IdentityHashMap<>())).force()).value.computeIfAbsent("c", k -> NixInteger.create(1).createCall());
 
 				/* body */
 				return rec;
