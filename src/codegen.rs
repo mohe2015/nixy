@@ -172,7 +172,9 @@ fn test_codegen<'a>(code: &'a [u8]) {
     let mut parser = Parser {
         lexer: itertools::multipeek(lexer),
         visitor: ast_builder,
-        phantom: PhantomData,
+        phantom1: PhantomData,
+        phantom2: PhantomData,
+        phantom3: PhantomData,
     };
 
     let expr = parser.parse().unwrap();

@@ -1,6 +1,6 @@
 use crate::{lexer::NixTokenType, parser::BindType};
 
-pub trait ASTVisitor<'a, R: std::fmt::Debug> {
+pub trait ASTVisitor<'a, R: std::fmt::Debug, FORMALS: std::fmt::Debug, BIND: std::fmt::Debug> {
     fn visit_file_start(&mut self) {}
 
     fn visit_file_end(&mut self) {}
@@ -68,7 +68,7 @@ pub trait ASTVisitor<'a, R: std::fmt::Debug> {
 
     fn visit_bind_between(&mut self, bind_type: BindType, attrpath: &R);
 
-    fn visit_bind_after(&mut self, bind_type: BindType, attrpath: R, expr: R) -> R;
+    fn visit_bind_after(&mut self, bind_type: BindType, attrpath: R, expr: R) -> BIND;
 
     fn visit_let_before(&mut self);
 
@@ -91,7 +91,7 @@ pub trait ASTVisitor<'a, R: std::fmt::Debug> {
         formals: Option<R>,
         at_identifier: Option<&'a [u8]>,
         ellipsis: bool,
-    ) -> R;
+    ) -> FORMALS;
 
     fn visit_inherit(&mut self, attrs: Vec<R>) -> R;
 

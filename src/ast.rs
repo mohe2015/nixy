@@ -54,7 +54,7 @@ pub enum AST<'a> {
 
 pub struct ASTBuilder;
 
-impl<'a> ASTVisitor<'a, AST<'a>> for ASTBuilder {
+impl<'a> ASTVisitor<'a, AST<'a>, Formals<'a>, Bind<'a>> for ASTBuilder {
     fn visit_identifier(&mut self, id: &'a [u8]) -> AST<'a> {
         AST::Identifier(std::str::from_utf8(id).unwrap())
     }

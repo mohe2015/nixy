@@ -161,7 +161,7 @@ pub fn test_java_transpiler() {
     test_java_transpiler_code(b"a: a + 1");
 }
 
-impl<'a, W: Write> ASTVisitor<'a, ()> for ASTJavaTranspiler<'a, W> {
+impl<'a, W: Write> ASTVisitor<'a, (), (), ()> for ASTJavaTranspiler<'a, W> {
     fn visit_file_start(&mut self) {
         write!(
             self.writer,
@@ -536,7 +536,9 @@ fn test_java_transpiler_code(code: &[u8]) {
     let mut parser = Parser {
         lexer: itertools::multipeek(lexer),
         visitor: transpiler,
-        phantom: PhantomData,
+        phantom1: PhantomData,
+        phantom2: PhantomData,
+        phantom3: PhantomData,  
     };
 
     parser.parse();
