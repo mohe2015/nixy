@@ -52,6 +52,57 @@ pub enum AST<'a> {
     WithOrLet(WithOrLet, Box<AST<'a>>, Box<AST<'a>>),
 }
 
+/*
+Ich fang erstmal ein stückchen weiter vorne an, beim AST erstellen:
+```nix
+{ a = { b = 1; }; a.c = 1; }
+```
+
+Wenn ich https://github.com/NixOS/nix/blob/8ad485ea893862029e02cb560a15fd276753b04f/src/libexpr/parser.y#L132 richtig verstehe, bauen die sich ein a mit dem b = 1 drin und ein anderes a mit c drin (der syntax sollte ja äquivalent sein). dann merken die, dass das gemerged werden muss.
+
+Problem 1: ${"trolled"} you know. (Ich hab das gefühl ich muss da wohl wirklich const evaluation machen).
+
+Problem 2: Entweder ich mach das mergen beim parsing, dann hab ich ja vmtl etliche scoping probleme, weil ich da dann ja tracken muss aus welchem rec / inherit was kam.
+
+Oder ich mach das mergen zur Laufzeit, wobei ich dann ja expressions und die vorher erstellen attrsets unterscheiden müsste, weil ich random expressions ja nicht mergen sollte.
+
+You see its kacke
+
+*/
+/*
+let a = "Hi"; in { ${"hi"+"jo"+a} = 1; }
+
+let a = "Hi"; in { ${"hi"+"jo"+a} = 1; hijoHi = 1; }
+
+let a = "Hi"; in { ${"hi"+"jo"+a} = {}; hijoHi.test = 1; }
+*/
+
+// https://github.com/NixOS/nix/blob/8ad485ea893862029e02cb560a15fd276753b04f/src/libexpr/parser.y#L534
+
+// https://github.com/nix-community/rnix-parser
+
+// hard think to decide how to implement for now are nested attrsets and how { a = { b = 1; }; a.c = 1; } is implemented
+
+// https://github.com/NixOS/nix/blob/8ad485ea893862029e02cb560a15fd276753b04f/src/libexpr/parser.y#L132 I suspect they go the merge way (the question is how rec works then)
+
+// convert all attrsets into nested attrpath syntax (because there can be dynamic attributes everywhere this is the only sane way)
+
+// then merge them by applying one after another (like I already did I think)
+
+// the problem is that we need to differentiate between these and expressions (which we shouldn't merge) (we could also ignore that for now as that would be wrong use)
+
+// I think that would be the path to go for now
+
+// leaves the scoping issues. (well actually I realize I think we could also keep the current way (so not flattening) and then we should have less scoping issues. Then just merge recursively attrsets which would break if you override existing ones but I don't care)
+
+/*
+let a = { hi = 1; }; in { inherit a; a.jo = 2; } 
+let b = { hi = 1; }; in { a = b; a.jo = 2; }
+just allow that for now and care about the scoping which is way more important first.
+
+{ a = { hi = 1; }; a.jo = 2; }
+*/
+
 pub struct ASTBuilder;
 
 impl<'a> ASTVisitor<'a, AST<'a>, Formals<'a>, Bind<'a>> for ASTBuilder {

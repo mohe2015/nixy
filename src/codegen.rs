@@ -227,9 +227,14 @@ fn test_codegen_basic() {
     // because of this just parse them directly as with with a special note that their scope orders are higher priority
     // this may means we can codegen this in the other generator
 
+    // can we even handle rec and non-rec the same? no we can't see these examples
+
+    test_codegen(br#"{ a = { d = 5; }; b.c = 3; a.c = 4; b = rec { inherit a; }; }"#);
+
+    test_codegen(br#"rec { a = { d = 5; }; b.c = 3; a.c = 4; b = rec { inherit a; }; }"#);
+
     test_codegen(br#"let a.b = 5; a.c = 3; a.d.e = 3; in a"#);
     exit(0);
-
     test_codegen(br#"let ${"hi"} = 1; in hi"#);
     test_codegen(br"1");
     test_codegen(br#"with builtins; (length [1 2 3 "x"])"#);

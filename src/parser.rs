@@ -122,7 +122,7 @@ impl<
     }
 
     #[cfg_attr(debug_assertions, instrument(name = "bind", skip_all, ret))]
-    pub fn parse_bind(&mut self, bind_type: BindType) -> R {
+    pub fn parse_bind(&mut self, bind_type: BindType) -> BIND {
         match self.lexer.peek() {
             Some(NixToken {
                 token_type: NixTokenType::Inherit,
