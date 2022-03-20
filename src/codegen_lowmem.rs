@@ -274,7 +274,6 @@ public class MainClosure extends NixLazyScoped {{
     }
 
     fn visit_attrpath_part(&mut self, _begin: (), _last: ()) {
-        todo!()
     }
 
     fn visit_path_concatenate(&mut self, _begin: (), _last: ()) {
