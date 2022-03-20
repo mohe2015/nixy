@@ -17,26 +17,39 @@ pub struct NixFunctionParameter<'a> {
 }
 
 #[derive(PartialEq, Debug)]
+enum WithOrLet {
+    With, Let
+}
+
+#[derive(PartialEq, Debug)]
+pub struct Bind<'a> {
+    path: Vec<AST<'a>>, 
+    value: Box<AST<'a>>
+}
+
+#[derive(PartialEq, Debug)]
+pub struct Attrset<'a>(Vec<Bind<'a>>); // list of bound values
+
+#[derive(PartialEq, Debug)]
+pub struct Formals<'a> {
+    parameters: Vec<NixFunctionParameter<'a>>,
+    at_identifier: Option<&'a str>,
+    ellipsis: bool,
+}
+
+#[derive(PartialEq, Debug)]
 pub enum AST<'a> {
     Identifier(&'a str),
     String(&'a str),
     PathSegment(&'a str),
     Integer(i64),
     Float(f64),
-    Let(Vec<AST<'a>>, Box<AST<'a>>),
-    Attrset(Vec<AST<'a>>),
+    Attrset(Attrset<'a>),
     Array(Vec<AST<'a>>),
-    Inherit(Vec<AST<'a>>),
-    Bind(Box<AST<'a>>, Box<AST<'a>>),
+    Inherit(Vec<AST<'a>>), // TODO do we need this
     Call(Box<AST<'a>>, Box<AST<'a>>),
-    Function(Box<AST<'a>>, Box<AST<'a>>),
-    Formals {
-        parameters: Vec<NixFunctionParameter<'a>>,
-        at_identifier: Option<&'a str>,
-        ellipsis: bool,
-    },
-    With(Box<AST<'a>>, Box<AST<'a>>),
-    Builtins,
+    Function(Formals<'a>, Box<AST<'a>>),
+    WithOrLet(WithOrLet, Box<AST<'a>>, Box<AST<'a>>),
 }
 
 pub struct ASTBuilder;

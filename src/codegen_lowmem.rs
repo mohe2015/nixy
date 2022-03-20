@@ -1,3 +1,5 @@
+// this is actually infeasible I think so we need to use the AST
+
 use std::{io::Write, marker::PhantomData};
 
 use crate::{

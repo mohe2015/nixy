@@ -6,7 +6,7 @@ use crate::{
     lexer::NixTokenType,
     parser::Parser,
 };
-use std::{io::Write, marker::PhantomData};
+use std::{io::Write, marker::PhantomData, process::exit};
 
 pub struct JavaCodegen<'a, W: Write> {
     pub writer: &'a mut W,
@@ -177,6 +177,8 @@ fn test_codegen<'a>(code: &'a [u8]) {
 
     let expr = parser.parse().unwrap();
 
+    println!("{:#?}", expr);
+/*
     transpiler.codegen(&expr);
 
     std::fs::write("/tmp/MainClosure.java", data).expect("Unable to write file");
@@ -214,16 +216,19 @@ fn test_codegen<'a>(code: &'a [u8]) {
 
     if !run_cmd.status.success() {
         panic!("failed to run java program");
-    }
+    }*/
 }
 
+// cargo test --package nixy --bin nixy -- codegen::test_codegen_basic --exact --nocapture
 #[test]
 fn test_codegen_basic() {
     // because of this just parse them directly as with with a special note that their scope orders are higher priority
     // this may means we can codegen this in the other generator
 
-    test_codegen(br#"let ${"hi"} = 1; in hi"#);
     test_codegen(br#"let a.b = 5; a.c = 3; a.d.e = 3; in a"#);
+    exit(0);
+
+    test_codegen(br#"let ${"hi"} = 1; in hi"#);
     test_codegen(br"1");
     test_codegen(br#"with builtins; (length [1 2 3 "x"])"#);
     test_codegen(
