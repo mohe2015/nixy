@@ -57,7 +57,7 @@ toString
 	public abstract NixValue force();
 
 	static NixLazy createIf(NixLazy condition, NixLazy trueCase, NixLazy falseCase) {
-		return new NixLazy() {
+		return new NixLazy(new ArrayDeque<>(), new ArrayDeque<>()) {
 
 			@Override
 			public NixValue force() {
@@ -72,7 +72,7 @@ toString
 
 	public NixLazy add(NixLazy second) {
 		NixLambda.ensureLambda(second);
-		return new NixLazy() {
+		return new NixLazy(new ArrayDeque<>(), new ArrayDeque<>()) {
 
 			@Override
 			public NixValue force() {
@@ -91,7 +91,7 @@ toString
 
 	public NixLazy subtract(NixLazy second) {
 		NixLambda.ensureLambda(second);
-		return new NixLazy() {
+		return new NixLazy(new ArrayDeque<>(), new ArrayDeque<>()) {
 
 			@Override
 			public NixValue force() {
@@ -108,7 +108,7 @@ toString
 
 	public NixLazy multiply(NixLazy second) {
 		NixLambda.ensureLambda(second);
-		return new NixLazy() {
+		return new NixLazy(new ArrayDeque<>(), new ArrayDeque<>()) {
 
 			@Override
 			public NixValue force() {
@@ -125,7 +125,7 @@ toString
 
 	public NixLazy divide(NixLazy second) {
 		NixLambda.ensureLambda(second);
-		return new NixLazy() {
+		return new NixLazy(new ArrayDeque<>(), new ArrayDeque<>()) {
 
 			@Override
 			public NixValue force() {
@@ -142,7 +142,7 @@ toString
 
 	public NixLazy lt(NixLazy second) {
 		NixLambda.ensureLambda(second);
-		return new NixLazy() {
+		return new NixLazy(new ArrayDeque<>(), new ArrayDeque<>()) {
 
 			@Override
 			public NixValue force() {
@@ -159,7 +159,7 @@ toString
 
 	public NixLazy lte(NixLazy second) {
 		NixLambda.ensureLambda(second);
-		return new NixLazy() {
+		return new NixLazy(new ArrayDeque<>(), new ArrayDeque<>()) {
 
 			@Override
 			public NixValue force() {
@@ -176,7 +176,7 @@ toString
 
 	public NixLazy gt(NixLazy second) {
 		NixLambda.ensureLambda(second);
-		return new NixLazy() {
+		return new NixLazy(new ArrayDeque<>(), new ArrayDeque<>()) {
 
 			@Override
 			public NixValue force() {
@@ -193,7 +193,7 @@ toString
 
 	public NixLazy gte(NixLazy second) {
 		NixLambda.ensureLambda(second);
-		return new NixLazy() {
+		return new NixLazy(new ArrayDeque<>(), new ArrayDeque<>()) {
 
 			@Override
 			public NixValue force() {
@@ -210,7 +210,7 @@ toString
 
 	public NixLazy land(NixLazy second) {
 		NixLambda.ensureLambda(second);
-		return new NixLazy() {
+		return new NixLazy(new ArrayDeque<>(), new ArrayDeque<>()) {
 
 			@Override
 			public NixValue force() {
@@ -221,7 +221,7 @@ toString
 
 	public NixLazy lor(NixLazy second) {
 		NixLambda.ensureLambda(second);
-		return new NixLazy() {
+		return new NixLazy(new ArrayDeque<>(), new ArrayDeque<>()) {
 
 			@Override
 			public NixValue force() {
@@ -232,7 +232,7 @@ toString
 
 	public NixLazy eq(NixLazy second) {
 		NixLambda.ensureLambda(second);
-		return new NixLazy() {
+		return new NixLazy(new ArrayDeque<>(), new ArrayDeque<>()) {
 
 			@Override
 			public NixValue force() {
@@ -243,7 +243,7 @@ toString
 
 	public NixLazy neq(NixLazy second) {
 		NixLambda.ensureLambda(second);
-		return new NixLazy() {
+		return new NixLazy(new ArrayDeque<>(), new ArrayDeque<>()) {
 
 			@Override
 			public NixValue force() {
@@ -254,7 +254,7 @@ toString
 
 	public NixLazy createCall(NixLazy second) {
 		NixLambda.ensureLambda(second);
-		return new NixLazy() {
+		return new NixLazy(new ArrayDeque<>(), new ArrayDeque<>()) {
 
 			@Override
 			public NixValue force() {
@@ -268,7 +268,7 @@ toString
 	}
 
 	public NixLazy get(String name) {
-		return new NixLazy() {
+		return new NixLazy(new ArrayDeque<>(), new ArrayDeque<>()) {
 
 			@Override
 			public NixValue force() {

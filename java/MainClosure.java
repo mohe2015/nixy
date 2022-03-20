@@ -4,26 +4,34 @@ import java.util.stream.StreamSupport;
 
 public class MainClosure extends NixLazy {
 
+	public MainClosure(ArrayDeque<NixAttrset> scopes, ArrayDeque<NixAttrset> withs) {
+		super(scopes, withs);
+	}
+
 	public static void main(String[] args) {
-		System.out.println(new MainClosure().force().call(NixInteger.create(5)));
+		System.out.println(new MainClosure(new ArrayDeque<>(List.of((NixAttrset) globals.force())), new ArrayDeque<>()).force().call(NixInteger.create(5)));
 	}
 
 	public NixValue force() {
-		ArrayDeque<NixAttrset> scopes = new ArrayDeque<>();
-		ArrayDeque<NixAttrset> withs = new ArrayDeque<>();
-		scopes.push((NixAttrset) globals.force()); // do this only in the root
 
 		// let binding
 
+		// TODO FIXME wrap this all in one NixLazy that fixes the scopes value
+
 		NixAttrset let = (NixAttrset) NixAttrset.create(new HashMap<>()).force();
 
-		let.value.put("a", new NixLazy(addToScope(scopes, let), withs) {
+		// this idea seems to work
+		return new NixLazy(addToScope(scopes, let), withs) {
+
 			@Override
 			public NixValue force() {
-				return findVariable(scopes, withs, "b").force();
-			}
-		});
-		let.value.put("b", new NixLazy(addToScope(scopes, let), withs) {
+				let.value.put("a", new NixLazy(addToScope(scopes, let), withs) {
+					@Override
+					public NixValue force() {
+						return findVariable(scopes, withs, "b").force();
+					}
+				});
+				let.value.put("b", new NixLazy(addToScope(scopes, let), withs) {
 
 					@Override
 					public NixValue force() {
@@ -31,9 +39,9 @@ public class MainClosure extends NixLazy {
 					}
 				});
 
-		NixValue returnValue = (arg) -> arg.add(findVariable(addToScope(scopes, let), withs, "a")).force();
-
-		return returnValue;
+				return (arg) -> arg.add(findVariable(addToScope(scopes, let), withs, "a")).force();
+			}
+		}.force();
 	}
 
 	public ArrayDeque<NixAttrset> addToScope(final ArrayDeque<NixAttrset> scopes, NixAttrset value) {
