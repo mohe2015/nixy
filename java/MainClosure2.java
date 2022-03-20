@@ -17,10 +17,12 @@ public class MainClosure2 extends NixLazyScoped {
 
 					@Override
 					public NixValue force() {
-
-
-
-						rec.value.computeIfAbsent("a", k -> NixAttrset.create(new java.util.IdentityHashMap<>())).castAttrset().computeIfAbsent("b", k -> NixInteger.create(1).createCall()); return rec; } }.force(); } }).createCall().force();
+						rec.value.computeIfAbsent("a", k -> NixAttrset.create(new java.util.IdentityHashMap<>())).castAttrset().computeIfAbsent("b", k -> NixInteger.create(1).createCall());
+						return rec;
+					}
+				}.force();
+			}
+		}).createCall().force();
 	}
 
 	public static void main(String[] args) {
