@@ -5,8 +5,8 @@ pub enum WithOrLet {
     With, Let
 }
 
-pub trait ASTVisitor<'a, R: std::fmt::Debug, FORMALS: std::fmt::Debug, BIND: std::fmt::Debug, IDENTIFIER: std::fmt::Debug> {
-    fn visit_identifier(&mut self, id: &'a [u8]) -> IDENTIFIER;
+pub trait ASTVisitor<'a, R: std::fmt::Debug, FORMALS: std::fmt::Debug, BIND: std::fmt::Debug> {
+    fn visit_identifier(&mut self, id: &'a [u8]) -> R;
 
     fn visit_integer(&mut self, integer: i64) -> R;
 
@@ -38,18 +38,18 @@ pub trait ASTVisitor<'a, R: std::fmt::Debug, FORMALS: std::fmt::Debug, BIND: std
 
     fn visit_call(&mut self, function: R, parameter: R) -> R;
 
-    fn visit_function_exit(&mut self, arg: IDENTIFIER, body: R) -> R;
+    fn visit_function_exit(&mut self, arg: &'a [u8], body: R) -> R;
 
-    fn visit_bind_after(&mut self, bind_type: BindType, attrpath: R, expr: R) -> BIND;
+    fn visit_bind_after(&mut self, bind_type: BindType, attrpath: Vec<R>, expr: R) -> BIND;
 
-    fn visit_attrset(&mut self, binds: Vec<R>) -> R;
+    fn visit_attrset(&mut self, binds: Vec<BIND>) -> R;
 
     fn visit_formal(&mut self, formals: Option<R>, identifier: &'a [u8], default: Option<R>) -> R;
 
     fn visit_formals(
         &mut self,
         formals: Option<R>,
-        at_identifier: Option<IDENTIFIER>,
+        at_identifier: Option<&'a [u8]>,
         ellipsis: bool,
     ) -> FORMALS;
 

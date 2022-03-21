@@ -4,7 +4,7 @@ use std::vec;
 use crate::{
     lexer::NixTokenType,
     parser::{
-        BindType, BUILTIN_IF, BUILTIN_PATH_CONCATENATE, BUILTIN_SELECT, BUILTIN_STRING_CONCATENATE,
+        BindType, BUILTIN_IF, BUILTIN_PATH_CONCATENATE, BUILTIN_STRING_CONCATENATE,
         BUILTIN_UNARY_MINUS, BUILTIN_UNARY_NOT,
     },
     visitor::{ASTVisitor, WithOrLet},
@@ -48,6 +48,7 @@ pub enum AST<'a> {
     Call(Box<AST<'a>>, Box<AST<'a>>),
     Function(Formals<'a>, Box<AST<'a>>),
     WithOrLet(WithOrLet, Box<AST<'a>>, Box<AST<'a>>),
+    Select(Box<AST<'a>>, Vec<AST<'a>>, Option<Box<AST<'a>>>,),
 }
 
 /*
@@ -123,29 +124,10 @@ impl<'a> ASTVisitor<'a, AST<'a>, Formals<'a>, Bind<'a>, Identifier<'a>> for ASTB
     fn visit_select(
         &mut self,
         expr: AST<'a>,
-        attrpath: AST<'a>,
+        attrpath: Vec<AST<'a>>,
         default: Option<AST<'a>>,
     ) -> AST<'a> {
-        let value = AST::Call(
-            Box::new(AST::Call(
-                Box::new(AST::Identifier(Identifier(BUILTIN_SELECT))),
-                Box::new(expr),
-            )),
-            Box::new(attrpath),
-        );
-        match default {
-            Some(default) => AST::Call(
-                Box::new(AST::Call(
-                    Box::new(AST::Identifier(Identifier("__value_or_default"))),
-                    Box::new(value),
-                )),
-                Box::new(default),
-            ),
-            None => AST::Call(
-                Box::new(AST::Identifier(Identifier("__abort_invalid_attrpath"))),
-                Box::new(value),
-            ),
-        }
+        AST::Select(Box::new(expr), attrpath, default.map(Box::new))
     }
 
     fn visit_infix_lhs(&mut self, _operator: NixTokenType<'a>, _left: &AST<'a>) {}

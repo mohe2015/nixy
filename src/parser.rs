@@ -1,5 +1,4 @@
 use crate::{
-    ast::{AST, Identifier},
     lexer::{NixToken, NixTokenType},
     visitor::ASTVisitor,
 };
@@ -28,15 +27,13 @@ pub struct Parser<
     R: std::fmt::Debug,
     FORMALS: std::fmt::Debug,
     BIND: std::fmt::Debug,
-    IDENTIFIER: std::fmt::Debug,
-    A: ASTVisitor<'a, R, FORMALS, BIND, IDENTIFIER>,
+    A: ASTVisitor<'a, R, FORMALS, BIND>,
 > {
     pub lexer: MultiPeek<I>,
     pub visitor: A,
     pub phantom1: PhantomData<R>, // https://github.com/rust-lang/rust/issues/23246
     pub phantom2: PhantomData<FORMALS>, // https://github.com/rust-lang/rust/issues/23246
     pub phantom3: PhantomData<BIND>, // https://github.com/rust-lang/rust/issues/23246
-    pub phantom4: PhantomData<IDENTIFIER>, // https://github.com/rust-lang/rust/issues/23246
 }
 
 #[derive(Copy, Clone)]
@@ -51,9 +48,8 @@ impl<
         R: std::fmt::Debug,
         FORMALS: std::fmt::Debug,
         BIND: std::fmt::Debug,
-        IDENTIFIER: std::fmt::Debug,
-        A: ASTVisitor<'a, R, FORMALS, BIND, IDENTIFIER>,
-    > Parser<'a, I, R, FORMALS, BIND, IDENTIFIER, A>
+        A: ASTVisitor<'a, R, FORMALS, BIND>,
+    > Parser<'a, I, R, FORMALS, BIND, A>
 {
     #[cfg_attr(debug_assertions, instrument(name = "expect", skip_all, ret))]
     pub fn expect(&mut self, t: NixTokenType<'a>) -> NixToken {
@@ -80,7 +76,6 @@ impl<
                 Some(NixToken {
                     token_type: NixTokenType::Select,
                 }) => {
-                    self.visitor.visit_attrpath_between();
                     self.expect(NixTokenType::Select);
                 }
                 Some(NixToken {
@@ -147,7 +142,8 @@ impl<
                     }
                 }
                 self.expect(NixTokenType::Semicolon);
-                self.visitor.visit_inherit(attrs)
+                self.visitor.visit_inherit(attrs);
+                todo!();
             }
             _other => {
                 self.lexer.reset_peek();
@@ -170,7 +166,7 @@ impl<
         self.expect(NixTokenType::Let);
 
         // maybe do this like the method after? so the let has a third parameter which is the body and which we can then concatenate afterwards
-        let mut binds: Vec<R> = Vec::new();
+        let mut binds: Vec<BIND> = Vec::new();
         loop {
             match self.lexer.peek() {
                 Some(NixToken {
@@ -182,7 +178,7 @@ impl<
                         .parse_expr_function()
                         .expect("failed to parse body of let binding");
 
-                    return Some(self.visitor.visit_let_or_attrset(binds, Some(body)));
+                    return Some(self.visitor.visit_with_or_let(crate::visitor::WithOrLet::Let,  self.visitor.visit_attrset(binds), body))
                 }
                 _ => {
                     self.lexer.reset_peek();
@@ -275,7 +271,9 @@ impl<
     pub fn parse_attrset(&mut self) -> Option<R> {
         self.expect(NixTokenType::CurlyOpen);
 
-        let mut binds: Vec<R> = Vec::new();
+        // TODO FIXME merge this with the let parser?
+
+        let mut binds: Vec<BIND> = Vec::new();
         loop {
             match self.lexer.peek() {
                 Some(NixToken {
@@ -283,7 +281,7 @@ impl<
                 }) => {
                     self.expect(NixTokenType::CurlyClose);
 
-                    break Some(self.visitor.visit_let_or_attrset(binds, None));
+                    break Some(self.visitor.visit_attrset(binds));
                 }
                 _ => {
                     self.lexer.reset_peek();
