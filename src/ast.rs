@@ -270,56 +270,16 @@ impl<'a> ASTVisitor<'a, AST<'a>, Formals<'a>, Bind<'a>> for ASTBuilder {
         }
     }
 
-    fn visit_formal(
-        &mut self,
-        formals: Option<AST<'a>>,
-        identifier: &'a [u8],
-        default: Option<AST<'a>>,
-    ) -> AST<'a> {
-        let formal = NixFunctionParameter {
-            name: identifier,
-            default,
-        };
-        match formals {
-            Some(AST::Formals {
-                mut parameters,
-                at_identifier,
-                ellipsis,
-            }) => {
-                parameters.push(formal);
-                AST::Formals {
-                    parameters,
-                    at_identifier,
-                    ellipsis,
-                }
-            }
-            None => AST::Formals {
-                parameters: vec![formal],
-                at_identifier: None,
-                ellipsis: false,
-            },
-            _ => panic!(),
-        }
-    }
-
     fn visit_formals(
         &mut self,
-        formals: Option<AST<'a>>,
+        parameters: Vec<(&'a [u8], Option<AST<'a>>)>,
         at_identifier: Option<&'a [u8]>,
         ellipsis: bool,
     ) -> Formals<'a> {
-        match formals {
-            Some(AST::Formals { parameters, .. }) => Formals {
-                parameters,
-                at_identifier: at_identifier.map(|s| std::str::from_utf8(s).unwrap()),
-                ellipsis,
-            },
-            None => Formals {
-                parameters: vec![],
-                at_identifier: at_identifier.map(|s| std::str::from_utf8(s).unwrap()),
-                ellipsis,
-            },
-            _ => panic!(),
+        Formals {
+            parameters: parameters.into_iter().map(|(a,b)| NixFunctionParameter { name: Identifier(std::str::from_utf8(a).unwrap()), default: b }).collect(),
+            at_identifier: at_identifier.map(|s| Identifier(std::str::from_utf8(s).unwrap())),
+            ellipsis,
         }
     }
 

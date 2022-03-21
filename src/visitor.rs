@@ -44,11 +44,9 @@ pub trait ASTVisitor<'a, R: std::fmt::Debug, FORMALS: std::fmt::Debug, BIND: std
 
     fn visit_attrset(&mut self, binds: Vec<BIND>) -> R;
 
-    fn visit_formal(&mut self, formals: Option<R>, identifier: &'a [u8], default: Option<R>) -> R;
-
     fn visit_formals(
         &mut self,
-        formals: Option<R>,
+        formals: Vec<(&'a [u8], Option<R>)>,
         at_identifier: Option<&'a [u8]>,
         ellipsis: bool,
     ) -> FORMALS;
