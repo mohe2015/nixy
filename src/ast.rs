@@ -15,24 +15,24 @@ pub struct Identifier<'a>(pub &'a str);
 
 #[derive(PartialEq, Debug)]
 pub struct NixFunctionParameter<'a> {
-    name: Identifier<'a>,
-    default: Option<AST<'a>>,
+    pub name: Identifier<'a>,
+    pub default: Option<AST<'a>>,
 }
 
 #[derive(PartialEq, Debug)]
 pub struct Bind<'a> {
-    path: Vec<AST<'a>>, 
-    value: Box<AST<'a>>
+    pub path: Vec<AST<'a>>, 
+    pub value: Box<AST<'a>>
 }
 
 #[derive(PartialEq, Debug)]
-pub struct Attrset<'a>(Vec<Bind<'a>>); // list of bound values
+pub struct Attrset<'a>(pub Vec<Bind<'a>>); // list of bound values
 
 #[derive(PartialEq, Debug)]
 pub struct Formals<'a> {
-    parameters: Vec<NixFunctionParameter<'a>>,
-    at_identifier: Option<Identifier<'a>>,
-    ellipsis: bool,
+    pub parameters: Vec<NixFunctionParameter<'a>>,
+    pub at_identifier: Option<Identifier<'a>>,
+    pub ellipsis: bool,
 }
 
 #[derive(PartialEq, Debug)]
@@ -49,6 +49,7 @@ pub enum AST<'a> {
     Function(Formals<'a>, Box<AST<'a>>),
     WithOrLet(WithOrLet, Box<AST<'a>>, Box<AST<'a>>),
     Select(Box<AST<'a>>, Vec<AST<'a>>, Option<Box<AST<'a>>>,),
+    Builtins
 }
 
 /*
@@ -104,9 +105,9 @@ just allow that for now and care about the scoping which is way more important f
 
 pub struct ASTBuilder;
 
-impl<'a> ASTVisitor<'a, AST<'a>, Formals<'a>, Bind<'a>, Identifier<'a>> for ASTBuilder {
-    fn visit_identifier(&mut self, id: &'a [u8]) -> Identifier<'a> {
-        Identifier(std::str::from_utf8(id).unwrap())
+impl<'a> ASTVisitor<'a, AST<'a>, Formals<'a>, Bind<'a>> for ASTBuilder {
+    fn visit_identifier(&mut self, id: &'a [u8]) -> AST<'a> {
+        AST::Identifier(Identifier(std::str::from_utf8(id).unwrap()))
     }
 
     fn visit_integer(&mut self, integer: i64) -> AST<'a> {
@@ -246,9 +247,9 @@ impl<'a> ASTVisitor<'a, AST<'a>, Formals<'a>, Bind<'a>, Identifier<'a>> for ASTB
         AST::Call(Box::new(function), Box::new(parameter))
     }
 
-    fn visit_function_exit(&mut self, arg: Identifier<'a>, body: AST<'a>) -> AST<'a> {
+    fn visit_function_exit(&mut self, arg: &'a [u8], body: AST<'a>) -> AST<'a> {
         AST::Function(Formals {
-            at_identifier: Some(arg),
+            at_identifier: Some(Identifier(arg)),
             parameters: vec![],
             ellipsis: true
         }, Box::new(body))
@@ -257,10 +258,10 @@ impl<'a> ASTVisitor<'a, AST<'a>, Formals<'a>, Bind<'a>, Identifier<'a>> for ASTB
     fn visit_bind_after(
         &mut self,
         _bind_type: BindType,
-        attrpath: AST<'a>,
+        attrpath: Vec<AST<'a>>,
         expr: AST<'a>,
     ) -> Bind<'a> {
-        Bind { path: vec![attrpath], value: Box::new(expr)}
+        Bind { path: attrpath, value: Box::new(expr)}
     }
     fn visit_string_concatenate_end(&mut self, result: Option<AST<'a>>) -> AST<'a> {
         match result {
@@ -304,7 +305,7 @@ impl<'a> ASTVisitor<'a, AST<'a>, Formals<'a>, Bind<'a>, Identifier<'a>> for ASTB
     fn visit_formals(
         &mut self,
         formals: Option<AST<'a>>,
-        at_identifier: Option<Identifier>,
+        at_identifier: Option<&'a [u8]>,
         ellipsis: bool,
     ) -> Formals<'a> {
         match formals {

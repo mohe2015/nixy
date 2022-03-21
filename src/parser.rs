@@ -1,6 +1,6 @@
 use crate::{
     lexer::{NixToken, NixTokenType},
-    visitor::ASTVisitor,
+    visitor::ASTVisitor, ast::{AST, Identifier},
 };
 
 use itertools::MultiPeek;
@@ -816,12 +816,10 @@ impl<
                             NixToken {
                                 token_type: NixTokenType::Identifier(ident),
                             } => {
-                                let arg = self.visitor.visit_identifier(ident);
-
                                 self.expect(NixTokenType::Colon);
                                 let body = self.parse_expr_function().unwrap();
 
-                                Some(self.visitor.visit_function_exit(arg, body))
+                                Some(self.visitor.visit_function_exit(ident, body))
                             }
                             _ => todo!(),
                         }

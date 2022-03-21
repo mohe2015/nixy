@@ -2,7 +2,7 @@ use itertools::Itertools;
 use rand::thread_rng;
 
 use crate::{
-    ast::{ASTBuilder, AST},
+    ast::{ASTBuilder, AST, Bind},
     lexer::NixTokenType,
     parser::Parser,
 };
@@ -49,7 +49,7 @@ impl<'a, W: Write> JavaCodegen<'a, W> {
                 }
                 write!(self.writer, r#"))"#,).unwrap();
             }
-            AST::With(with_expr, expr) => {
+            AST::WithOrLet(with_or_let, with_expr, expr) => {
                 // in theory I think we could run the with_expr and then from the results get all local variables so with could be handled completely statically
                 use rand::Rng;
                 const CHARSET: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
@@ -88,17 +88,17 @@ impl<'a, W: Write> JavaCodegen<'a, W> {
                 .unwrap();
                 self.withs.pop();
             }
-            AST::Let(binds, expr) => {
+            AST::Attrset(attrset) => {
                 write!(
                     self.writer,
                     r#"((NixLazy) () -> {{
                     "#
                 )
                 .unwrap();
-                for bind in binds {
+                for bind in attrset.0 {
                     match bind {
                         // fuck everything is an attrset
-                        AST::Bind(variable, value) => {
+                        Bind { path, value} => {
                             write!(
                                 self.writer,
                                 r#"NixProxy x_ = new NixProxy();
