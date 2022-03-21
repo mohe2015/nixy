@@ -141,7 +141,7 @@ impl<'a> ASTVisitor<'a, AST<'a>, Formals<'a>, Bind<'a>> for ASTBuilder {
     ) -> AST<'a> {
         AST::Call(
             Box::new(AST::Call(
-                Box::new(AST::Identifier(match operator {
+                Box::new(AST::Identifier(Identifier(match operator {
                     NixTokenType::If => "if",
                     NixTokenType::Then => "then",
                     NixTokenType::Else => "else",
@@ -176,7 +176,7 @@ impl<'a> ASTVisitor<'a, AST<'a>, Formals<'a>, Bind<'a>> for ASTBuilder {
                     NixTokenType::Multiplication => "multiplication",
                     NixTokenType::Division => "division",
                     _ => todo!(),
-                })),
+                }))),
                 Box::new(left),
             )),
             Box::new(right),
@@ -185,11 +185,11 @@ impl<'a> ASTVisitor<'a, AST<'a>, Formals<'a>, Bind<'a>> for ASTBuilder {
 
     fn visit_prefix_operation(&mut self, operator: NixTokenType<'a>, expr: AST<'a>) -> AST<'a> {
         AST::Call(
-            Box::new(AST::Identifier(match operator {
+            Box::new(AST::Identifier(Identifier(match operator {
                 NixTokenType::Subtraction => BUILTIN_UNARY_MINUS,
                 NixTokenType::ExclamationMark => BUILTIN_UNARY_NOT,
                 _ => todo!(),
-            })),
+            }))),
             Box::new(expr),
         )
     }
@@ -249,7 +249,7 @@ impl<'a> ASTVisitor<'a, AST<'a>, Formals<'a>, Bind<'a>> for ASTBuilder {
 
     fn visit_function_exit(&mut self, arg: &'a [u8], body: AST<'a>) -> AST<'a> {
         AST::Function(Formals {
-            at_identifier: Some(Identifier(arg)),
+            at_identifier: Some(Identifier(std::str::from_utf8(arg).unwrap())),
             parameters: vec![],
             ellipsis: true
         }, Box::new(body))
@@ -329,6 +329,10 @@ impl<'a> ASTVisitor<'a, AST<'a>, Formals<'a>, Bind<'a>> for ASTBuilder {
 
     fn visit_with_or_let(&mut self, with_or_let: WithOrLet, with_expr: AST<'a>, expr: AST<'a>) -> AST<'a> {
         AST::WithOrLet(WithOrLet::With, Box::new(with_expr), Box::new(expr))
+    }
+
+    fn visit_attrset(&mut self, binds: Vec<Bind<'a>>) -> AST<'a> {
+        AST::Attrset(Attrset(binds))
     }
 }
 

@@ -20,11 +20,11 @@ impl<'a, W: Write> JavaCodegen<'a, W> {
     fn codegen_expr(&mut self, expr: &'a AST<'a>) {
         match expr {
             AST::Identifier(value) => {
-                if self.variables.iter().any(|f| f.0 == *value) {
-                    write!(self.writer, "{}_", value).unwrap()
+                if self.variables.iter().any(|f| f.0 == value.0) {
+                    write!(self.writer, "{}_", value.0).unwrap()
                 } else {
                     for (ident, with) in self.withs.clone().iter().rev() {
-                        write!(self.writer, r#"{}.get("{}")"#, ident, value).unwrap()
+                        write!(self.writer, r#"{}.get("{}")"#, ident, value.0).unwrap()
                     }
                 }
             }
