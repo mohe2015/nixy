@@ -7,7 +7,7 @@ use crate::{
         BindType, BUILTIN_IF, BUILTIN_PATH_CONCATENATE, BUILTIN_SELECT, BUILTIN_STRING_CONCATENATE,
         BUILTIN_UNARY_MINUS, BUILTIN_UNARY_NOT,
     },
-    visitor::ASTVisitor,
+    visitor::{ASTVisitor, WithOrLet},
 };
 
 #[derive(PartialEq, Debug)]
@@ -254,20 +254,6 @@ impl<'a> ASTVisitor<'a, AST<'a>, Formals<'a>, Bind<'a>, Identifier<'a>> for ASTB
             None => last,
         }
     }
-    fn visit_array_start(&mut self) {}
-
-    fn visit_array_push_before(&mut self, _begin: &[AST<'a>]) {}
-
-    fn visit_array_push(&mut self, _begin: &[AST<'a>], last: AST<'a>) -> AST<'a> {
-        /*match begin {
-            Some(begin) => AST::Call(
-                Box::new(AST::Identifier(b"cons")),
-                Box::new(AST::Call(Box::new(begin), Box::new(last))),
-            ),
-            None => AST::Call(Box::new(AST::Identifier(b"cons")), Box::new(last)),
-        }*/
-        last
-    }
 
     fn visit_array_end(&mut self, array: Vec<AST<'a>>) -> AST<'a> {
         //AST::Call(Box::new(array), Box::new(AST::Identifier(b"nil")))
@@ -278,10 +264,6 @@ impl<'a> ASTVisitor<'a, AST<'a>, Formals<'a>, Bind<'a>, Identifier<'a>> for ASTB
         AST::Call(Box::new(function), Box::new(parameter))
     }
 
-    fn visit_attrset_bind_push(&mut self, _binds: &[AST<'a>], bind: AST<'a>) -> AST<'a> {
-        bind
-    }
-
     fn visit_function_exit(&mut self, arg: Identifier<'a>, body: AST<'a>) -> AST<'a> {
         AST::Function(Formals {
             at_identifier: Some(arg),
@@ -289,22 +271,6 @@ impl<'a> ASTVisitor<'a, AST<'a>, Formals<'a>, Bind<'a>, Identifier<'a>> for ASTB
             ellipsis: true
         }, Box::new(body))
     }
-
-    fn visit_function_before(&mut self) {}
-
-    fn visit_if_before(&mut self) {}
-
-    fn visit_if_after_condition(&mut self, _condition: &AST<'a>) {}
-
-    fn visit_if_after_true_case(&mut self, _condition: &AST<'a>, _true_case: &AST<'a>) {}
-
-    fn visit_call_maybe(&mut self, _expr: &Option<AST<'a>>) {}
-
-    fn visit_call_maybe_not(&mut self) {}
-
-    fn visit_bind_before(&mut self, _bind_type: BindType) {}
-
-    fn visit_bind_between(&mut self, _bind_type: BindType, _attrpath: &AST<'a>) {}
 
     fn visit_bind_after(
         &mut self,
@@ -314,15 +280,6 @@ impl<'a> ASTVisitor<'a, AST<'a>, Formals<'a>, Bind<'a>, Identifier<'a>> for ASTB
     ) -> Bind<'a> {
         Bind { path: vec![attrpath], value: Box::new(expr)}
     }
-
-    fn visit_let_bind_push(&mut self, _binds: &[AST<'a>], bind: AST<'a>) -> AST<'a> {
-        bind
-    }
-
-    fn visit_let_before_body(&mut self, _binds: &[AST<'a>]) {}
-
-    fn visit_let_or_attrset_before(&mut self, _binds: &[AST<'a>]) {}
-
     fn visit_string_concatenate_end(&mut self, result: Option<AST<'a>>) -> AST<'a> {
         match result {
             Some(result) => result,
@@ -387,13 +344,9 @@ impl<'a> ASTVisitor<'a, AST<'a>, Formals<'a>, Bind<'a>, Identifier<'a>> for ASTB
         AST::Inherit(attrs)
     }
 
-    fn visit_with(&mut self, with_expr: AST<'a>, expr: AST<'a>) -> AST<'a> {
+    fn visit_with_or_let(&mut self, with_or_let: WithOrLet, with_expr: AST<'a>, expr: AST<'a>) -> AST<'a> {
         AST::WithOrLet(WithOrLet::With, Box::new(with_expr), Box::new(expr))
     }
-
-    fn visit_attrpath_between(&mut self) {}
-
-    fn visit_select_before(&mut self) {}
 }
 
 // cargo test ast::test_java_transpiler -- --nocapture

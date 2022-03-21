@@ -56,6 +56,4 @@ pub trait ASTVisitor<'a, R: std::fmt::Debug, FORMALS: std::fmt::Debug, BIND: std
     fn visit_inherit(&mut self, attrs: Vec<R>) -> R;
 
     fn visit_with_or_let(&mut self, with_or_let: WithOrLet, with_expr: R, expr: R) -> R;
-
-    fn visit_select_before(&mut self);
 }

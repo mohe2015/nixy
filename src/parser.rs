@@ -369,7 +369,6 @@ impl<
                         _tokens => {
                             self.lexer.reset_peek();
 
-                            self.visitor.visit_array_push_before(&array);
                             let last = self.parse_expr_select().unwrap();
                             array.push(last)
                         }
@@ -452,7 +451,6 @@ impl<
         }) = peeked
         {
             self.expect(NixTokenType::Select);
-            self.visitor.visit_select_before();
             // TODO FIXME we probably need to fix that method (use a custom one because of function application order)
             let attrpath = self.parse_attrpath();
             // we need to parse it specially because evaluation needs to abort if the attrpath does not exist and there is no or
@@ -856,7 +854,7 @@ impl<
                 let with_expr = self.parse_expr().unwrap();
                 self.expect(NixTokenType::Semicolon);
                 let expr = self.parse_expr().unwrap();
-                Some(self.visitor.visit_with(with_expr, expr))
+                Some(self.visitor.visit_with_or_let(crate::visitor::WithOrLet::With, with_expr, expr))
             }
             _ => {
                 self.lexer.reset_peek();
