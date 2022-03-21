@@ -35,6 +35,10 @@ toString
 
 	public abstract NixValue force();
 
+	default boolean isSyntaxAttrset() {
+		return false;
+	}
+
 	static NixLazy createIf(NixLazy condition, NixLazy trueCase, NixLazy falseCase) {
 		return new NixLazy() {
 

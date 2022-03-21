@@ -17,10 +17,8 @@ public class MainClosure extends NixLazyScoped {
 
 					@Override
 					public NixValue force() {
-
-
-						rec.value.computeIfAbsent("a", k -> () -> NixAttrset.create(new java.util.IdentityHashMap<>()).force()).castAttrset().computeIfAbsent("b", k -> () -> findVariable(scopes, withs, "a").castAttrset().get("c").createCall());
-						rec.value.computeIfAbsent("a", k -> () -> (new NixLazy() {
+						rec.mutableMerge("a", () -> NixAttrset.create(new java.util.IdentityHashMap<>()).force()).castAttrset().computeIfAbsent("b", k -> () -> findVariable(scopes, withs, "a").castAttrset().get("c").createCall().force());
+						rec.mutableMerge("a", () -> (new NixLazy() {
 
 							@Override
 							public NixValue force() {
@@ -34,12 +32,12 @@ public class MainClosure extends NixLazyScoped {
 									public NixValue force() {
 
 
-										rec.value.computeIfAbsent("c", k -> () -> NixInteger.create(1).createCall());
+										rec.value.computeIfAbsent("c", k -> () -> NixInteger.create(1).createCall().force());
 										return rec;
 									}
 								}.force();
 							}
-						}).createCall());
+						}).createCall().force());
 						return rec;
 					}
 				}.force();
@@ -48,6 +46,27 @@ public class MainClosure extends NixLazyScoped {
 	}
 
 	public static void main(String[] args) {
+		System.out.println((new NixLazyScoped(new java.util.ArrayDeque<>(java.util.List.of((NixAttrset) globals.force())), new java.util.ArrayDeque<>()) {
+
+			@Override
+			public NixValue force() {
+				/* head */
+
+				NixAttrset rec = (NixAttrset) NixAttrset.create(new java.util.IdentityHashMap<>()).force();
+
+				return new NixLazyScoped(addToScope(scopes, rec), withs) {
+
+					@Override
+					public NixValue force() {
+
+
+						rec.value.computeIfAbsent("c", k -> () -> NixInteger.create(1).createCall().force());
+						return rec;
+					}
+				}.force();
+			}
+		}).createCall().force());
+
 		System.out.println(new MainClosure(new java.util.ArrayDeque<>(java.util.List.of((NixAttrset) globals.force())), new java.util.ArrayDeque<>()).force());
 	}
 }

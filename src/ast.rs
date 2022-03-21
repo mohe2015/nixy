@@ -344,12 +344,9 @@ impl<'a> ASTVisitor<'a, AST<'a>> for ASTBuilder {
         AST::With(Box::new(with_expr), Box::new(expr))
     }
 
-    fn visit_attrpath_between(&mut self) {
-        
-    }
+    fn visit_attrpath_between(&mut self) {}
 
-    fn visit_select_before(&mut self) {
-    }
+    fn visit_select_before(&mut self) {}
 }
 
 // cargo test ast::test_java_transpiler -- --nocapture

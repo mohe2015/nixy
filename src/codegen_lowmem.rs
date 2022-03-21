@@ -7,12 +7,14 @@ use crate::{
 };
 
 pub enum IdentifierState {
-    Lhs, Rhs, Select
+    Lhs,
+    Rhs,
+    Select,
 }
 
 pub struct ASTJavaTranspiler<'a, W: Write> {
     pub writer: &'a mut W,
-    pub identifier_state: IdentifierState
+    pub identifier_state: IdentifierState,
 }
 
 // cargo test --package nixy --bin nixy -- codegen_lowmem::test_java_transpiler --exact --nocapture
@@ -30,22 +32,27 @@ pub fn test_java_transpiler() {
     currentVars.put("b", () -> 5);
     */
 
+    test_java_transpiler_code(br"{ a.c = 1; a = { b = 1; }; }", "")
+;
     test_java_transpiler_code(
         br"rec {
         a.b = a.c;
         a = { c = 1; };
       }",
+        "",
     );
 
     test_java_transpiler_code(
         br"rec {
         a = 1;
       }",
+        "",
     );
     test_java_transpiler_code(
         br"rec {
         a.b = 1;
       }",
+        "",
     );
 
     // this one is already parsed wrong we need to not create nested objects for that.
@@ -53,112 +60,129 @@ pub fn test_java_transpiler() {
         br"rec {
         a = { f = 1; };
       }",
+        "",
     );
-    test_java_transpiler_code(br#"let ${"hi"} = 1; in hi"#);
-    test_java_transpiler_code(br#"let a.b = 5; a.c = 3; a.d.e = 3; in a"#);
+    test_java_transpiler_code(br#"let ${"hi"} = 1; in hi"#, "");
+    test_java_transpiler_code(br#"let a.b = 5; a.c = 3; a.d.e = 3; in a"#, "");
     test_java_transpiler_code(
         br#" (let y = x + "b";
        x = "a"; in
     y + "c")"#,
+        "",
     );
-    test_java_transpiler_code(br#"with builtins; (length [1 2 3 "x"])"#);
+    test_java_transpiler_code(br#"with builtins; (length [1 2 3 "x"])"#, "");
     test_java_transpiler_code(
         br#"(let a = 1; in
         let a = 2; in
           a)"#,
+        "",
     );
-    test_java_transpiler_code(br#"(import /tmp/foo.nix)"#);
-    test_java_transpiler_code(br#"/tmp/tutorials/learn.nix"#);
-    test_java_transpiler_code(br#"("Your home directory is ${1} ${1}")"#);
-    test_java_transpiler_code(b"(true && false)");
-    test_java_transpiler_code(b"(true || false)");
-    test_java_transpiler_code(br#"(if 3 < 4 then "a" else "b")"#);
-    test_java_transpiler_code(br#"(4 + 6 + 12 - 2)"#);
-    test_java_transpiler_code(br#"(4 - 2.5)"#);
-    test_java_transpiler_code(br#"(7 / 2)"#);
-    test_java_transpiler_code(br#"(7 / 2.0)"#);
-    test_java_transpiler_code(br#""Strings literals are in double quotes.""#);
+    test_java_transpiler_code(br#"(import /tmp/foo.nix)"#, "");
+    test_java_transpiler_code(br#"/tmp/tutorials/learn.nix"#, "");
+    test_java_transpiler_code(br#"("Your home directory is ${1} ${1}")"#, "");
+    test_java_transpiler_code(b"(true && false)", "");
+    test_java_transpiler_code(b"(true || false)","");
+    test_java_transpiler_code(br#"(if 3 < 4 then "a" else "b")"#, "");
+    test_java_transpiler_code(br#"(4 + 6 + 12 - 2)"#, "");
+    test_java_transpiler_code(br#"(4 - 2.5)"#, "");
+    test_java_transpiler_code(br#"(7 / 2)"#, "");
+    test_java_transpiler_code(br#"(7 / 2.0)"#, "");
+    test_java_transpiler_code(br#""Strings literals are in double quotes.""#, "");
     test_java_transpiler_code(
         br#""
     String literals can span
     multiple lines.
   ""#,
+        "",
     );
     test_java_transpiler_code(
         br#"''
     This is called an "indented string" literal.
     It intelligently strips leading whitespace.
   ''"#,
+        "",
     );
     test_java_transpiler_code(
         br#"''
     a
       b
   ''"#,
+        "",
     );
-    test_java_transpiler_code(br#"("ab" + "cd")"#);
-    test_java_transpiler_code(br#"7/2"#);
-    test_java_transpiler_code(br#"(7 / 2)"#);
+    test_java_transpiler_code(br#"("ab" + "cd")"#, "");
+    test_java_transpiler_code(br#"7/2"#, "");
+    test_java_transpiler_code(br#"(7 / 2)"#, "");
     test_java_transpiler_code(
         br#"(let x = "a"; in
     x + x + x)"#,
+        "",
     );
-    test_java_transpiler_code(br#"(n: n + 1)"#);
-    test_java_transpiler_code(br#"((n: n + 1) 5)"#);
-    test_java_transpiler_code(br#"(let succ = (n: n + 1); in succ 5)"#);
-    test_java_transpiler_code(br#"((x: y: x + "-" + y) "a" "b")"#);
-    test_java_transpiler_code(br#"([1 2 3] ++ [4 5])"#);
-    test_java_transpiler_code(br#"(concatLists [[1 2] [3 4] [5]])"#);
-    test_java_transpiler_code(br#"(head [1 2 3])"#);
-    test_java_transpiler_code(br#"(tail [1 2 3])"#);
-    test_java_transpiler_code(br#"(elemAt ["a" "b" "c" "d"] 2)"#);
-    test_java_transpiler_code(br#"(elem 2 [1 2 3])"#);
-    test_java_transpiler_code(br#"(elem 5 [1 2 3])"#);
-    test_java_transpiler_code(br#"(filter (n: n < 3) [1 2 3 4])"#);
-    test_java_transpiler_code(br#"{ foo = [1 2]; bar = "x"; }"#);
-    test_java_transpiler_code(br#"{ a = 1; b = 2; }.a"#);
-    test_java_transpiler_code(br#"({ a = 1; b = 2; } ? a)"#);
-    test_java_transpiler_code(br#"({ a = 1; b = 2; } ? c)"#);
-    test_java_transpiler_code(br#"({ a = 1; } // { b = 2; })"#);
-    test_java_transpiler_code(br#"({ a = 1; b = 2; } // { a = 3; c = 4; })"#);
-    test_java_transpiler_code(br#"(let a = 1; in { a = 2; b = a; }.b)"#);
-    test_java_transpiler_code(br#"(let a = 1; in rec { a = 2; b = a; }.b)"#);
+    test_java_transpiler_code(br#"(n: n + 1)"#, "");
+    test_java_transpiler_code(br#"((n: n + 1) 5)"#, "");
+    test_java_transpiler_code(br#"(let succ = (n: n + 1); in succ 5)"#, "");
+    test_java_transpiler_code(br#"((x: y: x + "-" + y) "a" "b")"#, "");
+    test_java_transpiler_code(br#"([1 2 3] ++ [4 5])"#, "");
+    test_java_transpiler_code(br#"(concatLists [[1 2] [3 4] [5]])"#, "");
+    test_java_transpiler_code(br#"(head [1 2 3])"#, "");
+    test_java_transpiler_code(br#"(tail [1 2 3])"#, "");
+    test_java_transpiler_code(br#"(elemAt ["a" "b" "c" "d"] 2)"#, "");
+    test_java_transpiler_code(br#"(elem 2 [1 2 3])"#, "");
+    test_java_transpiler_code(br#"(elem 5 [1 2 3])"#, "");
+    test_java_transpiler_code(br#"(filter (n: n < 3) [1 2 3 4])"#, "");
+    test_java_transpiler_code(br#"{ foo = [1 2]; bar = "x"; }"#, "");
+    test_java_transpiler_code(br#"{ a = 1; b = 2; }.a"#, "");
+    test_java_transpiler_code(br#"({ a = 1; b = 2; } ? a)"#, "");
+    test_java_transpiler_code(br#"({ a = 1; b = 2; } ? c)"#, "");
+    test_java_transpiler_code(br#"({ a = 1; } // { b = 2; })"#, "");
+    test_java_transpiler_code(br#"({ a = 1; b = 2; } // { a = 3; c = 4; })"#, "");
+    test_java_transpiler_code(br#"(let a = 1; in { a = 2; b = a; }.b)"#, "");
+    test_java_transpiler_code(br#"(let a = 1; in rec { a = 2; b = a; }.b)"#, "");
     test_java_transpiler_code(
         br#"{
         a.b = 1;
         a.c.d = 2;
         a.c.e = 3;
       }.a.c"#,
+        "",
     );
     test_java_transpiler_code(
         br#"{
         a = { b = 1; };
         a.c = 2;
       }"#,
+        "",
     );
     test_java_transpiler_code(
         br#"(with { a = 1; b = 2; };
         a + b)"#,
+        "",
     );
     test_java_transpiler_code(
         br#"(with { a = 1; b = 2; };
         (with { a = 5; };
           a + b))"#,
+        "",
     );
-    test_java_transpiler_code(br#"(args: args.x + "-" + args.y) { x = "a"; y = "b"; }"#);
-    test_java_transpiler_code(br#"({x, y}: x + "-" + y) { x = "a"; y = "b"; }"#);
-    test_java_transpiler_code(br#"({x, y, ...}: x + "-" + y) { x = "a"; y = "b"; z = "c"; }"#);
-    test_java_transpiler_code(br#"(assert 1 < 2; 42)"#);
-    test_java_transpiler_code(br#"(tryEval 42)"#);
+    test_java_transpiler_code(
+        br#"(args: args.x + "-" + args.y) { x = "a"; y = "b"; }"#,
+        "",
+    );
+    test_java_transpiler_code(br#"({x, y}: x + "-" + y) { x = "a"; y = "b"; }"#, "");
+    test_java_transpiler_code(
+        br#"({x, y, ...}: x + "-" + y) { x = "a"; y = "b"; z = "c"; }"#,
+        "",
+    );
+    test_java_transpiler_code(br#"(assert 1 < 2; 42)"#, "");
+    test_java_transpiler_code(br#"(tryEval 42)"#, "");
 
-    test_java_transpiler_code(b"{ a = 1; b = 10; }");
-    test_java_transpiler_code(b"let a = 5; b = 7; in a + b");
-    test_java_transpiler_code(b"(a: a + 1) 2");
-    test_java_transpiler_code(br#"["1" "true" "yes"]"#);
-    test_java_transpiler_code(b"1");
-    test_java_transpiler_code(b"1 + 1");
-    test_java_transpiler_code(b"if 1 == 1 then 1 + 1 else 2 + 2");
-    test_java_transpiler_code(b"a: a + 1");
+    test_java_transpiler_code(b"{ a = 1; b = 10; }", "");
+    test_java_transpiler_code(b"let a = 5; b = 7; in a + b", "");
+    test_java_transpiler_code(b"(a: a + 1) 2", "");
+    test_java_transpiler_code(br#"["1" "true" "yes"]"#, "");
+    test_java_transpiler_code(b"1", "");
+    test_java_transpiler_code(b"1 + 1", "");
+    test_java_transpiler_code(b"if 1 == 1 then 1 + 1 else 2 + 2", "");
+    test_java_transpiler_code(b"a: a + 1", "");
 }
 
 impl<'a, W: Write> ASTVisitor<'a, ()> for ASTJavaTranspiler<'a, W> {
@@ -322,8 +346,7 @@ public class MainClosure extends NixLazyScoped {{
         write!(self.writer, r#")"#).unwrap();
     }
 
-    fn visit_attrpath_part(&mut self, _begin: (), _last: ()) {
-    }
+    fn visit_attrpath_part(&mut self, _begin: (), _last: ()) {}
 
     fn visit_path_concatenate(&mut self, _begin: (), _last: ()) {
         todo!()
@@ -470,7 +493,11 @@ public class MainClosure extends NixLazyScoped {{
     }
 
     fn visit_attrpath_between(&mut self) {
-        write!(self.writer, r#"NixAttrset.create(new java.util.IdentityHashMap<>()).force()).castAttrset()"#,).unwrap();
+        write!(
+            self.writer,
+            r#"NixAttrset.create(new java.util.IdentityHashMap<>()).force()).castAttrset()"#,
+        )
+        .unwrap();
     }
 
     fn visit_select_before(&mut self) {
@@ -479,11 +506,11 @@ public class MainClosure extends NixLazyScoped {{
     }
 }
 
-fn test_java_transpiler_code(code: &[u8]) {
+fn test_java_transpiler_code(code: &[u8], expected: &str) {
     let mut data = Vec::new();
-    let transpiler = ASTJavaTranspiler { 
+    let transpiler = ASTJavaTranspiler {
         writer: &mut data,
-        identifier_state: IdentifierState::Rhs
+        identifier_state: IdentifierState::Rhs,
     };
 
     let lexer = crate::lexer::NixLexer::new(code).filter(|t| {
@@ -553,14 +580,17 @@ fn test_java_transpiler_code(code: &[u8]) {
     run_cmd.arg("-cp").arg("/tmp:java/").arg("MainClosure");
 
     let run_cmd = run_cmd.output().unwrap();
+    let stdout = String::from_utf8(run_cmd.stdout).unwrap();
     println!(
         "java program exited with {} {} {}",
         run_cmd.status,
         String::from_utf8(run_cmd.stderr).unwrap(),
-        String::from_utf8(run_cmd.stdout).unwrap()
+        stdout
     );
 
     if !run_cmd.status.success() {
         panic!("failed to run java program");
     }
+
+    assert_eq!(expected, stdout);
 }

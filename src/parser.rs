@@ -177,7 +177,6 @@ impl<
     pub fn parse_let(&mut self) -> Option<R> {
         self.expect(NixTokenType::Let);
 
-
         // maybe do this like the method after? so the let has a third parameter which is the body and which we can then concatenate afterwards
         let mut binds: Vec<R> = Vec::new();
         loop {

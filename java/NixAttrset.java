@@ -22,6 +22,14 @@ public class NixAttrset implements NixValue {
 		};
 	}
 
+	public void mutableMerge(String key, NixLazy that) {
+		for (Map.Entry<String, NixLazy> entry : that.value.entrySet()) {
+			if (entry.getValue().isSyntaxAttrset()) {
+
+			}
+		}
+	}
+
 	@Override
 	public NixValue call(NixLazy arg) {
 		throw new IllegalStateException("can't call an attrset");
