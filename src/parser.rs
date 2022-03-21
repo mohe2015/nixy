@@ -726,7 +726,7 @@ impl<
         }
 
         // this second part here actually parses these formals
-        let mut formals: Option<R> = None;
+        let mut formals: Vec<(&'a [u8], Option<R>)> = Vec::new();
 
         self.expect(NixTokenType::CurlyOpen);
 
@@ -741,12 +741,12 @@ impl<
                     }) = token
                     {
                         let expr = self.parse_expr().unwrap();
-                        formals = Some(self.visitor.visit_formal(formals, _a, Some(expr)));
+                        formals.push((_a, Some(expr)));
                     } else if let Some(NixToken {
                         token_type: NixTokenType::Comma,
                     }) = token
                     {
-                        formals = Some(self.visitor.visit_formal(formals, _a, None));
+                        formals.push((_a, None));
                     } else if let Some(NixToken {
                         token_type: NixTokenType::CurlyClose,
                     }) = token
