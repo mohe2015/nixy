@@ -430,6 +430,8 @@ impl<
                     )
                 });
                 // TODO FIXME replace leaking by match to function name
+
+                // TODO FIXME generate this using a passed function so e.g. the question mark operator can generate a custom structure
                 result = self
                     .visitor
                     .visit_infix_operation(result, rhs, token.token_type);
