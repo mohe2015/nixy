@@ -177,11 +177,11 @@ impl<
     pub fn parse_let(&mut self) -> Option<R> {
         self.expect(NixTokenType::Let);
 
-        self.visitor.visit_let_before();
 
         // maybe do this like the method after? so the let has a third parameter which is the body and which we can then concatenate afterwards
         let mut binds: Vec<R> = Vec::new();
         loop {
+            self.visitor.visit_let_or_attrset_before(&binds);
             match self.lexer.peek() {
                 Some(NixToken {
                     token_type: NixTokenType::In,
@@ -289,7 +289,7 @@ impl<
 
         let mut binds: Vec<R> = Vec::new();
         loop {
-            self.visitor.visit_attrset_before(&binds);
+            self.visitor.visit_let_or_attrset_before(&binds);
             match self.lexer.peek() {
                 Some(NixToken {
                     token_type: NixTokenType::CurlyClose,

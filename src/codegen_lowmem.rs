@@ -400,48 +400,17 @@ public class MainClosure extends NixLazyScoped {{
 
     fn visit_bind_before(&mut self, bind_type: BindType) {
         self.identifier_state = IdentifierState::Lhs;
-        match bind_type {
-            BindType::Let => write!(self.writer, r#"let.value.put(((NixString)"#,).unwrap(),
-            BindType::Attrset => write!(self.writer, r#"rec.value"#,).unwrap(),
-        }
+        write!(self.writer, r#"rec.value"#,).unwrap()
     }
 
     fn visit_bind_between(&mut self, bind_type: BindType, _attrpath: &()) {
         self.identifier_state = IdentifierState::Rhs;
-        match bind_type {
-            BindType::Let => write!(self.writer, r#".force()).value.intern(), "#,).unwrap(),
-            BindType::Attrset => write!(self.writer, r#""#,).unwrap(),
-        }
+        write!(self.writer, r#""#,).unwrap()
     }
 
     fn visit_bind_after(&mut self, bind_type: BindType, _attrpath: (), _expr: ()) {
-        match bind_type {
-            BindType::Let => writeln!(self.writer, ");",).unwrap(),
-            BindType::Attrset => write!(self.writer, ".force());",).unwrap(),
-        }
+        write!(self.writer, ".force());",).unwrap()
     }
-
-    fn visit_let_before(&mut self) {
-        write!(
-            self.writer,
-            "(new NixLazy() {{
-
-                @Override
-                public NixValue force() {{
-			/* head */\n
-            NixAttrset let = (NixAttrset) NixAttrset.create(new java.util.IdentityHashMap<>()).force();
-
-            return new NixLazyScoped(addToScope(scopes, let), withs) {{
-
-                @Override
-                public NixValue force() {{
-
-            
-            ",
-        )
-        .unwrap();
-    }
-
     fn visit_let_bind_push(&mut self, _binds: &[()], _bind: ()) {}
 
     fn visit_let_before_body(&mut self, _binds: &[()]) {
@@ -452,7 +421,7 @@ public class MainClosure extends NixLazyScoped {{
         write!(self.writer, ".force(); }}}}.force(); }}}})",).unwrap();
     }
 
-    fn visit_attrset_before(&mut self, binds: &[()]) {
+    fn visit_let_or_attrset_before(&mut self, binds: &[()]) {
         if binds.is_empty() {
             writeln!(
                 self.writer,
