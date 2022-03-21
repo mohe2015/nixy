@@ -67,7 +67,9 @@ fn main() -> Result<()> {
             let mut parser = Parser {
                 lexer: multipeek(lexer),
                 visitor: ASTBuilder,
-                phantom: PhantomData,
+                phantom1: PhantomData,
+                phantom2: PhantomData,
+                phantom3: PhantomData,
             };
 
             println!("{:#?}", parser.parse());

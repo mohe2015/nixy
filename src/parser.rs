@@ -26,11 +26,15 @@ pub struct Parser<
     'a,
     I: Iterator<Item = NixToken<'a>> + std::fmt::Debug,
     R: std::fmt::Debug,
-    A: ASTVisitor<'a, R>,
+    FORMALS: std::fmt::Debug,
+    BIND: std::fmt::Debug,
+    A: ASTVisitor<'a, R, FORMALS, BIND>,
 > {
     pub lexer: MultiPeek<I>,
     pub visitor: A,
-    pub phantom: PhantomData<R>, // https://github.com/rust-lang/rust/issues/23246
+    pub phantom1: PhantomData<R>, // https://github.com/rust-lang/rust/issues/23246
+    pub phantom2: PhantomData<FORMALS>, // https://github.com/rust-lang/rust/issues/23246
+    pub phantom3: PhantomData<BIND>, // https://github.com/rust-lang/rust/issues/23246
 }
 
 #[derive(Copy, Clone)]
@@ -43,8 +47,10 @@ impl<
         'a,
         I: Iterator<Item = NixToken<'a>> + std::fmt::Debug,
         R: std::fmt::Debug,
-        A: ASTVisitor<'a, R>,
-    > Parser<'a, I, R, A>
+        FORMALS: std::fmt::Debug,
+        BIND: std::fmt::Debug,
+        A: ASTVisitor<'a, R, FORMALS, BIND>,
+    > Parser<'a, I, R, FORMALS, BIND, A>
 {
     #[cfg_attr(debug_assertions, instrument(name = "expect", skip_all, ret))]
     pub fn expect(&mut self, t: NixTokenType<'a>) -> NixToken {
@@ -116,7 +122,7 @@ impl<
     }
 
     #[cfg_attr(debug_assertions, instrument(name = "bind", skip_all, ret))]
-    pub fn parse_bind(&mut self, bind_type: BindType) -> R {
+    pub fn parse_bind(&mut self, bind_type: BindType) -> BIND {
         match self.lexer.peek() {
             Some(NixToken {
                 token_type: NixTokenType::Inherit,
