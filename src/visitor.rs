@@ -52,9 +52,7 @@ pub trait ASTVisitor<'a, R: std::fmt::Debug, FORMALS: std::fmt::Debug, BIND: std
 
     fn visit_call(&mut self, function: R, parameter: R) -> R;
 
-    fn visit_function_enter(&mut self, arg: &R);
-
-    fn visit_function_exit(&mut self, arg: R, body: R) -> R;
+    fn visit_function_exit(&mut self, arg: IDENTIFIER, body: R) -> R;
 
     fn visit_function_before(&mut self);
 

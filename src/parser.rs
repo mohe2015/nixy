@@ -36,6 +36,7 @@ pub struct Parser<
     pub phantom1: PhantomData<R>, // https://github.com/rust-lang/rust/issues/23246
     pub phantom2: PhantomData<FORMALS>, // https://github.com/rust-lang/rust/issues/23246
     pub phantom3: PhantomData<BIND>, // https://github.com/rust-lang/rust/issues/23246
+    pub phantom4: PhantomData<IDENTIFIER>, // https://github.com/rust-lang/rust/issues/23246
 }
 
 #[derive(Copy, Clone)]
@@ -52,7 +53,7 @@ impl<
         BIND: std::fmt::Debug,
         IDENTIFIER: std::fmt::Debug,
         A: ASTVisitor<'a, R, FORMALS, BIND, IDENTIFIER>,
-    > Parser<'a, I, R, FORMALS, BIND, A>
+    > Parser<'a, I, R, FORMALS, BIND, IDENTIFIER, A>
 {
     #[cfg_attr(debug_assertions, instrument(name = "expect", skip_all, ret))]
     pub fn expect(&mut self, t: NixTokenType<'a>) -> NixToken {
@@ -838,8 +839,6 @@ impl<
 
                                 let arg = self.visitor.visit_identifier(ident);
 
-                                self.visitor.visit_function_enter(&arg);
-
                                 self.expect(NixTokenType::Colon);
                                 let body = self.parse_expr_function().unwrap();
 
@@ -890,10 +889,8 @@ impl<
 
     #[cfg_attr(debug_assertions, instrument(name = "p", skip_all, ret))]
     pub fn parse(&mut self) -> Option<R> {
-        self.visitor.visit_file_start();
         let result = self.parse_expr();
         assert_eq!(None, self.lexer.next());
-        self.visitor.visit_file_end();
         result
     }
 }

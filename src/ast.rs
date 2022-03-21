@@ -11,8 +11,11 @@ use crate::{
 };
 
 #[derive(PartialEq, Debug)]
+pub struct Identifier<'a>(&'a str);
+
+#[derive(PartialEq, Debug)]
 pub struct NixFunctionParameter<'a> {
-    name: &'a [u8],
+    name: Identifier<'a>,
     default: Option<AST<'a>>,
 }
 
@@ -33,13 +36,13 @@ pub struct Attrset<'a>(Vec<Bind<'a>>); // list of bound values
 #[derive(PartialEq, Debug)]
 pub struct Formals<'a> {
     parameters: Vec<NixFunctionParameter<'a>>,
-    at_identifier: Option<&'a str>,
+    at_identifier: Option<Identifier<'a>>,
     ellipsis: bool,
 }
 
 #[derive(PartialEq, Debug)]
 pub enum AST<'a> {
-    Identifier(&'a str),
+    Identifier(Identifier<'a>),
     String(&'a str),
     PathSegment(&'a str),
     Integer(i64),
@@ -105,7 +108,7 @@ just allow that for now and care about the scoping which is way more important f
 
 pub struct ASTBuilder;
 
-impl<'a> ASTVisitor<'a, AST<'a>, Formals<'a>, Bind<'a>, &'a [u8]> for ASTBuilder {
+impl<'a> ASTVisitor<'a, AST<'a>, Formals<'a>, Bind<'a>, Identifier<'a>> for ASTBuilder {
     fn visit_identifier(&mut self, id: &'a [u8]) -> AST<'a> {
         AST::Identifier(std::str::from_utf8(id).unwrap())
     }
@@ -284,11 +287,9 @@ impl<'a> ASTVisitor<'a, AST<'a>, Formals<'a>, Bind<'a>, &'a [u8]> for ASTBuilder
         bind
     }
 
-    fn visit_function_enter(&mut self, _arg: &AST<'a>) {}
-
-    fn visit_function_exit(&mut self, arg: AST<'a>, body: AST<'a>) -> AST<'a> {
+    fn visit_function_exit(&mut self, arg: Identifier<'a>, body: AST<'a>) -> AST<'a> {
         AST::Function(Formals {
-            at_identifier: arg,
+            at_identifier: Some(arg),
             parameters: vec![],
             ellipsis: true
         }, Box::new(body))
