@@ -29,6 +29,14 @@ pub fn test_java_transpiler() {
     currentVars.put("a", () -> currentVars.get("b"));
     currentVars.put("b", () -> 5);
     */
+
+    test_java_transpiler_code(
+        br"rec {
+        a.b = a.c;
+        a = { c = 1; };
+      }",
+    );
+
     test_java_transpiler_code(
         br"rec {
         a = 1;
@@ -44,12 +52,6 @@ pub fn test_java_transpiler() {
     test_java_transpiler_code(
         br"rec {
         a = { f = 1; };
-      }",
-    );
-    test_java_transpiler_code(
-        br"rec {
-        a.b = a.c;
-        a = { c = 1; };
       }",
     );
     test_java_transpiler_code(br#"let ${"hi"} = 1; in hi"#);
@@ -219,7 +221,7 @@ public class MainClosure extends NixLazyScoped {{
         match self.identifier_state {
             IdentifierState::Lhs => write!(
                 self.writer,
-                ".computeIfAbsent(\"{}\", k -> ",
+                ".computeIfAbsent(\"{}\", k -> () -> ",
                 std::str::from_utf8(id).unwrap()
             )
             .unwrap(),
@@ -415,7 +417,7 @@ public class MainClosure extends NixLazyScoped {{
     fn visit_bind_after(&mut self, bind_type: BindType, _attrpath: (), _expr: ()) {
         match bind_type {
             BindType::Let => writeln!(self.writer, ");",).unwrap(),
-            BindType::Attrset => write!(self.writer, ");",).unwrap(),
+            BindType::Attrset => write!(self.writer, ".force());",).unwrap(),
         }
     }
 
@@ -502,7 +504,7 @@ public class MainClosure extends NixLazyScoped {{
     }
 
     fn visit_attrpath_between(&mut self) {
-        write!(self.writer, r#"NixAttrset.create(new java.util.IdentityHashMap<>())).castAttrset()"#,).unwrap();
+        write!(self.writer, r#"NixAttrset.create(new java.util.IdentityHashMap<>()).force()).castAttrset()"#,).unwrap();
     }
 
     fn visit_select_before(&mut self) {

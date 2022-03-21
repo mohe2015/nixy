@@ -1,5 +1,3 @@
-import java.util.IdentityHashMap;
-
 public class MainClosure extends NixLazyScoped {
 
 	public MainClosure(java.util.ArrayDeque<NixAttrset> scopes, java.util.ArrayDeque<NixAttrset> withs) {
@@ -7,30 +5,46 @@ public class MainClosure extends NixLazyScoped {
 	}
 
 	public NixValue force() {
-		/*
-		rec {
-		  a.b = a.c;
-		  a = { c = 1; };
-	  	}.a.b
-		 */
-
-		NixAttrset rec = (NixAttrset) NixAttrset.create(new java.util.IdentityHashMap<>()).force();
-
-		return new NixLazyScoped(addToScope(scopes, rec), withs) {
+		return (new NixLazy() {
 
 			@Override
 			public NixValue force() {
-				// every identifier should generate
-				// .value.computeIfAbsent("a", k -> NixAttrset.create(new IdentityHashMap<>())).force())
+				/* head */
 
-				((NixAttrset)rec.value.computeIfAbsent("a", k -> NixAttrset.create(new IdentityHashMap<>())).force()).value.computeIfAbsent("b", k -> () -> ((NixAttrset)findVariable(scopes, withs, "a").force()).value.get("c").force());
+				NixAttrset rec = (NixAttrset) NixAttrset.create(new java.util.IdentityHashMap<>()).force();
 
-				((NixAttrset)rec.value.computeIfAbsent("a", k -> NixAttrset.create(new IdentityHashMap<>())).force()).value.computeIfAbsent("c", k -> NixInteger.create(1).createCall());
+				return new NixLazyScoped(addToScope(scopes, rec), withs) {
 
-				/* body */
-				return rec;
+					@Override
+					public NixValue force() {
+
+
+						rec.value.computeIfAbsent("a", k -> () -> NixAttrset.create(new java.util.IdentityHashMap<>()).force()).castAttrset().computeIfAbsent("b", k -> () -> findVariable(scopes, withs, "a").castAttrset().get("c").createCall());
+						rec.value.computeIfAbsent("a", k -> () -> (new NixLazy() {
+
+							@Override
+							public NixValue force() {
+								/* head */
+
+								NixAttrset rec = (NixAttrset) NixAttrset.create(new java.util.IdentityHashMap<>()).force();
+
+								return new NixLazyScoped(addToScope(scopes, rec), withs) {
+
+									@Override
+									public NixValue force() {
+
+
+										rec.value.computeIfAbsent("c", k -> () -> NixInteger.create(1).createCall());
+										return rec;
+									}
+								}.force();
+							}
+						}).createCall());
+						return rec;
+					}
+				}.force();
 			}
-		}.force();
+		}).createCall().force();
 	}
 
 	public static void main(String[] args) {
