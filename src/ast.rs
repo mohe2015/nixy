@@ -49,7 +49,7 @@ pub enum AST<'a> {
     Inherit(Vec<AST<'a>>), // TODO do we need this
     Call(Box<AST<'a>>, Box<AST<'a>>),
     Function(Formals<'a>, Box<AST<'a>>),
-    WithOrLet(WithOrLet, Box<AST<'a>>, Box<AST<'a>>),
+    WithOrLet(WithOrLet, Box<Attrset<'a>>, Box<AST<'a>>),
 }
 
 /*
@@ -105,7 +105,7 @@ just allow that for now and care about the scoping which is way more important f
 
 pub struct ASTBuilder;
 
-impl<'a> ASTVisitor<'a, AST<'a>, Formals<'a>, Bind<'a>> for ASTBuilder {
+impl<'a> ASTVisitor<'a, AST<'a>, Formals<'a>, Bind<'a>, &'a [u8]> for ASTBuilder {
     fn visit_identifier(&mut self, id: &'a [u8]) -> AST<'a> {
         AST::Identifier(std::str::from_utf8(id).unwrap())
     }
@@ -226,16 +226,6 @@ impl<'a> ASTVisitor<'a, AST<'a>, Formals<'a>, Bind<'a>> for ASTBuilder {
         )
     }
 
-    fn visit_attrpath_part(&mut self, begin: AST<'a>, last: AST<'a>) -> AST<'a> {
-        AST::Call(
-            Box::new(AST::Call(
-                Box::new(AST::Identifier(BUILTIN_SELECT)),
-                Box::new(begin),
-            )),
-            Box::new(last),
-        )
-    }
-
     fn visit_path_concatenate(&mut self, begin: AST<'a>, last: AST<'a>) -> AST<'a> {
         AST::Call(
             Box::new(AST::Call(
@@ -297,7 +287,11 @@ impl<'a> ASTVisitor<'a, AST<'a>, Formals<'a>, Bind<'a>> for ASTBuilder {
     fn visit_function_enter(&mut self, _arg: &AST<'a>) {}
 
     fn visit_function_exit(&mut self, arg: AST<'a>, body: AST<'a>) -> AST<'a> {
-        AST::Function(Box::new(arg), Box::new(body))
+        AST::Function(Formals {
+            at_identifier: arg,
+            parameters: vec![],
+            ellipsis: true
+        }, Box::new(body))
     }
 
     fn visit_function_before(&mut self) {}
@@ -321,8 +315,8 @@ impl<'a> ASTVisitor<'a, AST<'a>, Formals<'a>, Bind<'a>> for ASTBuilder {
         _bind_type: BindType,
         attrpath: AST<'a>,
         expr: AST<'a>,
-    ) -> AST<'a> {
-        AST::Bind(Box::new(attrpath), Box::new(expr))
+    ) -> Bind<'a> {
+        Bind { path: vec![attrpath], value: Box::new(expr)}
     }
 
     fn visit_let_bind_push(&mut self, _binds: &[AST<'a>], bind: AST<'a>) -> AST<'a> {
@@ -331,7 +325,7 @@ impl<'a> ASTVisitor<'a, AST<'a>, Formals<'a>, Bind<'a>> for ASTBuilder {
 
     fn visit_let_or_attrset(&mut self, binds: Vec<AST<'a>>, body: Option<AST<'a>>) -> AST<'a> {
         match body {
-            Some(body) => AST::Let(binds, Box::new(body)),
+            Some(body) => AST::WithOrLet(WithOrLet::Let, binds, Box::new(body)),
             None => AST::Attrset(binds),
         }
     }

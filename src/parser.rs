@@ -28,7 +28,8 @@ pub struct Parser<
     R: std::fmt::Debug,
     FORMALS: std::fmt::Debug,
     BIND: std::fmt::Debug,
-    A: ASTVisitor<'a, R, FORMALS, BIND>,
+    IDENTIFIER: std::fmt::Debug,
+    A: ASTVisitor<'a, R, FORMALS, BIND, IDENTIFIER>,
 > {
     pub lexer: MultiPeek<I>,
     pub visitor: A,
@@ -49,7 +50,8 @@ impl<
         R: std::fmt::Debug,
         FORMALS: std::fmt::Debug,
         BIND: std::fmt::Debug,
-        A: ASTVisitor<'a, R, FORMALS, BIND>,
+        IDENTIFIER: std::fmt::Debug,
+        A: ASTVisitor<'a, R, FORMALS, BIND, IDENTIFIER>,
     > Parser<'a, I, R, FORMALS, BIND, A>
 {
     #[cfg_attr(debug_assertions, instrument(name = "expect", skip_all, ret))]
@@ -62,22 +64,17 @@ impl<
     }
 
     #[cfg_attr(debug_assertions, instrument(name = "attrpath", skip_all, ret))]
-    pub fn parse_attrpath(&mut self) -> Option<R> {
-        let mut result: Option<R> = None;
+    pub fn parse_attrpath(&mut self) -> Vec<R> {
+        let mut result: Vec<R> = Vec::new();
         loop {
             match self.lexer.peek() {
                 Some(NixToken {
                     token_type: NixTokenType::Identifier(id),
                 }) => {
                     let id_ast = self.visitor.visit_identifier(id);
-                    match result {
-                        Some(a) => {
-                            result = Some(self.visitor.visit_attrpath_part(a, id_ast));
-                        }
-                        None => result = Some(id_ast),
-                    }
-
                     self.lexer.next();
+
+                    result.push(id_ast);
                 }
                 Some(NixToken {
                     token_type: NixTokenType::Select,
@@ -92,12 +89,8 @@ impl<
                     let res = self
                         .parse_some_string(NixTokenType::StringStart, NixTokenType::StringEnd)
                         .unwrap();
-                    match result {
-                        Some(a) => {
-                            result = Some(self.visitor.visit_attrpath_part(a, res));
-                        }
-                        None => result = Some(res),
-                    }
+                        
+                    result.push(res);
                 }
                 Some(NixToken {
                     token_type: NixTokenType::InterpolateStart,
@@ -105,12 +98,8 @@ impl<
                     self.expect(NixTokenType::InterpolateStart);
                     let expr = self.parse_expr().unwrap();
                     self.expect(NixTokenType::CurlyClose);
-                    match result {
-                        Some(a) => {
-                            result = Some(self.visitor.visit_attrpath_part(a, expr));
-                        }
-                        None => result = Some(expr),
-                    }
+
+                    result.push(expr);
                 }
                 _ => {
                     self.lexer.reset_peek();
@@ -948,7 +937,9 @@ fn can_parse(code: &str) {
     let mut parser = Parser {
         lexer: itertools::multipeek(lexer),
         visitor: ASTBuilder,
-        phantom: PhantomData,
+        phantom1: PhantomData,
+        phantom2: PhantomData,
+        phantom3: PhantomData,
     };
 
     let _result = parser.parse();
@@ -1050,7 +1041,9 @@ fn test_operators() {
             .into_iter(),
         ),
         visitor: crate::ast::ASTBuilder,
-        phantom: PhantomData,
+        phantom1: PhantomData,
+        phantom2: PhantomData,
+        phantom3: PhantomData,
     };
     let r = parser.parse_expr_op().unwrap();
     assert_eq!(

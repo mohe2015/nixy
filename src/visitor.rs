@@ -1,11 +1,7 @@
 use crate::{lexer::NixTokenType, parser::BindType};
 
-pub trait ASTVisitor<'a, R: std::fmt::Debug, FORMALS: std::fmt::Debug, BIND: std::fmt::Debug> {
-    fn visit_file_start(&mut self) {}
-
-    fn visit_file_end(&mut self) {}
-
-    fn visit_identifier(&mut self, id: &'a [u8]) -> R;
+pub trait ASTVisitor<'a, R: std::fmt::Debug, FORMALS: std::fmt::Debug, BIND: std::fmt::Debug, IDENTIFIER: std::fmt::Debug> {
+    fn visit_identifier(&mut self, id: &'a [u8]) -> IDENTIFIER;
 
     fn visit_integer(&mut self, integer: i64) -> R;
 
@@ -28,8 +24,6 @@ pub trait ASTVisitor<'a, R: std::fmt::Debug, FORMALS: std::fmt::Debug, BIND: std
     fn visit_if_after_true_case(&mut self, condition: &R, true_case: &R);
 
     fn visit_if(&mut self, condition: R, true_case: R, false_case: R) -> R;
-
-    fn visit_attrpath_part(&mut self, begin: R, last: R) -> R;
 
     fn visit_attrpath_between(&mut self);
 
