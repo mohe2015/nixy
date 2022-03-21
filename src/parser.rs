@@ -194,7 +194,7 @@ impl<
                         .parse_expr_function()
                         .expect("failed to parse body of let binding");
 
-                    return Some(self.visitor.visit_let(binds, body));
+                    return Some(self.visitor.visit_let_or_attrset(binds, Some(body)));
                 }
                 _ => {
                     self.lexer.reset_peek();
@@ -296,7 +296,7 @@ impl<
                 }) => {
                     self.expect(NixTokenType::CurlyClose);
 
-                    break Some(self.visitor.visit_attrset(binds));
+                    break Some(self.visitor.visit_let_or_attrset(binds, None));
                 }
                 _ => {
                     self.lexer.reset_peek();

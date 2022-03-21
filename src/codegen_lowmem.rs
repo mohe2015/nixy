@@ -417,8 +417,9 @@ public class MainClosure extends NixLazyScoped {{
         write!(self.writer, "\n/* body */ \nreturn ",).unwrap();
     }
 
-    fn visit_let(&mut self, _binds: Vec<()>, _body: ()) {
-        write!(self.writer, ".force(); }}}}.force(); }}}})",).unwrap();
+    fn visit_let_or_attrset(&mut self, _binds: Vec<()>, _body: Option<()>) {
+        // TODO FIXME handle body
+        write!(self.writer, r#" return rec; }} }}.force(); }} }})"#,).unwrap();
     }
 
     fn visit_let_or_attrset_before(&mut self, binds: &[()]) {
@@ -446,10 +447,6 @@ public class MainClosure extends NixLazyScoped {{
     }
 
     fn visit_attrset_bind_push(&mut self, _begin: &[()], _last: ()) {}
-
-    fn visit_attrset(&mut self, _binds: Vec<()>) {
-        write!(self.writer, r#" return rec; }} }}.force(); }} }})"#,).unwrap();
-    }
 
     fn visit_formal(&mut self, _formals: Option<()>, _identifier: &'a [u8], _default: Option<()>) {
         todo!()

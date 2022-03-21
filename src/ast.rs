@@ -261,23 +261,20 @@ impl<'a> ASTVisitor<'a, AST<'a>> for ASTBuilder {
         AST::Bind(Box::new(attrpath), Box::new(expr))
     }
 
-    fn visit_let_before(&mut self) {}
-
     fn visit_let_bind_push(&mut self, _binds: &[AST<'a>], bind: AST<'a>) -> AST<'a> {
         bind
     }
 
-    fn visit_let(&mut self, binds: Vec<AST<'a>>, body: AST<'a>) -> AST<'a> {
-        AST::Let(binds, Box::new(body))
+    fn visit_let_or_attrset(&mut self, binds: Vec<AST<'a>>, body: Option<AST<'a>>) -> AST<'a> {
+        match body {
+            Some(body) => AST::Let(binds, Box::new(body)),
+            None => AST::Attrset(binds),
+        }
     }
 
     fn visit_let_before_body(&mut self, _binds: &[AST<'a>]) {}
 
-    fn visit_attrset_before(&mut self, _binds: &[AST<'a>]) {}
-
-    fn visit_attrset(&mut self, binds: Vec<AST<'a>>) -> AST<'a> {
-        AST::Attrset(binds)
-    }
+    fn visit_let_or_attrset_before(&mut self, _binds: &[AST<'a>]) {}
 
     fn visit_string_concatenate_end(&mut self, result: Option<AST<'a>>) -> AST<'a> {
         match result {
