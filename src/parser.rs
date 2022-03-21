@@ -1,5 +1,5 @@
 use crate::{
-    ast::AST,
+    ast::{AST, Identifier},
     lexer::{NixToken, NixTokenType},
     visitor::ASTVisitor,
 };
@@ -152,12 +152,8 @@ impl<
             _other => {
                 self.lexer.reset_peek();
 
-                self.visitor.visit_bind_before(bind_type);
-
-                let attrpath = self.parse_attrpath().unwrap();
+                let attrpath = self.parse_attrpath();
                 self.expect(NixTokenType::Assign);
-
-                self.visitor.visit_bind_between(bind_type, &attrpath);
 
                 let expr = self
                     .parse_expr() // here
@@ -176,14 +172,11 @@ impl<
         // maybe do this like the method after? so the let has a third parameter which is the body and which we can then concatenate afterwards
         let mut binds: Vec<R> = Vec::new();
         loop {
-            self.visitor.visit_let_or_attrset_before(&binds);
             match self.lexer.peek() {
                 Some(NixToken {
                     token_type: NixTokenType::In,
                 }) => {
                     self.lexer.next();
-
-                    self.visitor.visit_let_before_body(&binds);
 
                     let body = self
                         .parse_expr_function()
@@ -195,7 +188,7 @@ impl<
                     self.lexer.reset_peek();
                     let bind = self.parse_bind(BindType::Let);
 
-                    binds.push(self.visitor.visit_let_bind_push(&binds, bind));
+                    binds.push(bind);
                 }
             }
         }
@@ -284,7 +277,6 @@ impl<
 
         let mut binds: Vec<R> = Vec::new();
         loop {
-            self.visitor.visit_let_or_attrset_before(&binds);
             match self.lexer.peek() {
                 Some(NixToken {
                     token_type: NixTokenType::CurlyClose,
@@ -297,7 +289,7 @@ impl<
                     self.lexer.reset_peek();
                     let bind = self.parse_bind(BindType::Attrset);
 
-                    binds.push(self.visitor.visit_attrset_bind_push(&binds, bind));
+                    binds.push(bind);
                 }
             }
         }
@@ -366,7 +358,6 @@ impl<
                 // array
                 self.expect(NixTokenType::BracketOpen);
                 let mut array = Vec::new();
-                self.visitor.visit_array_start();
                 loop {
                     match self.lexer.peek() {
                         Some(NixToken {
@@ -380,7 +371,7 @@ impl<
 
                             self.visitor.visit_array_push_before(&array);
                             let last = self.parse_expr_select().unwrap();
-                            array.push(self.visitor.visit_array_push(&array, last))
+                            array.push(last)
                         }
                     }
                 }
@@ -463,7 +454,7 @@ impl<
             self.expect(NixTokenType::Select);
             self.visitor.visit_select_before();
             // TODO FIXME we probably need to fix that method (use a custom one because of function application order)
-            let attrpath = self.parse_attrpath().unwrap();
+            let attrpath = self.parse_attrpath();
             // we need to parse it specially because evaluation needs to abort if the attrpath does not exist and there is no or
             if let Some(NixToken {
                 token_type: NixTokenType::Identifier(b"or"),
@@ -489,7 +480,6 @@ impl<
     pub fn parse_expr_app(&mut self) -> Option<R> {
         let mut result: Option<R> = None;
         loop {
-            self.visitor.visit_call_maybe(&result);
             let jo = self.parse_expr_select();
             match jo {
                 Some(expr) => {
@@ -502,7 +492,6 @@ impl<
                     //lexer.next();
                 }
                 None => {
-                    self.visitor.visit_call_maybe_not();
                     break;
                 }
             }
@@ -640,13 +629,9 @@ impl<
                 token_type: NixTokenType::If,
             }) => {
                 self.expect(NixTokenType::If);
-                self.visitor.visit_if_before();
                 let condition = self.parse_expr().expect("failed to parse if condition");
-                self.visitor.visit_if_after_condition(&condition);
                 self.expect(NixTokenType::Then);
                 let true_case = self.parse_expr().expect("failed to parse if true case");
-                self.visitor
-                    .visit_if_after_true_case(&condition, &true_case);
                 self.expect(NixTokenType::Else);
                 let false_case = self.parse_expr().expect("failed to parse if false case");
                 Some(self.visitor.visit_if(condition, true_case, false_case))
@@ -835,8 +820,6 @@ impl<
                             NixToken {
                                 token_type: NixTokenType::Identifier(ident),
                             } => {
-                                self.visitor.visit_function_before();
-
                                 let arg = self.visitor.visit_identifier(ident);
 
                                 self.expect(NixTokenType::Colon);
@@ -937,6 +920,7 @@ fn can_parse(code: &str) {
         phantom1: PhantomData,
         phantom2: PhantomData,
         phantom3: PhantomData,
+        phantom4: PhantomData,
     };
 
     let _result = parser.parse();
@@ -1046,7 +1030,7 @@ fn test_operators() {
     assert_eq!(
         AST::Call(
             Box::new(AST::Call(
-                Box::new(AST::Identifier("addition")),
+                Box::new(AST::Identifier(Identifier("addition"))),
                 Box::new(AST::Integer(1))
             )),
             Box::new(AST::Integer(41))

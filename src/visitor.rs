@@ -1,5 +1,10 @@
 use crate::{lexer::NixTokenType, parser::BindType};
 
+#[derive(PartialEq, Debug)]
+pub enum WithOrLet {
+    With, Let
+}
+
 pub trait ASTVisitor<'a, R: std::fmt::Debug, FORMALS: std::fmt::Debug, BIND: std::fmt::Debug, IDENTIFIER: std::fmt::Debug> {
     fn visit_identifier(&mut self, id: &'a [u8]) -> IDENTIFIER;
 
@@ -9,7 +14,7 @@ pub trait ASTVisitor<'a, R: std::fmt::Debug, FORMALS: std::fmt::Debug, BIND: std
 
     fn visit_todo(&mut self) -> R;
 
-    fn visit_select(&mut self, expr: R, attrpath: R, default: Option<R>) -> R;
+    fn visit_select(&mut self, expr: R, attrpath: Vec<R>, default: Option<R>) -> R;
 
     fn visit_infix_lhs(&mut self, operator: NixTokenType<'a>, left: &R);
 
@@ -17,15 +22,7 @@ pub trait ASTVisitor<'a, R: std::fmt::Debug, FORMALS: std::fmt::Debug, BIND: std
 
     fn visit_prefix_operation(&mut self, operator: NixTokenType<'a>, expr: R) -> R;
 
-    fn visit_if_before(&mut self);
-
-    fn visit_if_after_condition(&mut self, condition: &R);
-
-    fn visit_if_after_true_case(&mut self, condition: &R, true_case: &R);
-
     fn visit_if(&mut self, condition: R, true_case: R, false_case: R) -> R;
-
-    fn visit_attrpath_between(&mut self);
 
     fn visit_path_concatenate(&mut self, begin: R, last: R) -> R;
 
@@ -37,53 +34,28 @@ pub trait ASTVisitor<'a, R: std::fmt::Debug, FORMALS: std::fmt::Debug, BIND: std
 
     fn visit_string_concatenate_end(&mut self, result: Option<R>) -> R;
 
-    fn visit_array_start(&mut self);
-
-    fn visit_array_push_before(&mut self, begin: &[R]);
-
-    fn visit_array_push(&mut self, begin: &[R], last: R) -> R;
-
-    /// This is always called after `visit_array_push` and may help some implementations.
     fn visit_array_end(&mut self, array: Vec<R>) -> R;
-
-    fn visit_call_maybe(&mut self, expr: &Option<R>);
-
-    fn visit_call_maybe_not(&mut self);
 
     fn visit_call(&mut self, function: R, parameter: R) -> R;
 
     fn visit_function_exit(&mut self, arg: IDENTIFIER, body: R) -> R;
 
-    fn visit_function_before(&mut self);
-
-    fn visit_bind_before(&mut self, bind_type: BindType);
-
-    fn visit_bind_between(&mut self, bind_type: BindType, attrpath: &R);
-
     fn visit_bind_after(&mut self, bind_type: BindType, attrpath: R, expr: R) -> BIND;
 
-    fn visit_let_bind_push(&mut self, binds: &[R], bind: R) -> R;
-
-    fn visit_let_before_body(&mut self, binds: &[R]);
-
-    fn visit_let_or_attrset(&mut self, binds: Vec<R>, body: Option<R>) -> R;
-
-    fn visit_let_or_attrset_before(&mut self, binds: &[R]);
-
-    fn visit_attrset_bind_push(&mut self, binds: &[R], bind: R) -> R;
+    fn visit_attrset(&mut self, binds: Vec<R>) -> R;
 
     fn visit_formal(&mut self, formals: Option<R>, identifier: &'a [u8], default: Option<R>) -> R;
 
     fn visit_formals(
         &mut self,
         formals: Option<R>,
-        at_identifier: Option<&'a [u8]>,
+        at_identifier: Option<IDENTIFIER>,
         ellipsis: bool,
     ) -> FORMALS;
 
     fn visit_inherit(&mut self, attrs: Vec<R>) -> R;
 
-    fn visit_with(&mut self, with_expr: R, expr: R) -> R;
+    fn visit_with_or_let(&mut self, with_or_let: WithOrLet, with_expr: R, expr: R) -> R;
 
     fn visit_select_before(&mut self);
 }

@@ -11,17 +11,12 @@ use crate::{
 };
 
 #[derive(PartialEq, Debug)]
-pub struct Identifier<'a>(&'a str);
+pub struct Identifier<'a>(pub &'a str);
 
 #[derive(PartialEq, Debug)]
 pub struct NixFunctionParameter<'a> {
     name: Identifier<'a>,
     default: Option<AST<'a>>,
-}
-
-#[derive(PartialEq, Debug)]
-enum WithOrLet {
-    With, Let
 }
 
 #[derive(PartialEq, Debug)]
@@ -52,7 +47,7 @@ pub enum AST<'a> {
     Inherit(Vec<AST<'a>>), // TODO do we need this
     Call(Box<AST<'a>>, Box<AST<'a>>),
     Function(Formals<'a>, Box<AST<'a>>),
-    WithOrLet(WithOrLet, Box<Attrset<'a>>, Box<AST<'a>>),
+    WithOrLet(WithOrLet, Box<AST<'a>>, Box<AST<'a>>),
 }
 
 /*
@@ -109,8 +104,8 @@ just allow that for now and care about the scoping which is way more important f
 pub struct ASTBuilder;
 
 impl<'a> ASTVisitor<'a, AST<'a>, Formals<'a>, Bind<'a>, Identifier<'a>> for ASTBuilder {
-    fn visit_identifier(&mut self, id: &'a [u8]) -> AST<'a> {
-        AST::Identifier(std::str::from_utf8(id).unwrap())
+    fn visit_identifier(&mut self, id: &'a [u8]) -> Identifier<'a> {
+        Identifier(std::str::from_utf8(id).unwrap())
     }
 
     fn visit_integer(&mut self, integer: i64) -> AST<'a> {
@@ -133,7 +128,7 @@ impl<'a> ASTVisitor<'a, AST<'a>, Formals<'a>, Bind<'a>, Identifier<'a>> for ASTB
     ) -> AST<'a> {
         let value = AST::Call(
             Box::new(AST::Call(
-                Box::new(AST::Identifier(BUILTIN_SELECT)),
+                Box::new(AST::Identifier(Identifier(BUILTIN_SELECT))),
                 Box::new(expr),
             )),
             Box::new(attrpath),
@@ -141,13 +136,13 @@ impl<'a> ASTVisitor<'a, AST<'a>, Formals<'a>, Bind<'a>, Identifier<'a>> for ASTB
         match default {
             Some(default) => AST::Call(
                 Box::new(AST::Call(
-                    Box::new(AST::Identifier("__value_or_default")),
+                    Box::new(AST::Identifier(Identifier("__value_or_default"))),
                     Box::new(value),
                 )),
                 Box::new(default),
             ),
             None => AST::Call(
-                Box::new(AST::Identifier("__abort_invalid_attrpath")),
+                Box::new(AST::Identifier(Identifier("__abort_invalid_attrpath"))),
                 Box::new(value),
             ),
         }
@@ -220,7 +215,7 @@ impl<'a> ASTVisitor<'a, AST<'a>, Formals<'a>, Bind<'a>, Identifier<'a>> for ASTB
         AST::Call(
             Box::new(AST::Call(
                 Box::new(AST::Call(
-                    Box::new(AST::Identifier(BUILTIN_IF)),
+                    Box::new(AST::Identifier(Identifier(BUILTIN_IF))),
                     Box::new(condition),
                 )),
                 Box::new(true_case),
@@ -232,7 +227,7 @@ impl<'a> ASTVisitor<'a, AST<'a>, Formals<'a>, Bind<'a>, Identifier<'a>> for ASTB
     fn visit_path_concatenate(&mut self, begin: AST<'a>, last: AST<'a>) -> AST<'a> {
         AST::Call(
             Box::new(AST::Call(
-                Box::new(AST::Identifier(BUILTIN_PATH_CONCATENATE)),
+                Box::new(AST::Identifier(Identifier(BUILTIN_PATH_CONCATENATE))),
                 Box::new(begin),
             )),
             Box::new(last),
@@ -251,7 +246,7 @@ impl<'a> ASTVisitor<'a, AST<'a>, Formals<'a>, Bind<'a>, Identifier<'a>> for ASTB
         match begin {
             Some(begin) => AST::Call(
                 Box::new(AST::Call(
-                    Box::new(AST::Identifier(BUILTIN_STRING_CONCATENATE)),
+                    Box::new(AST::Identifier(Identifier(BUILTIN_STRING_CONCATENATE))),
                     Box::new(begin),
                 )),
                 Box::new(last),
@@ -324,13 +319,6 @@ impl<'a> ASTVisitor<'a, AST<'a>, Formals<'a>, Bind<'a>, Identifier<'a>> for ASTB
         bind
     }
 
-    fn visit_let_or_attrset(&mut self, binds: Vec<AST<'a>>, body: Option<AST<'a>>) -> AST<'a> {
-        match body {
-            Some(body) => AST::WithOrLet(WithOrLet::Let, binds, Box::new(body)),
-            None => AST::Attrset(binds),
-        }
-    }
-
     fn visit_let_before_body(&mut self, _binds: &[AST<'a>]) {}
 
     fn visit_let_or_attrset_before(&mut self, _binds: &[AST<'a>]) {}
@@ -377,16 +365,16 @@ impl<'a> ASTVisitor<'a, AST<'a>, Formals<'a>, Bind<'a>, Identifier<'a>> for ASTB
     fn visit_formals(
         &mut self,
         formals: Option<AST<'a>>,
-        at_identifier: Option<&'a [u8]>,
+        at_identifier: Option<Identifier>,
         ellipsis: bool,
-    ) -> AST<'a> {
+    ) -> Formals<'a> {
         match formals {
-            Some(AST::Formals { parameters, .. }) => AST::Formals {
+            Some(AST::Formals { parameters, .. }) => Formals {
                 parameters,
                 at_identifier: at_identifier.map(|s| std::str::from_utf8(s).unwrap()),
                 ellipsis,
             },
-            None => AST::Formals {
+            None => Formals {
                 parameters: vec![],
                 at_identifier: at_identifier.map(|s| std::str::from_utf8(s).unwrap()),
                 ellipsis,
@@ -400,7 +388,7 @@ impl<'a> ASTVisitor<'a, AST<'a>, Formals<'a>, Bind<'a>, Identifier<'a>> for ASTB
     }
 
     fn visit_with(&mut self, with_expr: AST<'a>, expr: AST<'a>) -> AST<'a> {
-        AST::With(Box::new(with_expr), Box::new(expr))
+        AST::WithOrLet(WithOrLet::With, Box::new(with_expr), Box::new(expr))
     }
 
     fn visit_attrpath_between(&mut self) {}
